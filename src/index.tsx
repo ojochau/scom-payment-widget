@@ -19,7 +19,7 @@ type CreateInvoiceBody = {
 }
 
 interface ScomTelegramPayWidgetElement extends ControlElement {
-    data: CreateInvoiceBody;
+    data?: CreateInvoiceBody;
     botAPIEndpoint: string;
     onPaymentSuccess: () => Promise<void>;
     payBtnCaption?: string;
