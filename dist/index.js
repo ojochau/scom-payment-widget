@@ -30,13 +30,25 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             this.botAPIEndpoint = botAPIEndpoint;
             this.onPaymentSuccess = onPaymentSuccess;
             this.payBtnCaption = payBtnCaption;
-            this.btnPayNow.caption = payBtnCaption;
         }
         set invoiceData(data) {
             this._invoiceData = data;
         }
         get invoiceData() {
             return this._invoiceData;
+        }
+        set payBtnCaption(value) {
+            this._payBtnCaption = value;
+            this.btnPayNow.caption = value || 'Pay';
+        }
+        get payBtnCaption() {
+            return this._payBtnCaption;
+        }
+        get font() {
+            return this.btnPayNow.font;
+        }
+        set font(value) {
+            this.btnPayNow.font = value;
         }
         async getInvoiceLink() {
             if (!this._invoiceData) {
@@ -48,7 +60,10 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(this._invoiceData)
+                body: JSON.stringify({
+                    ...this._invoiceData,
+                    prices: JSON.stringify(this._invoiceData.prices)
+                })
             });
             if (response.ok) {
                 const data = await response.json();
@@ -73,7 +88,7 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
         }
         render() {
             return (this.$render("i-stack", { direction: "vertical" },
-                this.$render("i-button", { id: "btnPayNow", onClick: this.handlePayClick, caption: this.payBtnCaption || 'Pay', padding: { top: 10, bottom: 10, left: 10, right: 10 }, width: '100%' })));
+                this.$render("i-button", { id: "btnPayNow", onClick: this.handlePayClick, caption: this._payBtnCaption || 'Pay', padding: { top: 10, bottom: 10, left: 10, right: 10 }, width: '100%' })));
         }
     };
     ScomTelegramPayWidget = __decorate([

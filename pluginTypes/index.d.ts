@@ -1,6 +1,6 @@
 /// <amd-module name="@scom/scom-payment-widget" />
 declare module "@scom/scom-payment-widget" {
-    import { Module, ControlElement, Container } from '@ijstech/components';
+    import { Module, ControlElement, Container, IFont } from '@ijstech/components';
     type CreateInvoiceBody = {
         title: string;
         description: string;
@@ -9,13 +9,13 @@ declare module "@scom/scom-payment-widget" {
         payload: string;
         prices: {
             label: string;
-            amount: number;
+            amount: number | string;
         }[];
     };
     interface ScomTelegramPayWidgetElement extends ControlElement {
         data?: CreateInvoiceBody;
         botAPIEndpoint: string;
-        onPaymentSuccess: () => Promise<void>;
+        onPaymentSuccess: (status: string) => Promise<void>;
         payBtnCaption?: string;
     }
     global {
@@ -29,7 +29,7 @@ declare module "@scom/scom-payment-widget" {
         private _invoiceData;
         private botAPIEndpoint;
         private onPaymentSuccess;
-        private payBtnCaption;
+        private _payBtnCaption;
         private btnPayNow;
         constructor(parent?: Container, options?: any);
         static create(options?: ScomTelegramPayWidgetElement, parent?: Container): Promise<ScomTelegramPayWidget>;
@@ -37,6 +37,10 @@ declare module "@scom/scom-payment-widget" {
         init(): void;
         set invoiceData(data: CreateInvoiceBody);
         get invoiceData(): CreateInvoiceBody;
+        set payBtnCaption(value: string);
+        get payBtnCaption(): string;
+        get font(): IFont;
+        set font(value: IFont);
         private getInvoiceLink;
         private handlePayClick;
         render(): any;
