@@ -13,6 +13,13 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
         constructor(parent, options) {
             super(parent, options);
         }
+        get enabled() {
+            return super.enabled;
+        }
+        set enabled(value) {
+            super.enabled = value;
+            this.btnPayNow.enabled = value;
+        }
         static async create(options, parent) {
             let self = new this(parent, options);
             await self.ready();
