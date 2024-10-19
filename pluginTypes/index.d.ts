@@ -32,6 +32,8 @@ declare module "@scom/scom-payment-widget" {
         private _payBtnCaption;
         private btnPayNow;
         constructor(parent?: Container, options?: any);
+        get enabled(): boolean;
+        set enabled(value: boolean);
         static create(options?: ScomTelegramPayWidgetElement, parent?: Container): Promise<ScomTelegramPayWidget>;
         clear(): void;
         init(): void;

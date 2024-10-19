@@ -48,6 +48,14 @@ export class ScomTelegramPayWidget extends Module {
         super(parent, options);
     }
 
+    get enabled(): boolean {
+        return super.enabled;
+    }
+    set enabled(value: boolean) {
+        super.enabled = value;
+        this.btnPayNow.enabled = value;
+    }
+
     static async create(options?: ScomTelegramPayWidgetElement, parent?: Container) {
         let self = new this(parent, options);
         await self.ready();
