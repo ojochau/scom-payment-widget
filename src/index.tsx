@@ -1,150 +1,152 @@
-import {
-    Module,
-    Styles,
-    customElements,
-    ControlElement,
-    Container,
-    Button,
-    IFont,
-} from '@ijstech/components';
+import { Module, Container, customElements, ControlElement } from '@ijstech/components';
+import { InvoiceCreation, PaymentMethod, WalletPayment, StatusPayment } from './components/index';
+import { INetworkConfig, IPaymentInfo, IPaymentStatus, PaymentProvider } from './interface';
+import { State } from './store';
+import { IWalletPlugin } from '@scom/scom-wallet-modal';
+import { ITokenObject } from "@scom/scom-token-list";
+import configData from './data';
+import '@scom/scom-dapp-container';
+import { dappContainerStyle } from './index.css';
+import { IRpcWallet } from '@ijstech/eth-wallet';
+import { ScomTelegramPayWidget } from './telegramPayWidget';
+export { ScomTelegramPayWidget };
 
-const Theme = Styles.Theme.ThemeVars;
-
-type CreateInvoiceBody = {
-    title: string;
-    description: string;
-    currency: string;
-    photoUrl: string;
-    payload: string;
-    prices: { label: string; amount: number | string }[];
+interface ScomPaymentWidgetElement extends ControlElement {
+  lazyLoad?: boolean;
+  wallets?: IWalletPlugin[];
+  networks?: INetworkConfig[];
+  tokens?: ITokenObject[];
 }
-
-interface ScomTelegramPayWidgetElement extends ControlElement {
-    data?: CreateInvoiceBody;
-    botAPIEndpoint: string;
-    onPaymentSuccess: (status: string) => Promise<void>;
-    payBtnCaption?: string;
-}
-
 
 declare global {
-    namespace JSX {
-        interface IntrinsicElements {
-            ['i-scom-telegram-pay-widget']: ScomTelegramPayWidgetElement;
-        }
+  namespace JSX {
+    interface IntrinsicElements {
+      ['i-scom-payment-widget']: ScomPaymentWidgetElement;
     }
+  }
 }
 
-@customElements('i-scom-telegram-pay-widget')
-export class ScomTelegramPayWidget extends Module {
+@customElements('i-scom-payment-widget')
+export class ScomPaymentWidget extends Module {
+  private state: State;
+  private isInitialized: boolean;
+  private invoiceCreation: InvoiceCreation;
+  private paymentMethod: PaymentMethod;
+  private walletPayment: WalletPayment;
+  private statusPayment: StatusPayment;
+  private payment: IPaymentInfo;
 
-    private _invoiceData: CreateInvoiceBody;
-    private botAPIEndpoint: string;
-    private onPaymentSuccess: (status: string) => Promise<void>;
-    private _payBtnCaption: string;
-    private btnPayNow: Button;
+  private _wallets: IWalletPlugin[] = [];
+  private _networks: INetworkConfig[] = [];
+  private _tokens: ITokenObject[] = [];
 
-    constructor(parent?: Container, options?: any) {
-        super(parent, options);
+  constructor(parent?: Container, options?: ScomPaymentWidgetElement) {
+    super(parent, options);
+  }
+
+  get wallets() {
+    return this._wallets ?? configData.defaultData.wallets;
+  }
+
+  set wallets(value: IWalletPlugin[]) {
+    this._wallets = value;
+  }
+
+  get networks() {
+    return this._networks ?? configData.defaultData.networks;
+  }
+
+  set networks(value: INetworkConfig[]) {
+    this._networks = value;
+  }
+
+  get tokens() {
+    return this._tokens ?? configData.defaultData.tokens;
+  }
+
+  set tokens(value: ITokenObject[]) {
+    this._tokens = value;
+  }
+
+  get rpcWallet(): IRpcWallet {
+    return this.state.getRpcWallet();
+  }
+
+  onStartPayment(payment: IPaymentInfo) {
+    this.payment = payment;
+    if (!this.invoiceCreation) return;
+    this.isInitialized = true;
+    this.invoiceCreation.payment = payment;
+    this.invoiceCreation.visible = true;
+    this.paymentMethod.payment = payment;
+    this.paymentMethod.visible = false;
+    this.walletPayment.visible = false;
+    this.walletPayment.state = this.state;
+    this.statusPayment.visible = false;
+  }
+
+  async init() {
+    if (!this.state) {
+      this.state = new State(configData);
     }
-
-    get enabled(): boolean {
-        return super.enabled;
+    super.init();
+    this.invoiceCreation.onContinue = () => {
+      this.invoiceCreation.visible = false;
+      this.paymentMethod.visible = true;
+      this.walletPayment.visible = false;
+      this.statusPayment.visible = false;
+    };
+    this.paymentMethod.onSelectedPaymentProvider = (payment: IPaymentInfo, paymentProvider: PaymentProvider) => {
+      this.paymentMethod.visible = false;
+      this.walletPayment.wallets = this.wallets;
+      this.walletPayment.networks = this.networks;
+      this.walletPayment.tokens = this.tokens;
+      this.walletPayment.onStartPayment({
+        ...payment,
+        provider: paymentProvider
+      })
+      this.walletPayment.visible = true;
+    };
+    this.walletPayment.onPaid = (paymentStatus: IPaymentStatus) => {
+      this.walletPayment.visible = false;
+      this.statusPayment.visible = true;
+      this.statusPayment.updateStatus(this.state, paymentStatus);
     }
-    set enabled(value: boolean) {
-        super.enabled = value;
-        this.btnPayNow.enabled = value;
+    this.walletPayment.onBack = () => {
+      this.paymentMethod.visible = true;
+      this.walletPayment.visible = false;
+      this.statusPayment.visible = false;
+    };
+    this.statusPayment.onClose = () => {
+      this.onStartPayment(this.payment);
     }
-
-    static async create(options?: ScomTelegramPayWidgetElement, parent?: Container) {
-        let self = new this(parent, options);
-        await self.ready();
-        return self;
+    const lazyLoad = this.getAttribute('lazyLoad', true, false);
+    if (!lazyLoad) {
+      this.networks = this.getAttribute('networks', true, configData.defaultData.networks);
+      this.tokens = this.getAttribute('tokens', true, configData.defaultData.tokens);
+      this.wallets = this.getAttribute('wallets', true, configData.defaultData.wallets);
     }
-
-    clear() {
-
+    if (this.payment && !this.isInitialized) {
+      this.onStartPayment(this.payment);
     }
+    this.executeReadyCallback();
+  }
 
-    init() {
-        super.init();
-        const data = this.getAttribute('data', true);
-        const botAPIEndpoint = this.getAttribute('botAPIEndpoint', true);
-        const onPaymentSuccess = this.getAttribute('onPaymentSuccess', true);
-        const payBtnCaption = this.getAttribute('payBtnCaption', true);
-        this._invoiceData = data;
-        this.botAPIEndpoint = botAPIEndpoint;
-        this.onPaymentSuccess = onPaymentSuccess;
-        this.payBtnCaption = payBtnCaption;
-    }
-
-    set invoiceData(data: CreateInvoiceBody) {
-        this._invoiceData = data;
-    }
-
-    get invoiceData() {
-        return this._invoiceData;
-    }
-
-    set payBtnCaption(value: string) {
-        this._payBtnCaption = value;
-        this.btnPayNow.caption = value || 'Pay';
-    }
-
-    get payBtnCaption() {
-        return this._payBtnCaption;
-    }
-
-    get font(): IFont {
-      return this.btnPayNow.font;
-    }
-
-    set font(value: IFont) {
-        this.btnPayNow.font = value;
-    }
-
-    private async getInvoiceLink() {
-        if(!this._invoiceData) {
-            console.error('Invoice data is empty.');
-            return;
-        }
-        const response = await fetch(`${this.botAPIEndpoint}/invoice`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                ...this._invoiceData,
-                prices: JSON.stringify(this._invoiceData.prices)
-            })
-        });
-        if(response.ok) {
-            const data = await response.json();
-            if(data.success) {
-                return data.data.invoiceLink;
-            }
-            else return '';
-        }
-    }
-
-    private async handlePayClick() {
-        const telegram = (window as any).Telegram;
-        if(telegram) {
-            const app = telegram.WebApp;
-            if(app) {
-                const invoiceLink = await this.getInvoiceLink();
-                if(invoiceLink) {
-                    app.openInvoice(invoiceLink, this.onPaymentSuccess);
-                }
-            }
-        }
-    }
-
-    render() {
-        return (
-            <i-stack direction="vertical">
-                <i-button id="btnPayNow" onClick={this.handlePayClick} caption={this._payBtnCaption || 'Pay'} padding={{top: 10, bottom: 10, left: 10, right: 10}} width={'100%'}/>
-            </i-stack>
-        );
-    }
+  render() {
+    return <i-scom-dapp-container id="containerDapp" showHeader={true} showFooter={false} class={dappContainerStyle}>
+      <i-stack
+        direction="vertical"
+        width={360}
+        height="100%"
+        maxWidth="100%"
+        minHeight={480}
+        border={{ radius: 12 }}
+      >
+        <scom-payment-widget--invoice-creation id="invoiceCreation" visible={false} height="100%" />
+        <scom-payment-widget--payment-method id="paymentMethod" visible={false} height="100%" />
+        <scom-payment-widget--wallet-payment id="walletPayment" visible={false} height="100%" />
+        <scom-payment-widget--status-payment id="statusPayment" visible={false} height="100%" />
+      </i-stack>
+    </i-scom-dapp-container>
+  }
 }
