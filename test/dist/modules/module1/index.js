@@ -20,14 +20,15 @@ define("@modules/module1", ["require", "exports", "@ijstech/components"], functi
         async handlePaymentSuccess() {
         }
         render() {
-            return this.$render("i-panel", null,
-                this.$render("i-hstack", { id: "mainStack", margin: { top: '1rem', left: '1rem' }, gap: "2rem" },
-                    this.$render("i-scom-telegram-pay-widget", { onPaymentSuccess: this.handlePaymentSuccess, botAPIEndpoint: 'http://localhost:3000', payBtnCaption: "Pay now", data: {
+            return this.$render("i-stack", { width: '100%', height: '100%', alignItems: "center", justifyContent: 'center' },
+                this.$render("i-stack", { id: "mainStack", margin: { top: '1rem', left: '1rem' }, gap: "2rem", width: 800, height: 1200 },
+                    this.$render("i-scom-payment-widget", { onPaymentSuccess: this.handlePaymentSuccess, botAPIEndpoint: 'http://localhost:3000', data: {
                             title: 'Invoice title',
-                            description: 'Invoice description',
+                            // description: 'Invoice description',
                             currency: 'USD',
-                            prices: [{ label: 'Item 1', amount: 10000 }],
-                            payload: 'payload',
+                            amount: 100000,
+                            // prices: [{label: 'Item 1', amount: 10000}],
+                            // payload: 'payload',
                             photoUrl: 'https://cdn.corporatefinanceinstitute.com/assets/product-mix3.jpeg'
                         } })));
         }
