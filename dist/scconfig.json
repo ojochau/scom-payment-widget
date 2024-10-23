@@ -3,12 +3,6 @@
     "type": "widget",
     "version": "0.1.0",
     "dependencies": [
-        "@ijstech/components",
-        "@ijstech/eth-wallet",
-        "@scom/scom-network-list",
-        "@scom/scom-token-list",
-        "@scom/scom-wallet-modal",
-        "@scom/scom-multicall",
-        "@scom/scom-dapp-container"
+        "@ijstech/components"
     ]
 }
