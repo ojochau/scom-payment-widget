@@ -6,6 +6,9 @@
         "@modules/module1": {
             "path": "module1",
             "dependencies": [
+                "@ijstech/eth-wallet",
+                "@scom/scom-multicall",
+                "@scom/scom-network-list",
                 "@scom/scom-payment-widget"
             ]
         }
@@ -21,11 +24,11 @@
     "packages": [
         "@ijstech/components",
         "@scom/scom-payment-widget",
-        "@scom/dapp",
-        "@ijstech/eth-contract",
         "@ijstech/eth-wallet",
         "@scom/scom-multicall",
-        "@scom/scom-network-list"
+        "@ijstech/eth-contract",
+        "@scom/scom-network-list",
+        "@scom/dapp"
     ],
     "menus": [
         {

@@ -45,11 +45,11 @@ export default class Module1 extends Module {
 
   async init() {
     super.init();
-    this.scomPaymentWidget.onStartPayment({
-      amount: 1000,
-      paymentId: '262951AA-D913-40A5-9468-7EB8B92706E3',
-      address: '0xA81961100920df22CF98703155029822f2F7f033'
-    });
+    // this.scomPaymentWidget.onStartPayment({
+    //   amount: 1000,
+    //   paymentId: '262951AA-D913-40A5-9468-7EB8B92706E3',
+    //   address: '0xA81961100920df22CF98703155029822f2F7f033'
+    // });
   }
 
   private onSubmit(content: string, medias: any) {
@@ -63,16 +63,17 @@ export default class Module1 extends Module {
   render() {
     return <i-panel width="100%">
       <i-hstack id="mainStack" margin={{ top: '1rem', left: '1rem' }} gap="2rem" width="100%" padding={{ top: '1rem', bottom: '1rem' }}>
-        <i-scom-payment-widget id="scomPaymentWidget" />
-        {/* <i-scom-telegram-pay-widget onPaymentSuccess={this.handlePaymentSuccess} botAPIEndpoint={'http://localhost:3000'} payBtnCaption="Pay now"
-                data={{
-                    title: 'Invoice title',
-                    description: 'Invoice description',
-                    currency: 'USD',
-                    prices: [{label: 'Item 1', amount: 10000}],
-                    payload: 'payload',
-                    photoUrl: 'https://cdn.corporatefinanceinstitute.com/assets/product-mix3.jpeg'
-                }}/> */}
+        {/* <i-scom-payment-widget id="scomPaymentWidget" /> */}
+        <i-scom-payment-widget onPaymentSuccess={this.handlePaymentSuccess} botAPIEndpoint={'http://localhost:3000'}
+          data={{
+            title: 'Invoice title',
+            // description: 'Invoice description',
+            currency: 'USD',
+            amount: 100000,
+            // prices: [{label: 'Item 1', amount: 10000}],
+            // payload: 'payload',
+            photoUrl: 'https://cdn.corporatefinanceinstitute.com/assets/product-mix3.jpeg'
+          }} />
       </i-hstack>
     </i-panel>
   }
