@@ -35,7 +35,6 @@ interface ScomPaymentWidgetElement extends ControlElement {
     payBtnCaption?: string;
 }
 
-
 declare global {
     namespace JSX {
         interface IntrinsicElements {
@@ -66,9 +65,6 @@ export class ScomPaymentWidget extends Module {
         super(parent, options);
     }
 
-<<<<<<< HEAD
-    static async create(options?: ScomPaymentWidgetElement, parent?: Container) {
-=======
     get enabled(): boolean {
         return super.enabled;
     }
@@ -77,8 +73,7 @@ export class ScomPaymentWidget extends Module {
         this.btnPayNow.enabled = value;
     }
 
-    static async create(options?: ScomTelegramPayWidgetElement, parent?: Container) {
->>>>>>> edd4d82d93306423be5d0ebd37cea14c068176c2
+    static async create(options?: ScomPaymentWidgetElement, parent?: Container) {
         let self = new this(parent, options);
         await self.ready();
         return self;

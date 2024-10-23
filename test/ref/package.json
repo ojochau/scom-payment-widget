@@ -15,7 +15,13 @@
         "test": "cd test && npm run test && cd .."
     },
     "dependencies": {
-        "@ijstech/components": "^0.1.113"
+        "@ijstech/components": "^0.1.113",
+        "@ijstech/eth-wallet": "^0.1.51",
+        "@ijstech/eth-contract": "^0.1.10",
+        "@scom/scom-network-list": "^0.1.0",
+        "@scom/scom-token-list": "^0.1.0",
+        "@scom/scom-wallet-modal": "^0.1.0",
+        "@scom/scom-dapp-container": "^0.1.2"
     },
     "devDependencies": {
         "@ijstech/cli": "^0.1.34",

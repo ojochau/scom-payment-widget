@@ -44,7 +44,7 @@ declare module "@scom/scom-payment-widget" {
         constructor(parent?: Container, options?: any);
         get enabled(): boolean;
         set enabled(value: boolean);
-        static create(options?: ScomTelegramPayWidgetElement, parent?: Container): Promise<ScomTelegramPayWidget>;
+        static create(options?: ScomPaymentWidgetElement, parent?: Container): Promise<ScomPaymentWidget>;
         clear(): void;
         init(): void;
         initStripePayment(): Promise<void>;
