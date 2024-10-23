@@ -42,7 +42,9 @@ declare module "@scom/scom-payment-widget" {
         private lbStripeDetailProductAmount;
         private imgStripeDetailProductImage;
         constructor(parent?: Container, options?: any);
-        static create(options?: ScomPaymentWidgetElement, parent?: Container): Promise<ScomPaymentWidget>;
+        get enabled(): boolean;
+        set enabled(value: boolean);
+        static create(options?: ScomTelegramPayWidgetElement, parent?: Container): Promise<ScomTelegramPayWidget>;
         clear(): void;
         init(): void;
         initStripePayment(): Promise<void>;
