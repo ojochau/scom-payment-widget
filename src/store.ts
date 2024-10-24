@@ -5,6 +5,13 @@ import { PaymentProvider, PaymentType } from "./interface";
 
 const infuraId = 'adc596bf88b648e2a8902bc9093930c5';
 
+export const STRIPE_LIB_URL = 'https://js.stripe.com/v3';
+
+export const STRIPE_CONFIG = {
+  STRIPE_PUBLISHABLE_KEY: 'pk_test_51Q60lAP7pMwOSpCLJJQliRgIVHlmPlpkrstk43VlRG2vutqIPZKhoSv8XVzK3nbxawr2ru5cWQ1SFfkayFu5m25o00RHU1gBhl',
+  STRIPE_SECRET_KEY: 'sk_test_51Q60lAP7pMwOSpCLNlbVBSZOIUOaqYVFVWihoOpqVOjOag6hUtOktCBYFudiXkVLiYKRlgZODmILVnr271jm9yQc00ANkHT99O'
+};
+
 interface IExtendedNetwork extends INetwork {
   explorerName?: string;
   explorerTxUrl?: string;
@@ -111,3 +118,25 @@ export const PaymentProviders = [
     image: 'metamask.png'
   }
 ]
+
+export const stripeCurrencies = [
+  "aed", "afn", "all", "amd", "ang", "aoa", "ars", "aud", "awg", "azn",
+  "bam", "bbd", "bdt", "bgn", "bhd", "bif", "bmd", "bnd", "bob", "brl",
+  "bsd", "btn", "bwp", "byn", "byr", "bzd", "cad", "cdf", "chf", "clf",
+  "clp", "cny", "cop", "crc", "cuc", "cup", "cve", "czk", "djf", "dkk",
+  "dop", "dzd", "egp", "ern", "etb", "eur", "fjd", "fkp", "gbp", "gel",
+  "ghs", "gip", "gmd", "gnf", "gtq", "gyd", "hkd", "hnl", "htg", "huf",
+  "idr", "ils", "inr", "iqd", "irr", "isk", "jmd", "jod", "jpy", "kes",
+  "kgs", "khr", "kmf", "kpw", "krw", "kwd", "kyd", "kzt", "lak", "lbp",
+  "lkr", "lrd", "lsl", "ltl", "lvl", "lyd", "mad", "mdl", "mga", "mkd",
+  "mmk", "mnt", "mop", "mro", "mur", "mvr", "mwk", "mxn", "myr", "mzn",
+  "nad", "ngn", "nio", "nok", "npr", "nzd", "omr", "pab", "pen", "pgk",
+  "php", "pkr", "pln", "pyg", "qar", "ron", "rsd", "rub", "rwf", "sar",
+  "sbd", "scr", "sdg", "sek", "sgd", "shp", "skk", "sll", "sos", "srd",
+  "ssp", "std", "svc", "syp", "szl", "thb", "tjs", "tmt", "tnd", "top",
+  "try", "ttd", "twd", "tzs", "uah", "ugx", "usd", "uyu", "uzs", "vef",
+  "vnd", "vuv", "wst", "xaf", "xag", "xau", "xcd", "xdr", "xof", "xpf",
+  "yer", "zar", "zmk", "zmw", "btc", "jep", "eek", "ghc", "mtl", "tmm",
+  "yen", "zwd", "zwl", "zwn", "zwr"
+];
+

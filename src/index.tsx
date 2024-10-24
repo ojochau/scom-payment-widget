@@ -1,232 +1,196 @@
-import {
-    Module,
-    Styles,
-    customElements,
-    ControlElement,
-    Container,
-    Button,
-    StackLayout,
-    IFont,
-    Label,
-    Image
-} from '@ijstech/components';
-
-const CONFIG = {
-    STRIPE_PUBLISHABLE_KEY: 'pk_test_51Q60lAP7pMwOSpCLJJQliRgIVHlmPlpkrstk43VlRG2vutqIPZKhoSv8XVzK3nbxawr2ru5cWQ1SFfkayFu5m25o00RHU1gBhl',
-    STRIPE_SECRET_KEY: 'sk_test_51Q60lAP7pMwOSpCLNlbVBSZOIUOaqYVFVWihoOpqVOjOag6hUtOktCBYFudiXkVLiYKRlgZODmILVnr271jm9yQc00ANkHT99O'
-};
-
-const Theme = Styles.Theme.ThemeVars;
-
-type CreateInvoiceBody = {
-    title: string;
-    description?: string;
-    currency?: string;
-    photoUrl?: string;
-    payload?: string;
-    prices?: { label: string; amount: number | string }[];
-    amount: number;
-}
+import { Module, Container, customElements, ControlElement } from '@ijstech/components';
+import { InvoiceCreation, PaymentMethod, WalletPayment, StripePayment, StatusPayment } from './components/index';
+import { INetworkConfig, IPaymentInfo, IPaymentStatus, PaymentProvider } from './interface';
+import { State } from './store';
+import { IWalletPlugin } from '@scom/scom-wallet-modal';
+import { ITokenObject } from "@scom/scom-token-list";
+import configData from './data';
+import '@scom/scom-dapp-container';
+import { dappContainerStyle } from './index.css';
+import { IRpcWallet } from '@ijstech/eth-wallet';
+import ScomDappContainer from '@scom/scom-dapp-container';
 
 interface ScomPaymentWidgetElement extends ControlElement {
-    data?: CreateInvoiceBody;
-    botAPIEndpoint: string;
-    onPaymentSuccess: (status: string) => Promise<void>;
-    payBtnCaption?: string;
+	lazyLoad?: boolean;
+	payment?: IPaymentInfo;
+	wallets?: IWalletPlugin[];
+	networks?: INetworkConfig[];
+	tokens?: ITokenObject[];
+	onPaymentSuccess?: (status: string) => Promise<void>;
 }
 
 declare global {
-    namespace JSX {
-        interface IntrinsicElements {
-            ['i-scom-payment-widget']: ScomPaymentWidgetElement;
-        }
-    }
+	namespace JSX {
+		interface IntrinsicElements {
+			['i-scom-payment-widget']: ScomPaymentWidgetElement;
+		}
+	}
 }
 
 @customElements('i-scom-payment-widget')
 export class ScomPaymentWidget extends Module {
+	private containerDapp: ScomDappContainer;
+	private state: State;
+	private invoiceCreation: InvoiceCreation;
+	private paymentMethod: PaymentMethod;
+	private walletPayment: WalletPayment;
+	private stripePayment: StripePayment;
+	private statusPayment: StatusPayment;
+	private _payment: IPaymentInfo;
 
-    private _invoiceData: CreateInvoiceBody;
-    private botAPIEndpoint: string;
-    private onPaymentSuccess: (status: string) => Promise<void>;
-    private _payBtnCaption: string;
-    private btnPayNow: Button;
-    private pnlStripe: StackLayout;
-    private pnlStripePaymentForm: StackLayout;
-    private pnlPaymentOptions: StackLayout;
-    private stripe: any;
-    private stripeElements: any;
-    private lbAmount: Label;
-    private lbStripeDetailProductName: Label;
-    private lbStripeDetailProductAmount: Label;
-    private imgStripeDetailProductImage: Image;
+	private _wallets: IWalletPlugin[] = [];
+	private _networks: INetworkConfig[] = [];
+	private _tokens: ITokenObject[] = [];
+	public onPaymentSuccess: (status: string) => Promise<void>;
 
-    constructor(parent?: Container, options?: any) {
-        super(parent, options);
-    }
+	constructor(parent?: Container, options?: ScomPaymentWidgetElement) {
+		super(parent, options);
+	}
 
-    get enabled(): boolean {
-        return super.enabled;
-    }
-    set enabled(value: boolean) {
-        super.enabled = value;
-        this.btnPayNow.enabled = value;
-    }
+	get payment() {
+		return this._payment;
+	}
 
-    static async create(options?: ScomPaymentWidgetElement, parent?: Container) {
-        let self = new this(parent, options);
-        await self.ready();
-        return self;
-    }
+	set payment(value: IPaymentInfo) {
+		this._payment = value;
+		this.onStartPayment(value);
+	}
 
-    clear() {
+	get wallets() {
+		return this._wallets ?? configData.defaultData.wallets;
+	}
 
-    }
+	set wallets(value: IWalletPlugin[]) {
+		this._wallets = value;
+	}
 
-    init() {
-        super.init();
-        const data = this.getAttribute('data', true);
-        const botAPIEndpoint = this.getAttribute('botAPIEndpoint', true);
-        const onPaymentSuccess = this.getAttribute('onPaymentSuccess', true);
-        const payBtnCaption = this.getAttribute('payBtnCaption', true);
-        this._invoiceData = data;
-        this.botAPIEndpoint = botAPIEndpoint;
-        this.onPaymentSuccess = onPaymentSuccess;
-        this.payBtnCaption = payBtnCaption;
-        this.updateInvoiceUI();
-    }
+	get networks() {
+		return this._networks ?? configData.defaultData.networks;
+	}
 
-    async initStripePayment() {
-        if ((window as any).Stripe !== undefined) {
-            this.stripe = (window as any).Stripe(CONFIG.STRIPE_PUBLISHABLE_KEY);
-            this.stripeElements = this.stripe.elements({
-                mode: 'payment',
-                currency: 'usd',
-                amount: 1099,
-            });
-            var paymentElement = this.stripeElements.create('payment');
-            paymentElement.mount('#pnlStripePaymentForm');
-        }
-    }
+	set networks(value: INetworkConfig[]) {
+		this._networks = value;
+	}
 
-    set invoiceData(data: CreateInvoiceBody) {
-        this._invoiceData = data;
-        this.updateInvoiceUI();
-    }
+	get tokens() {
+		return this._tokens ?? configData.defaultData.tokens;
+	}
 
-    get invoiceData() {
-        return this._invoiceData;
-    }
+	set tokens(value: ITokenObject[]) {
+		this._tokens = value;
+	}
 
-    set payBtnCaption(value: string) {
-        this._payBtnCaption = value;
-        // this.btnPayNow.caption = value || 'Pay';
-    }
+	get rpcWallet(): IRpcWallet {
+		return this.state.getRpcWallet();
+	}
 
-    get payBtnCaption() {
-        return this._payBtnCaption;
-    }
+	private async updateTheme() {
+		const themeVar = this.containerDapp?.theme || 'dark';
+		this.updateStyle('--divider', '#fff');
+		const theme = {
+			[themeVar]: {
+				inputFontColor: '#fff',
+				secondaryColor: '#444444'
+			}
+		};
+		await this.containerDapp.ready();
+		this.containerDapp.setTag(theme);
+	}
 
-    get font(): IFont {
-        return this.btnPayNow.font;
-    }
+	private updateStyle(name: string, value: any) {
+		if (value) {
+			this.style.setProperty(name, value);
+		} else {
+			this.style.removeProperty(name);
+		}
+	}
 
-    set font(value: IFont) {
-        this.btnPayNow.font = value;
-    }
+	onStartPayment(payment: IPaymentInfo) {
+		this._payment = payment;
+		if (!this.invoiceCreation) return;
+		this.invoiceCreation.payment = payment;
+		this.invoiceCreation.visible = true;
+		this.paymentMethod.payment = payment;
+		this.paymentMethod.visible = false;
+		this.walletPayment.visible = false;
+		this.walletPayment.state = this.state;
+		this.stripePayment.payment = payment;
+		this.stripePayment.visible = false;
+		this.statusPayment.visible = false;
+	}
 
-    private updateInvoiceUI() {
-        console.log('updateInvoiceUI', this._invoiceData);
-        this.lbAmount.caption = `${this._invoiceData.amount / 100} ${this._invoiceData.currency.toUpperCase()}`;
-    }
+	async init() {
+		if (!this.state) {
+			this.state = new State(configData);
+		}
+		super.init();
+		this.updateTheme();
+		this.onPaymentSuccess = this.getAttribute('onPaymentSuccess', true) || this.onPaymentSuccess;
+		this.invoiceCreation.onContinue = () => {
+			this.invoiceCreation.visible = false;
+			this.paymentMethod.visible = true;
+		};
+		this.paymentMethod.onSelectedPaymentProvider = (payment: IPaymentInfo, paymentProvider: PaymentProvider) => {
+			this.paymentMethod.visible = false;
+			if (paymentProvider === PaymentProvider.Metamask || paymentProvider === PaymentProvider.TonWallet) {
+				this.paymentMethod.visible = false;
+				this.walletPayment.wallets = this.wallets;
+				this.walletPayment.networks = this.networks;
+				this.walletPayment.tokens = this.tokens;
+				this.walletPayment.onStartPayment({
+					...payment,
+					provider: paymentProvider
+				})
+				this.walletPayment.visible = true;
+			} else {
+				this.stripePayment.visible = true;
+			}
+		};
+		this.walletPayment.onPaid = (paymentStatus: IPaymentStatus) => {
+			this.walletPayment.visible = false;
+			this.statusPayment.visible = true;
+			this.statusPayment.updateStatus(this.state, paymentStatus);
+		}
+		this.walletPayment.onBack = () => {
+			this.paymentMethod.visible = true;
+			this.walletPayment.visible = false;
+		};
+		this.stripePayment.onBack = () => {
+			this.paymentMethod.visible = true;
+			this.stripePayment.visible = false;
+		}
+		this.stripePayment.onPaymentSuccess = (status: string) => {
+			if (this.onPaymentSuccess) this.onPaymentSuccess(status);
+		}
+		this.statusPayment.onClose = (status: string) => {
+			if (this.onPaymentSuccess) this.onPaymentSuccess(status);
+		}
+		const lazyLoad = this.getAttribute('lazyLoad', true, false);
+		if (!lazyLoad) {
+			const payment = this.getAttribute('payment', true);
+			this.networks = this.getAttribute('networks', true, configData.defaultData.networks);
+			this.tokens = this.getAttribute('tokens', true, configData.defaultData.tokens);
+			this.wallets = this.getAttribute('wallets', true, configData.defaultData.wallets);
+			if (payment) this.payment = payment;
+		}
+		this.executeReadyCallback();
+	}
 
-    private async getInvoiceLink() {
-        if (!this._invoiceData) {
-            console.error('Invoice data is empty.');
-            return;
-        }
-        const response = await fetch(`${this.botAPIEndpoint}/invoice`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                ...this._invoiceData,
-                prices: JSON.stringify(this._invoiceData.prices)
-            })
-        });
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-                return data.data.invoiceLink;
-            }
-            else return '';
-        }
-    }
-
-    private async handlePayClick() {
-        const telegram = (window as any).Telegram;
-        if (telegram) {
-            const app = telegram.WebApp;
-            if (app) {
-                const invoiceLink = await this.getInvoiceLink();
-                if (invoiceLink) {
-                    app.openInvoice(invoiceLink, this.onPaymentSuccess);
-                }
-            }
-        }
-    }
-
-    private async handlePayWithStripeClick() {
-        this.updateStripeDetailUI();
-        await this.initStripePayment();
-    }
-
-    private updateStripeDetailUI() {
-        this.pnlPaymentOptions.visible = false;
-        this.pnlStripe.visible = true;
-        this.lbStripeDetailProductName.caption = this._invoiceData.title;
-        this.lbStripeDetailProductAmount.caption = `${this._invoiceData.amount / 100} ${this._invoiceData.currency}`;
-        if (this._invoiceData.photoUrl) {
-            this.imgStripeDetailProductImage.url = this._invoiceData.photoUrl;
-        }
-    }
-
-    private async handleStripeCheckoutClick() {
-        if (!this.stripe) return;
-        this.stripeElements.submit().then((result) => {
-            console.log('stripe result', result);
-        })
-    }
-
-    render() {
-        return (
-            <i-stack direction="vertical" width={'100%'} height={'100%'}>
-                <i-stack direction="vertical" gap={5}>
-                    <i-label caption="AMOUNT TO PAY" font={{ size: '14px' }} />
-                    <i-label id="lbAmount" font={{ size: '20px' }} />
-                </i-stack>
-                <i-stack direction="vertical" id="pnlPaymentOptions">
-                    <i-button id="btnPayWithStripe" onClick={this.handlePayWithStripeClick} caption={'Pay with stripe'} padding={{ top: 10, bottom: 10, left: 10, right: 10 }} width={'100%'} />
-                </i-stack>
-                <i-stack direction="vertical" id="pnlStripe" visible={false}>
-                    <i-stack direction="horizontal" width={'100%'} height={'100%'} border={{ right: { width: 1, style: 'solid', color: Theme.divider } }}>
-                        <i-stack direction="vertical" gap={10} padding={{ top: 20, bottom: 20, left: 20, right: 20 }} width={'50%'}>
-                            <i-label id="lbStripeDetailProductName" font={{ color: Theme.text.secondary }} />
-                            <i-label id="lbStripeDetailProductAmount" font={{ color: Theme.text.primary, size: '18px' }} />
-                            <i-image id="imgStripeDetailProductImage" maxWidth={'100%'} />
-                        </i-stack>
-                        <i-stack direction="vertical" background={{ color: 'white' }} width={'50%'} padding={{ top: 20, bottom: 20, left: 20, right: 20 }} gap={10}>
-                            <i-stack direction="vertical" id="pnlStripePaymentForm"></i-stack>
-                            <i-stack direction="horizontal">
-                                <i-button width={'100%'} padding={{ top: 5, left: 5, right: 5, bottom: 5 }} caption="Checkout" onClick={this.handleStripeCheckoutClick} />
-                            </i-stack>
-                        </i-stack>
-                    </i-stack>
-
-                </i-stack>
-
-            </i-stack>
-        );
-    }
+	render() {
+		return <i-scom-dapp-container id="containerDapp" showHeader={true} showFooter={false} class={dappContainerStyle}>
+			<i-stack
+				direction="vertical"
+				width="100%"
+				height="100%"
+				minHeight={480}
+				border={{ radius: 12 }}
+			>
+				<scom-payment-widget--invoice-creation id="invoiceCreation" visible={false} height="100%" />
+				<scom-payment-widget--payment-method id="paymentMethod" visible={false} height="100%" />
+				<scom-payment-widget--wallet-payment id="walletPayment" visible={false} height="100%" />
+				<scom-payment-widget--stripe-payment id="stripePayment" visible={false} height="100%" />
+				<scom-payment-widget--status-payment id="statusPayment" visible={false} height="100%" />
+			</i-stack>
+		</i-scom-dapp-container>
+	}
 }

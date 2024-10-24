@@ -126,10 +126,11 @@ export class WalletPayment extends Module {
     }
 
     private updateAmount() {
-        if (this.lbAmount) {
-            const amount = FormatUtils.formatNumber(this.payment?.amount || 0, { decimalFigures: 2 });
-            this.lbAmount.caption = `${amount} USD`;
-            this.lbPayAmount.caption = `${amount} USD`;
+        if (this.lbAmount && this.payment) {
+            const { amount, currency } = this.payment;
+            const formattedAmount = FormatUtils.formatNumber(amount || 0, { decimalFigures: 2 });
+            this.lbAmount.caption = `${formattedAmount} ${currency || 'USD'}`;
+            this.lbPayAmount.caption = `${formattedAmount} ${currency || 'USD'}`;
         }
     }
 
@@ -148,7 +149,7 @@ export class WalletPayment extends Module {
                 const address = '0xA81961100920df22CF98703155029822f2F7f033';
                 const chainId = 97;
                 const network = {
-                    image: '/libs/@scom/scom-network-list/img/bscMainnet.svg',
+                    image: assets.fullPath('img/bscMainnet.svg'),
                     chainName: 'BNB Chain Testnet'
                 };
                 if (provider) {
@@ -229,11 +230,12 @@ export class WalletPayment extends Module {
         this.btnBack.width = 'calc(50% - 1rem)';
         this.isToPay = true;
         this.imgToken.url = tokenAssets.tokenPath(token, token.chainId);
-        const address = this.payment.address || '';
-        this.lbToAddress.caption = address.substr(0, 12) + '...' + address.substr(-12);
-        const amount = FormatUtils.formatNumber(this.payment.amount || 0, { decimalFigures: 2 });
-        this.lbAmountToPay.caption = `${amount} ${token.symbol}`;
-        this.lbUSD.caption = `${amount} USD`;
+        const { address, amount, currency } = this.payment;
+        const toAddress = address || '';
+        this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);
+        const formattedAmount = FormatUtils.formatNumber(amount || 0, { decimalFigures: 2 });
+        this.lbAmountToPay.caption = `${formattedAmount} ${token.symbol}`;
+        this.lbUSD.caption = `${formattedAmount} ${currency || 'USD'}`;
         this.imgPayToken.url = tokenAssets.tokenPath(token, token.chainId);
     }
 
@@ -265,8 +267,7 @@ export class WalletPayment extends Module {
 
     private handlePay() {
         if (this.onPaid) {
-            const wallet = Wallet.getClientInstance();
-            const address = wallet.address;
+            const address = '0xA81961100920df22CF98703155029822f2F7f033';
             this.onPaid({ status: 'pending', provider: this.payment.provider, receipt: '0x00000000000000000000000000000', ownerAddress: address });
             setTimeout(() => {
                 this.onPaid({ status: 'complete', provider: this.payment.provider, receipt: '0x00000000000000000000000000000', ownerAddress: address });
@@ -323,7 +324,7 @@ export class WalletPayment extends Module {
                     padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}
                     background={{ color: Theme.colors.primary.main }}
                 >
-                    <i-label caption="Amount to pay" font={{ size: '0.675rem', bold: true, transform: 'uppercase', color: Theme.text.primary }} opacity={0.8} />
+                    <i-label caption="Amount to pay" font={{ size: '0.675rem', bold: true, transform: 'uppercase', color: Theme.text.primary }} />
                     <i-label id="lbAmount" font={{ size: '0.875rem', color: Theme.text.primary, bold: true }} />
                 </i-stack>
                 <i-stack
@@ -446,7 +447,7 @@ export class WalletPayment extends Module {
                                 width="100%"
                                 padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }}
                             >
-                                <i-label caption="Amount to pay" font={{ size: '0.75rem', transform: 'uppercase', color: Theme.input.fontColor }} opacity={0.8} />
+                                <i-label caption="Amount to pay" font={{ size: '0.75rem', transform: 'uppercase', color: Theme.input.fontColor }} />
                                 <i-label id="lbAmountToPay" wordBreak="break-all" font={{ size: '0.875rem', color: Theme.colors.primary.main, bold: true }} />
                                 <i-label id="lbUSD" wordBreak="break-all" font={{ size: '0.75rem', color: Theme.colors.primary.main }} />
                             </i-stack>
@@ -466,7 +467,7 @@ export class WalletPayment extends Module {
                             </i-stack>
                         </i-stack>
                     </i-stack>
-                    <i-stack direction="horizontal" width="100%" alignItems="center" justifyContent="center" gap="2rem" wrap="wrap" padding={{ left: '1rem', right: '1rem' }}>
+                    <i-stack direction="horizontal" width="100%" alignItems="center" justifyContent="center" gap="1rem" wrap="wrap" padding={{ left: '1rem', right: '1rem' }}>
                         <i-button
                             id="btnBack"
                             caption="Back"

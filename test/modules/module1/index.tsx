@@ -1,8 +1,10 @@
-import { Module, customModule, Container, application } from '@ijstech/components';
+import { Module, customModule, Container, application, Styles } from '@ijstech/components';
 import { INetwork } from '@ijstech/eth-wallet';
 import { getMulticallInfoList } from '@scom/scom-multicall';
 import getNetworkList from '@scom/scom-network-list';
 import { ScomPaymentWidget } from '@scom/scom-payment-widget';
+const Theme = Styles.Theme.ThemeVars;
+
 @customModule
 export default class Module1 extends Module {
   private scomPaymentWidget: ScomPaymentWidget;
@@ -45,35 +47,49 @@ export default class Module1 extends Module {
 
   async init() {
     super.init();
-    // this.scomPaymentWidget.onStartPayment({
-    //   amount: 1000,
-    //   paymentId: '262951AA-D913-40A5-9468-7EB8B92706E3',
-    //   address: '0xA81961100920df22CF98703155029822f2F7f033'
-    // });
   }
 
-  private onSubmit(content: string, medias: any) {
-    console.log(content);
+  private async handlePay() {
+    if (!this.scomPaymentWidget) {
+      this.scomPaymentWidget = new ScomPaymentWidget(undefined, { display: 'block', margin: { top: '1rem' }});
+      this.scomPaymentWidget.onPaymentSuccess = this.handlePaymentSuccess.bind(this);
+      await this.scomPaymentWidget.ready();
+    }
+    this.scomPaymentWidget.openModal({
+      title: 'Payment',
+      width: '100%',
+      maxWidth: '450px',
+      maxHeight: '100%',
+      zIndex: 1001
+    });
+    this.scomPaymentWidget.onStartPayment({
+      amount: 1000,
+      paymentId: '262951AA-D913-40A5-9468-7EB8B92706E3',
+      address: '0xA81961100920df22CF98703155029822f2F7f033',
+      title: 'Invoice title',
+      currency: 'USD',
+      photoUrl: 'https://cdn.corporatefinanceinstitute.com/assets/product-mix3.jpeg'
+    });
   }
 
-  private async handlePaymentSuccess() {
-
+  private async handlePaymentSuccess(status: string) {
+    console.log('handlePaymentSuccess', status);
   }
 
   render() {
     return <i-panel width="100%">
-      <i-hstack id="mainStack" margin={{ top: '1rem', left: '1rem' }} gap="2rem" width="100%" padding={{ top: '1rem', bottom: '1rem' }}>
-        {/* <i-scom-payment-widget id="scomPaymentWidget" /> */}
-        <i-scom-payment-widget onPaymentSuccess={this.handlePaymentSuccess} botAPIEndpoint={'http://localhost:3000'}
-          data={{
-            title: 'Invoice title',
-            // description: 'Invoice description',
-            currency: 'USD',
-            amount: 100000,
-            // prices: [{label: 'Item 1', amount: 10000}],
-            // payload: 'payload',
-            photoUrl: 'https://cdn.corporatefinanceinstitute.com/assets/product-mix3.jpeg'
-          }} />
+      <i-hstack id="mainStack" margin={{ top: '1rem', left: '1rem' }} gap="2rem" width="100%" justifyContent="center" padding={{ top: '1rem', bottom: '1rem' }}>
+        <i-button
+          caption="Pay"
+          width="100%"
+          maxWidth={180}
+          minWidth={90}
+          padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }}
+          font={{ size: '1rem', color: Theme.colors.primary.contrastText }}
+          background={{ color: Theme.colors.primary.main }}
+          border={{ radius: 12 }}
+          onClick={this.handlePay}
+        />
       </i-hstack>
     </i-panel>
   }

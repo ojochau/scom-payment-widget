@@ -1,7 +1,13 @@
 export interface IPaymentInfo {
+  title: string;
+  description?: string;
   paymentId: string;
   amount: number;
-  address?: string;
+  currency?: string;
+  photoUrl?: string;
+  payload?: string;
+  prices?: { label: string; amount: number | string }[];
+  address?: string; //wallet
   provider?: PaymentProvider;
 }
 

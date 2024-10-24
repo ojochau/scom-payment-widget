@@ -19,10 +19,11 @@ declare global {
 @customElements('scom-payment-widget--invoice-creation')
 export class InvoiceCreation extends Module {
     private lbAmount: Label;
+    private pnlPaymentId: Label;
     private lbPaymentId: Label;
     private checkboxAgree: Checkbox;
     private btnContinue: Button;
-    private _payment: IPaymentInfo = { paymentId: '', amount: 0 };
+    private _payment: IPaymentInfo = { title: '', paymentId: '', amount: 0 };
     public onContinue: () => void;
 
     get payment() {
@@ -39,12 +40,18 @@ export class InvoiceCreation extends Module {
     }
 
     private updateInfo() {
-        const { amount, paymentId } = this.payment;
+        const { paymentId, amount, currency } = this.payment;
         if (this.lbAmount) {
-            this.lbAmount.caption = `${FormatUtils.formatNumber(amount || 0, { decimalFigures: 2 })} USD`;
+            this.lbAmount.caption = `${FormatUtils.formatNumber(amount || 0, { decimalFigures: 2 })} ${currency || 'USD'}`;
         }
-        if (this.lbPaymentId) {
-            this.lbPaymentId.caption = paymentId || '';
+        if (this.pnlPaymentId) {
+            const _paymentId = paymentId || ''; 
+            this.pnlPaymentId.visible = !!_paymentId;
+            this.lbPaymentId.caption = _paymentId;
+        }   
+        if (this.checkboxAgree.checked) {
+            this.checkboxAgree.checked = false;
+            this.btnContinue.enabled = false;
         }
     }
 
@@ -71,12 +78,12 @@ export class InvoiceCreation extends Module {
             <i-stack direction="vertical" gap="1rem" height="100%">
                 <i-stack direction="vertical" gap="1rem" alignItems="center" width="100%">
                     <i-stack direction="vertical" gap="0.5rem" alignItems="center">
-                        <i-label caption="Amount to pay" font={{ color: Theme.text.secondary, bold: true, transform: 'uppercase' }} />
+                        <i-label caption="Amount to pay" font={{ color: Theme.text.primary, bold: true, transform: 'uppercase' }} />
                         <i-label id="lbAmount" class={textCenterStyle} font={{ size: '1.25rem', color: Theme.colors.primary.main, bold: true }} />
                     </i-stack>
-                    <i-stack direction="vertical" gap="0.25rem" alignItems="center">
-                        <i-label caption="Payment ID" font={{ color: Theme.text.secondary, bold: true, transform: 'uppercase' }} />
-                        <i-label id="lbPaymentId" class={textCenterStyle} font={{ color: Theme.text.secondary, bold: true, transform: 'uppercase' }} />
+                    <i-stack id="pnlPaymentId" visible={false} direction="vertical" gap="0.25rem" alignItems="center">
+                        <i-label caption="Payment ID" font={{ color: Theme.text.primary, bold: true, transform: 'uppercase' }} />
+                        <i-label id="lbPaymentId" class={textCenterStyle} font={{ color: Theme.text.primary, bold: true, transform: 'uppercase' }} />
                     </i-stack>
                     <i-panel width="80%" height={1} background={{ color: Theme.divider }} />
                 </i-stack>
@@ -95,7 +102,7 @@ export class InvoiceCreation extends Module {
                         border={{ radius: 8 }}
                     >
                         <i-label caption="Your email" font={{ size: '0.75rem', color: Theme.input.fontColor }} />
-                        <i-input background={{ color: 'transparent' }} border={{ radius: 4, width: 1, style: 'solid', color: Theme.divider }} height={32} width="100%" />
+                        <i-input background={{ color: 'transparent' }} padding={{ left: '0.25rem', right: '0.25rem' }} border={{ radius: 4, width: 1, style: 'solid', color: Theme.divider }} height={32} width="100%" />
                     </i-stack>
                 </i-stack>
                 <i-stack direction="horizontal" gap="0.25rem">
