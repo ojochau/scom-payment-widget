@@ -21,6 +21,7 @@ declare global {
 export class StatusPayment extends Module {
     private state: State;
     private receipt: string;
+    private status: string;
     private lbHeaderStatus: Label;
     private imgHeaderStatus: Image;
     private lbStatus: Label;
@@ -28,7 +29,7 @@ export class StatusPayment extends Module {
     private lbAddress: Label;
     private imgWallet: Image;
     private btnClose: Button;
-    public onClose: () => void;
+    public onClose: (status: string) => void;
 
     constructor(parent?: Container, options?: ScomPaymentWidgetStatusPaymentElement) {
         super(parent, options);
@@ -38,6 +39,7 @@ export class StatusPayment extends Module {
         this.state = state;
         const { status, receipt, provider, ownerAddress } = info;
         this.receipt = receipt;
+        this.status = status;
         const isPending = status === 'pending';
         const isCompleted = status === 'complete';
         this.lbHeaderStatus.caption = isPending ? 'Payment Pending' : isCompleted ? 'Success' : 'Failed';
@@ -66,7 +68,7 @@ export class StatusPayment extends Module {
     }
 
     private handleClose() {
-        if (this.onClose) this.onClose();
+        if (this.onClose) this.onClose(this.status);
     }
 
     async init() {

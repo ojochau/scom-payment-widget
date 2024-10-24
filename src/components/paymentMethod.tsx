@@ -61,9 +61,10 @@ export class PaymentMethod extends Module {
     }
 
     private updateAmount() {
-        if (this.lbAmount) {
-            const amount = FormatUtils.formatNumber(this.payment?.amount || 0, { decimalFigures: 2 });
-            this.lbAmount.caption = `${amount} USD`;
+        if (this.lbAmount && this.payment) {
+            const { amount, currency } = this.payment;
+            const formattedAmount = FormatUtils.formatNumber(amount || 0, { decimalFigures: 2 });
+            this.lbAmount.caption = `${formattedAmount} ${currency || 'USD'}`;
         }
     }
 
@@ -106,7 +107,7 @@ export class PaymentMethod extends Module {
     }
 
     private handlePaymentProvider(provider: PaymentProvider) {
-        if (provider === PaymentProvider.Metamask) {
+        if (provider === PaymentProvider.Metamask || provider === PaymentProvider.Stripe) {
             if (this.onSelectedPaymentProvider) this.onSelectedPaymentProvider(this.payment, provider);
         }
     }
@@ -139,7 +140,7 @@ export class PaymentMethod extends Module {
                 padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}
                 background={{ color: Theme.colors.primary.main }}
             >
-                <i-label caption="Amount to pay" font={{ size: '0.675rem', bold: true, transform: 'uppercase', color: Theme.text.primary }} opacity={0.8} />
+                <i-label caption="Amount to pay" font={{ size: '0.675rem', bold: true, transform: 'uppercase', color: Theme.text.primary }} />
                 <i-label id="lbAmount" font={{ size: '0.875rem', color: Theme.text.primary, bold: true }} />
             </i-stack>
             <i-stack direction="vertical" gap="1rem" width="100%" height="100%" alignItems="center" padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}>
