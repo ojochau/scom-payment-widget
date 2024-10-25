@@ -1,4 +1,4 @@
-import { Module, Container, customElements, ControlElement } from '@ijstech/components';
+import { Module, Container, customElements, ControlElement, Styles } from '@ijstech/components';
 import { InvoiceCreation, PaymentMethod, WalletPayment, StripePayment, StatusPayment } from './components/index';
 import { INetworkConfig, IPaymentInfo, IPaymentStatus, PaymentProvider } from './interface';
 import { State } from './store';
@@ -9,6 +9,7 @@ import '@scom/scom-dapp-container';
 import { dappContainerStyle } from './index.css';
 import { IRpcWallet } from '@ijstech/eth-wallet';
 import ScomDappContainer from '@scom/scom-dapp-container';
+const Theme = Styles.Theme.ThemeVars;
 
 interface ScomPaymentWidgetElement extends ControlElement {
 	lazyLoad?: boolean;
@@ -183,7 +184,7 @@ export class ScomPaymentWidget extends Module {
 				width="100%"
 				height="100%"
 				minHeight={480}
-				border={{ radius: 12 }}
+				border={{ radius: 12, style: 'solid', width: 1, color: Theme.action.activeBackground }}
 			>
 				<scom-payment-widget--invoice-creation id="invoiceCreation" visible={false} height="100%" />
 				<scom-payment-widget--payment-method id="paymentMethod" visible={false} height="100%" />
