@@ -107,7 +107,7 @@ export class PaymentMethod extends Module {
     }
 
     private handlePaymentProvider(provider: PaymentProvider) {
-        if (provider === PaymentProvider.Metamask || provider === PaymentProvider.Stripe) {
+        if ([PaymentProvider.Metamask, PaymentProvider.TonWallet, PaymentProvider.Stripe].includes(provider)) {
             if (this.onSelectedPaymentProvider) this.onSelectedPaymentProvider(this.payment, provider);
         }
     }

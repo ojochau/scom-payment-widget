@@ -185,6 +185,7 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
     import { INetworkConfig, IPaymentInfo, IPaymentStatus } from "@scom/scom-payment-widget/interface.ts";
     import { ITokenObject } from '@scom/scom-token-list';
     import { State } from "@scom/scom-payment-widget/store.ts";
+    import { IRpcWallet } from '@ijstech/eth-wallet';
     import { IWalletPlugin } from '@scom/scom-wallet-modal';
     interface ScomPaymentWidgetWalletPaymentElement extends ControlElement {
         wallets?: IWalletPlugin[];
@@ -207,6 +208,7 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private lbAmount;
         private lbPayAmount;
         private imgPayToken;
+        private btnTonWallet;
         private pnlNetwork;
         private pnlWallet;
         private pnlTokens;
@@ -229,13 +231,16 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private _networks;
         private _tokens;
         private _state;
+        private rpcWalletEvents;
         private isInitialized;
-        private isWalletConnected;
+        private isWalletInitialized;
         private isToPay;
         private copyAddressTimer;
         private copyAmountTimer;
         private iconCopyAddress;
         private iconCopyAmount;
+        private tonConnectUI;
+        private isTonWalletConnected;
         onBack: () => void;
         onPaid: (paymentStatus: IPaymentStatus) => void;
         constructor(parent?: Container, options?: ScomPaymentWidgetWalletPaymentElement);
@@ -247,11 +252,20 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         set networks(value: INetworkConfig[]);
         get tokens(): ITokenObject[];
         set tokens(value: ITokenObject[]);
+        get rpcWallet(): IRpcWallet;
         onStartPayment(payment: IPaymentInfo): Promise<void>;
         private showFirstScreen;
+        private removeRpcWalletEvents;
+        private resetRpcWallet;
+        private initWallet;
+        private initTonWallet;
+        private connectTonWallet;
+        private loadLib;
         private updateAmount;
         private checkWalletStatus;
+        private updateTokenBalances;
         private renderTokens;
+        private updateDappContainer;
         private handleConnectWallet;
         private handleShowNetworks;
         private handleSelectToken;

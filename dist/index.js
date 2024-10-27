@@ -326,7 +326,7 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
             }
         }
         handlePaymentProvider(provider) {
-            if (provider === interface_2.PaymentProvider.Metamask || provider === interface_2.PaymentProvider.Stripe) {
+            if ([interface_2.PaymentProvider.Metamask, interface_2.PaymentProvider.TonWallet, interface_2.PaymentProvider.Stripe].includes(provider)) {
                 if (this.onSelectedPaymentProvider)
                     this.onSelectedPaymentProvider(this.payment, provider);
             }
@@ -414,10 +414,11 @@ define("@scom/scom-payment-widget/data.ts", ["require", "exports"], function (re
         }
     };
 });
-define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/data.ts", "@scom/scom-token-list", "@scom/scom-payment-widget/store.ts"], function (require, exports, components_6, interface_3, assets_2, data_1, scom_token_list_1, store_2) {
+define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/data.ts", "@scom/scom-token-list", "@scom/scom-payment-widget/store.ts", "@ijstech/eth-wallet", "@scom/scom-payment-widget/components/index.css.ts"], function (require, exports, components_6, interface_3, assets_2, data_1, scom_token_list_1, store_2, eth_wallet_2, index_css_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.WalletPayment = void 0;
+    const path = components_6.application.currentModuleDir;
     const Theme = components_6.Styles.Theme.ThemeVars;
     let WalletPayment = class WalletPayment extends components_6.Module {
         constructor(parent, options) {
@@ -425,6 +426,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             this._wallets = [];
             this._networks = [];
             this._tokens = [];
+            this.rpcWalletEvents = [];
         }
         get state() {
             return this._state;
@@ -450,16 +452,19 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         set tokens(value) {
             this._tokens = value;
         }
+        get rpcWallet() {
+            return this.state.getRpcWallet();
+        }
         async onStartPayment(payment) {
             this.payment = payment;
             if (!this.pnlAmount)
                 return;
             this.isInitialized = true;
             if (this.payment.provider === interface_3.PaymentProvider.Metamask) {
-                // TODO
+                await this.initWallet();
             }
             else if (this.payment.provider === interface_3.PaymentProvider.TonWallet) {
-                // TODO
+                this.initTonWallet();
             }
             this.showFirstScreen();
             this.updateAmount();
@@ -474,6 +479,87 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             this.btnBack.width = '100%';
             this.isToPay = false;
         }
+        removeRpcWalletEvents() {
+            const rpcWallet = this.rpcWallet;
+            for (let event of this.rpcWalletEvents) {
+                rpcWallet.unregisterWalletEvent(event);
+            }
+            this.rpcWalletEvents = [];
+        }
+        async resetRpcWallet() {
+            this.removeRpcWalletEvents();
+            await this.state.initRpcWallet(data_1.default.defaultData.defaultChainId);
+            const rpcWallet = this.rpcWallet;
+            const chainChangedEvent = rpcWallet.registerWalletEvent(this, eth_wallet_2.Constants.RpcWalletEvent.ChainChanged, async (chainId) => {
+                this.showFirstScreen();
+                this.checkWalletStatus();
+            });
+            const connectedEvent = rpcWallet.registerWalletEvent(this, eth_wallet_2.Constants.RpcWalletEvent.Connected, async (connected) => {
+                this.checkWalletStatus();
+            });
+            this.rpcWalletEvents.push(chainChangedEvent, connectedEvent);
+            this.updateDappContainer();
+        }
+        async initWallet() {
+            if (this.isWalletInitialized)
+                return;
+            try {
+                await eth_wallet_2.Wallet.getClientInstance().init();
+                await this.resetRpcWallet();
+                await this.rpcWallet.init();
+                this.isWalletInitialized = true;
+            }
+            catch (err) {
+                console.log(err);
+            }
+        }
+        initTonWallet() {
+            try {
+                if (this.tonConnectUI)
+                    return;
+                let UI = window['TON_CONNECT_UI'];
+                this.tonConnectUI = new UI.TonConnectUI({
+                    manifestUrl: 'https://ton.noto.fan/tonconnect/manifest.json',
+                    buttonRootId: 'btnTonWallet'
+                });
+                this.tonConnectUI.connectionRestored.then(async (restored) => {
+                    this.isTonWalletConnected = this.tonConnectUI.connected;
+                    this.checkWalletStatus();
+                });
+                this.tonConnectUI.onStatusChange((walletAndwalletInfo) => {
+                    this.isTonWalletConnected = !!walletAndwalletInfo;
+                    this.checkWalletStatus();
+                });
+            }
+            catch (err) {
+                console.log(err);
+            }
+        }
+        async connectTonWallet() {
+            try {
+                await this.tonConnectUI.openModal();
+            }
+            catch (err) {
+                console.log(err);
+            }
+        }
+        async loadLib() {
+            if (window['TON_CONNECT_UI'])
+                return;
+            const moduleDir = this['currentModuleDir'] || path;
+            return new Promise((resolve, reject) => {
+                components_6.RequireJS.config({
+                    baseUrl: `${moduleDir}/lib`,
+                    paths: {
+                        'tonconnect-ui': 'tonconnect-ui'
+                    }
+                });
+                components_6.RequireJS.require(['tonconnect-ui'], function (TonConnectUI) {
+                    window['TON_CONNECT_UI'] = TonConnectUI;
+                    resolve(TonConnectUI);
+                });
+            });
+        }
         updateAmount() {
             if (this.lbAmount && this.payment) {
                 const { amount, currency } = this.payment;
@@ -484,23 +570,21 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         }
         async checkWalletStatus() {
             const paymentProvider = this.payment.provider;
-            let isConnected = this.isWalletConnected;
+            let isConnected;
             if (paymentProvider === interface_3.PaymentProvider.Metamask) {
-                // TODO
+                isConnected = (0, store_2.isClientWalletConnected)();
             }
             else if (paymentProvider === interface_3.PaymentProvider.TonWallet) {
-                // TODO
+                isConnected = this.isTonWalletConnected;
             }
             this.pnlWallet.visible = !isConnected;
             const provider = store_2.PaymentProviders.find(v => v.provider === this.payment.provider);
             if (isConnected) {
                 if (paymentProvider === interface_3.PaymentProvider.Metamask) {
-                    const address = '0xA81961100920df22CF98703155029822f2F7f033';
-                    const chainId = 97;
-                    const network = {
-                        image: assets_2.default.fullPath('img/bscMainnet.svg'),
-                        chainName: 'BNB Chain Testnet'
-                    };
+                    const wallet = this.state.getRpcWallet();
+                    const address = wallet.address;
+                    const chainId = wallet.chainId;
+                    const network = this.state.getNetworkInfo(chainId);
                     if (provider) {
                         this.imgCurrentWallet.url = assets_2.default.fullPath(`img/${provider.image}`);
                         this.lbCurrentAddress.caption = address.substr(0, 6) + '...' + address.substr(-4);
@@ -511,7 +595,16 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                     await this.renderTokens(chainId);
                 }
                 else if (paymentProvider === interface_3.PaymentProvider.TonWallet) {
-                    // TODO
+                    const account = this.tonConnectUI.account;
+                    const address = account.address;
+                    this.pnlNetwork.visible = false;
+                    if (provider) {
+                        this.imgCurrentWallet.url = assets_2.default.fullPath(`img/${provider.image}`);
+                        this.lbCurrentAddress.caption = address.substr(0, 6) + '...' + address.substr(-4);
+                    }
+                    // TODO - render tokens for ton wallet
+                    this.pnlTokenItems.clearInnerHTML();
+                    this.pnlTokenItems.appendChild(this.$render("i-label", { caption: "No tokens", class: index_css_2.textCenterStyle }));
                 }
             }
             else if (provider) {
@@ -520,12 +613,26 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             }
             this.pnlTokens.visible = isConnected;
         }
+        async updateTokenBalances(tokens) {
+            const arr = (tokens || this.tokens).reduce((acc, token) => {
+                const { chainId } = token;
+                if (!acc[chainId]) {
+                    acc[chainId] = [];
+                }
+                acc[chainId].push(token);
+                return acc;
+            }, {});
+            let promises = [];
+            for (const chainId in arr) {
+                const tokens = arr[chainId];
+                promises.push(scom_token_list_1.tokenStore.updateTokenBalancesByChainId(Number(chainId), tokens));
+            }
+            await Promise.all(promises);
+        }
         async renderTokens(chainId) {
             const tokens = this.tokens.filter(v => v.chainId === chainId);
-            const network = {
-                image: '/libs/@scom/scom-network-list/img/bscMainnet.svg',
-                chainName: 'BNB Chain Testnet'
-            };
+            await this.updateTokenBalances(tokens);
+            const network = this.state.getNetworkInfo(chainId);
             const nodeItems = [];
             for (const token of tokens) {
                 const balances = scom_token_list_1.tokenStore.getTokenBalancesByChainId(chainId) || {};
@@ -543,11 +650,32 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             this.pnlTokenItems.clearInnerHTML();
             this.pnlTokenItems.append(...nodeItems);
         }
+        updateDappContainer() {
+            const dappContainer = this.closest('i-scom-dapp-container');
+            const containerData = {
+                wallets: this.wallets,
+                networks: this.networks,
+                showHeader: true,
+                rpcWalletId: this.state.getRpcWallet()?.instanceId
+            };
+            dappContainer.setData(containerData);
+        }
         handleConnectWallet() {
-            this.isWalletConnected = true;
-            this.checkWalletStatus();
+            if (this.payment.provider === interface_3.PaymentProvider.Metamask) {
+                const dappContainer = this.closest('i-scom-dapp-container');
+                const header = dappContainer.querySelector('dapp-container-header');
+                const btnConnectWallet = header.querySelector('#btnConnectWallet');
+                btnConnectWallet.click();
+            }
+            else if (this.payment.provider === interface_3.PaymentProvider.TonWallet) {
+                this.connectTonWallet();
+            }
         }
         handleShowNetworks() {
+            const dappContainer = this.closest('i-scom-dapp-container');
+            const header = dappContainer.querySelector('dapp-container-header');
+            const btnNetwork = header.querySelector('#btnNetwork');
+            btnNetwork.click();
         }
         handleSelectToken(token) {
             this.pnlAmount.visible = false;
@@ -596,7 +724,8 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         }
         handlePay() {
             if (this.onPaid) {
-                const address = '0xA81961100920df22CF98703155029822f2F7f033';
+                const wallet = eth_wallet_2.Wallet.getClientInstance();
+                const address = wallet.address;
                 this.onPaid({ status: 'pending', provider: this.payment.provider, receipt: '0x00000000000000000000000000000', ownerAddress: address });
                 setTimeout(() => {
                     this.onPaid({ status: 'complete', provider: this.payment.provider, receipt: '0x00000000000000000000000000000', ownerAddress: address });
@@ -613,6 +742,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         }
         async init() {
             super.init();
+            this.loadLib();
             this.onBack = this.getAttribute('onBack', true) || this.onBack;
             this.onPaid = this.getAttribute('onPaid', true) || this.onPaid;
             const state = this.getAttribute('state', true);
@@ -670,9 +800,10 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                                     this.$render("i-label", { id: "lbUSD", wordBreak: "break-all", font: { size: '0.75rem', color: Theme.colors.primary.main } })),
                                 this.$render("i-stack", { direction: "horizontal", width: 32, minWidth: 32, height: "100%", alignItems: "center", justifyContent: "center", cursor: "pointer", margin: { left: 'auto' }, background: { color: Theme.colors.primary.main }, onClick: this.handleCopyAmount },
                                     this.$render("i-icon", { id: "iconCopyAmount", name: "copy", width: 16, height: 16, fill: Theme.text.primary })))),
-                        this.$render("i-stack", { direction: "horizontal", width: "100%", alignItems: "center", justifyContent: "center", gap: "1rem", wrap: "wrap", padding: { left: '1rem', right: '1rem' } },
+                        this.$render("i-stack", { direction: "horizontal", width: "100%", alignItems: "center", justifyContent: "center", gap: "1rem", wrap: "wrap-reverse", padding: { left: '1rem', right: '1rem' } },
                             this.$render("i-button", { id: "btnBack", caption: "Back", width: "100%", maxWidth: 180, minWidth: 90, padding: { top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }, font: { size: '1rem', color: Theme.colors.secondary.contrastText }, background: { color: Theme.colors.secondary.main }, border: { radius: 12 }, onClick: this.handleBack }),
-                            this.$render("i-button", { id: "btnPay", visible: false, caption: "Pay", width: "calc(50% - 1rem)", maxWidth: 180, minWidth: 90, padding: { top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }, font: { size: '1rem', color: Theme.colors.primary.contrastText }, background: { color: Theme.colors.primary.main }, border: { radius: 12 }, onClick: this.handlePay })))));
+                            this.$render("i-button", { id: "btnPay", visible: false, caption: "Pay", width: "calc(50% - 1rem)", maxWidth: 180, minWidth: 90, padding: { top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }, font: { size: '1rem', color: Theme.colors.primary.contrastText }, background: { color: Theme.colors.primary.main }, border: { radius: 12 }, onClick: this.handlePay })))),
+                this.$render("i-button", { id: "btnTonWallet", visible: false }));
         }
     };
     WalletPayment = __decorate([
@@ -680,7 +811,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
     ], WalletPayment);
     exports.WalletPayment = WalletPayment;
 });
-define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/store.ts"], function (require, exports, components_7, index_css_2, assets_3, store_3) {
+define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/store.ts"], function (require, exports, components_7, index_css_3, assets_3, store_3) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.StatusPayment = void 0;
@@ -702,10 +833,10 @@ define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "ex
             this.imgHeaderStatus.visible = isPending;
             this.lbStatus.caption = `Payment ${status}`;
             if (isPending) {
-                this.imgStatus.classList.add(index_css_2.loadingImageStyle);
+                this.imgStatus.classList.add(index_css_3.loadingImageStyle);
             }
             else {
-                this.imgStatus.classList.remove(index_css_2.loadingImageStyle);
+                this.imgStatus.classList.remove(index_css_3.loadingImageStyle);
             }
             this.imgStatus.url = assets_3.default.fullPath(`img/${isPending ? 'loading.svg' : isCompleted ? 'success.svg' : 'error.png'}`);
             const currentProvider = store_3.PaymentProviders.find(v => v.provider === provider);
@@ -733,7 +864,7 @@ define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "ex
                 this.$render("i-stack", { direction: "vertical", gap: "1rem", height: "100%", width: "100%" },
                     this.$render("i-stack", { direction: "horizontal", gap: "1rem", justifyContent: "space-between", alignItems: "center", width: "100%", minHeight: 40, padding: { left: '1rem', right: '1rem', bottom: '1rem' }, border: { bottom: { style: 'solid', width: 1, color: Theme.divider } } },
                         this.$render("i-label", { id: "lbHeaderStatus", font: { size: '0.875rem', color: Theme.colors.primary.main, transform: 'uppercase', bold: true } }),
-                        this.$render("i-image", { id: "imgHeaderStatus", class: index_css_2.loadingImageStyle, url: assets_3.default.fullPath('img/loading.svg'), width: 20, height: 20, minWidth: 20 })),
+                        this.$render("i-image", { id: "imgHeaderStatus", class: index_css_3.loadingImageStyle, url: assets_3.default.fullPath('img/loading.svg'), width: 20, height: 20, minWidth: 20 })),
                     this.$render("i-stack", { direction: "vertical", gap: "1rem", width: "100%", height: "100%", alignItems: "center", padding: { left: '1rem', right: '1rem' } },
                         this.$render("i-stack", { direction: "horizontal", justifyContent: "space-between", alignItems: "center", gap: "1rem", width: "100%", wrap: "wrap", margin: { bottom: '0.5rem' } },
                             this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", alignItems: "center", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }, border: { style: 'solid', width: 1, color: Theme.divider, radius: 8 } },
@@ -743,7 +874,7 @@ define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "ex
                                 this.$render("i-label", { caption: "View transaction" }))),
                         this.$render("i-stack", { direction: "vertical", alignItems: "center", justifyContent: "center", gap: "1rem", width: "100%", height: "100%" },
                             this.$render("i-image", { id: "imgStatus", width: 64, height: 64 }),
-                            this.$render("i-label", { id: "lbStatus", class: index_css_2.textCenterStyle, font: { size: '1rem', color: Theme.text.primary, bold: true } })))),
+                            this.$render("i-label", { id: "lbStatus", class: index_css_3.textCenterStyle, font: { size: '1rem', color: Theme.text.primary, bold: true } })))),
                 this.$render("i-button", { id: "btnClose", visible: false, width: "100%", maxWidth: 180, caption: "Close", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }, font: { size: '1rem', color: Theme.colors.primary.contrastText }, background: { color: Theme.colors.primary.main }, border: { radius: 12 }, onClick: this.handleClose }));
         }
     };
@@ -842,7 +973,7 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                     this.$render("i-label", { id: "lbAmount", font: { size: '0.875rem', color: Theme.text.primary, bold: true } })),
                 this.$render("i-stack", { direction: "vertical", gap: "1rem", width: "100%", height: "100%", alignItems: "center", padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' } },
                     this.$render("i-stack", { direction: "vertical", id: "pnlStripePaymentForm", background: { color: '#fff' }, border: { radius: 12 }, padding: { top: '1rem', left: '1rem', bottom: '2rem', right: '1rem' } }),
-                    this.$render("i-stack", { direction: "horizontal", width: "100%", alignItems: "center", justifyContent: "center", margin: { top: 'auto' }, gap: "1rem", wrap: "wrap" },
+                    this.$render("i-stack", { direction: "horizontal", width: "100%", alignItems: "center", justifyContent: "center", margin: { top: 'auto' }, gap: "1rem", wrap: "wrap-reverse" },
                         this.$render("i-button", { caption: "Back", width: "calc(50% - 0.5rem)", maxWidth: 180, minWidth: 90, padding: { top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }, font: { size: '1rem', color: Theme.colors.secondary.contrastText }, background: { color: Theme.colors.secondary.main }, border: { radius: 12 }, onClick: this.handleBack }),
                         this.$render("i-button", { caption: "Checkout", width: "calc(50% - 0.5rem)", maxWidth: 180, minWidth: 90, padding: { top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }, font: { size: '1rem', color: Theme.colors.primary.contrastText }, background: { color: Theme.colors.primary.main }, border: { radius: 12 }, onClick: this.handleStripeCheckoutClick }))));
         }
@@ -885,10 +1016,11 @@ define("@scom/scom-payment-widget/index.css.ts", ["require", "exports", "@ijstec
         }
     });
 });
-define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/data.ts", "@scom/scom-payment-widget/index.css.ts", "@scom/scom-dapp-container"], function (require, exports, components_10, interface_4, store_5, data_2, index_css_3) {
+define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/data.ts", "@scom/scom-payment-widget/index.css.ts", "@scom/scom-dapp-container"], function (require, exports, components_10, interface_4, store_5, data_2, index_css_4) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ScomPaymentWidget = void 0;
+    const Theme = components_10.Styles.Theme.ThemeVars;
     let ScomPaymentWidget = class ScomPaymentWidget extends components_10.Module {
         constructor(parent, options) {
             super(parent, options);
@@ -1019,8 +1151,8 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             this.executeReadyCallback();
         }
         render() {
-            return this.$render("i-scom-dapp-container", { id: "containerDapp", showHeader: true, showFooter: false, class: index_css_3.dappContainerStyle },
-                this.$render("i-stack", { direction: "vertical", width: "100%", height: "100%", minHeight: 480, border: { radius: 12 } },
+            return this.$render("i-scom-dapp-container", { id: "containerDapp", showHeader: true, showFooter: false, class: index_css_4.dappContainerStyle },
+                this.$render("i-stack", { direction: "vertical", width: "100%", height: "100%", minHeight: 480, border: { radius: 12, style: 'solid', width: 1, color: Theme.action.activeBackground } },
                     this.$render("scom-payment-widget--invoice-creation", { id: "invoiceCreation", visible: false, height: "100%" }),
                     this.$render("scom-payment-widget--payment-method", { id: "paymentMethod", visible: false, height: "100%" }),
                     this.$render("scom-payment-widget--wallet-payment", { id: "walletPayment", visible: false, height: "100%" }),
