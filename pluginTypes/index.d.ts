@@ -58,6 +58,9 @@ declare module "@scom/scom-payment-widget/components/invoiceCreation.tsx" {
         }
     }
     export class InvoiceCreation extends Module {
+        private pnlItemInfo;
+        private lbItem;
+        private imgItem;
         private lbAmount;
         private pnlPaymentId;
         private lbPaymentId;
@@ -136,6 +139,7 @@ declare module "@scom/scom-payment-widget/components/paymentMethod.tsx" {
         }
     }
     export class PaymentMethod extends Module {
+        private lbItem;
         private lbAmount;
         private lbPayMethod;
         private pnlPaymentType;
@@ -205,7 +209,9 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
     export class WalletPayment extends Module {
         private pnlAmount;
         private pnlPayAmount;
+        private lbItem;
         private lbAmount;
+        private lbPayItem;
         private lbPayAmount;
         private imgPayToken;
         private btnTonWallet;
@@ -226,7 +232,7 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private lbCurrentAddress;
         private imgCurrentNetwork;
         private lbCurrentNetwork;
-        private payment;
+        private _payment;
         private _wallets;
         private _networks;
         private _tokens;
@@ -244,6 +250,8 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         onBack: () => void;
         onPaid: (paymentStatus: IPaymentStatus) => void;
         constructor(parent?: Container, options?: ScomPaymentWidgetWalletPaymentElement);
+        get payment(): IPaymentInfo;
+        set payment(value: IPaymentInfo);
         get state(): State;
         set state(value: State);
         get wallets(): IWalletPlugin[];
@@ -264,7 +272,7 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private updateAmount;
         private checkWalletStatus;
         private updateTokenBalances;
-        private renderTokens;
+        private renderErcTokens;
         private updateDappContainer;
         private handleConnectWallet;
         private handleShowNetworks;
@@ -296,6 +304,7 @@ declare module "@scom/scom-payment-widget/components/statusPayment.tsx" {
         private state;
         private receipt;
         private status;
+        private provider;
         private lbHeaderStatus;
         private imgHeaderStatus;
         private lbStatus;
@@ -333,6 +342,7 @@ declare module "@scom/scom-payment-widget/components/stripePayment.tsx" {
         private _payment;
         private stripe;
         private stripeElements;
+        private lbItem;
         private lbAmount;
         onPaymentSuccess: (status: string) => void;
         onBack: () => void;
