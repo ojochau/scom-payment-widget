@@ -1,6 +1,7 @@
-import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, RequireJS, application } from '@ijstech/components';
+import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils } from '@ijstech/components';
 import { IPaymentInfo } from '../interface';
 import { STRIPE_CONFIG, STRIPE_LIB_URL, stripeCurrencies } from '../store';
+import { textCenterStyle } from './index.css';
 const Theme = Styles.Theme.ThemeVars;
 declare const window: any;
 
@@ -24,6 +25,7 @@ export class StripePayment extends Module {
     private _payment: IPaymentInfo;
     private stripe: any;
     private stripeElements: any;
+    private lbItem: Label;
     private lbAmount: Label;
     public onPaymentSuccess: (status: string) => void;
     public onBack: () => void;
@@ -42,8 +44,9 @@ export class StripePayment extends Module {
     }
 
     private updateAmount() {
-        if (this.lbAmount) {
-            const { amount, currency } = this.payment;
+        if (this.payment && this.lbAmount) {
+            const { title, amount, currency } = this.payment;
+            this.lbItem.caption = title || '';
             this.lbAmount.caption = `${FormatUtils.formatNumber(amount, { decimalFigures: 2 })} ${currency?.toUpperCase()}`;
             this.initStripePayment();
         }
@@ -119,10 +122,11 @@ export class StripePayment extends Module {
                 justifyContent="center"
                 alignItems="center"
                 width="100%"
-                height={60}
+                minHeight={85}
                 padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}
                 background={{ color: Theme.colors.primary.main }}
             >
+                <i-label id="lbItem" class={textCenterStyle} font={{ size: '0.875rem', color: Theme.text.primary, bold: true }} wordBreak="break-word" />
                 <i-label caption="Amount to pay" font={{ size: '0.675rem', bold: true, transform: 'uppercase', color: Theme.text.primary }} />
                 <i-label id="lbAmount" font={{ size: '0.875rem', color: Theme.text.primary, bold: true }} />
             </i-stack>

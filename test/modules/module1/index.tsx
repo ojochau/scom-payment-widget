@@ -66,7 +66,7 @@ export default class Module1 extends Module {
       amount: 1000,
       paymentId: '262951AA-D913-40A5-9468-7EB8B92706E3',
       address: '0xA81961100920df22CF98703155029822f2F7f033',
-      title: 'Invoice title',
+      title: 'Product Mix',
       currency: 'USD',
       photoUrl: 'https://cdn.corporatefinanceinstitute.com/assets/product-mix3.jpeg'
     });

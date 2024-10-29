@@ -2,7 +2,7 @@ import { Module, Container, customElements, ControlElement, Styles, Label, Butto
 import { loadingImageStyle, textCenterStyle } from './index.css';
 import assets from '../assets';
 import { PaymentProviders, State } from '../store';
-import { IPaymentStatus } from '../interface';
+import { IPaymentStatus, PaymentProvider } from '../interface';
 const Theme = Styles.Theme.ThemeVars;
 
 interface ScomPaymentWidgetStatusPaymentElement extends ControlElement {
@@ -22,6 +22,7 @@ export class StatusPayment extends Module {
     private state: State;
     private receipt: string;
     private status: string;
+    private provider: PaymentProvider;
     private lbHeaderStatus: Label;
     private imgHeaderStatus: Image;
     private lbStatus: Label;
@@ -40,6 +41,7 @@ export class StatusPayment extends Module {
         const { status, receipt, provider, ownerAddress } = info;
         this.receipt = receipt;
         this.status = status;
+        this.provider = provider;
         const isPending = status === 'pending';
         const isCompleted = status === 'complete';
         this.lbHeaderStatus.caption = isPending ? 'Payment Pending' : isCompleted ? 'Success' : 'Failed';
@@ -60,10 +62,14 @@ export class StatusPayment extends Module {
     }
 
     private handleViewTransaction() {
-        const network = this.state.getNetworkInfo(this.state.getChainId());
-        if (network && network.explorerTxUrl) {
-            const url = `${network.explorerTxUrl}${this.receipt}`;
-            window.open(url);
+        if (this.provider === PaymentProvider.Metamask) {
+            const network = this.state.getNetworkInfo(this.state.getChainId());
+            if (network && network.explorerTxUrl) {
+                const url = `${network.explorerTxUrl}${this.receipt}`;
+                window.open(url);
+            }
+        } else if (this.provider === PaymentProvider.TonWallet) {
+            window.open(`https://tonscan.org/transaction/${this.receipt}`);
         }
     }
 

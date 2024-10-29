@@ -103,11 +103,6 @@ export const PaymentProviders = [
     image: 'stripe.png'
   },
   {
-    provider: PaymentProvider.Paypal,
-    type: PaymentType.Fiat,
-    image: 'paypal.png'
-  },
-  {
     provider: PaymentProvider.TonWallet,
     type: PaymentType.Crypto,
     image: 'ton.png'

@@ -32,7 +32,9 @@ declare global {
 export class WalletPayment extends Module {
     private pnlAmount: StackLayout;
     private pnlPayAmount: StackLayout;
+    private lbItem: Label;
     private lbAmount: Label;
+    private lbPayItem: Label;
     private lbPayAmount: Label;
     private imgPayToken: Image;
     private btnTonWallet: Button;
@@ -53,7 +55,7 @@ export class WalletPayment extends Module {
     private lbCurrentAddress: Label;
     private imgCurrentNetwork: Image;
     private lbCurrentNetwork: Label;
-    private payment: IPaymentInfo;
+    private _payment: IPaymentInfo;
     private _wallets: IWalletPlugin[] = [];
     private _networks: INetworkConfig[] = [];
     private _tokens: ITokenObject[] = [];
@@ -74,6 +76,15 @@ export class WalletPayment extends Module {
 
     constructor(parent?: Container, options?: ScomPaymentWidgetWalletPaymentElement) {
         super(parent, options);
+    }
+
+    get payment() {
+        return this._payment;
+    }
+
+    set payment(value: IPaymentInfo) {
+        this._payment = value;
+        this.updateAmount();
     }
 
     get state() {
@@ -204,7 +215,7 @@ export class WalletPayment extends Module {
     private async loadLib() {
         if (window['TON_CONNECT_UI']) return;
         const moduleDir = this['currentModuleDir'] || path;
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
             RequireJS.config({
                 baseUrl: `${moduleDir}/lib`,
                 paths: {
@@ -213,7 +224,7 @@ export class WalletPayment extends Module {
             })
             RequireJS.require(['tonconnect-ui'], function (TonConnectUI: any) {
                 window['TON_CONNECT_UI'] = TonConnectUI;
-                resolve(TonConnectUI);
+                resolve();
             });
         })
     }
@@ -221,9 +232,12 @@ export class WalletPayment extends Module {
     private updateAmount() {
         if (this.lbAmount && this.payment) {
             const { amount, currency } = this.payment;
-            const formattedAmount = FormatUtils.formatNumber(amount || 0, { decimalFigures: 2 });
-            this.lbAmount.caption = `${formattedAmount} ${currency || 'USD'}`;
-            this.lbPayAmount.caption = `${formattedAmount} ${currency || 'USD'}`;
+            const title = this.payment.title || ''; 
+            if (this.lbItem.caption !== title) this.lbItem.caption = title;
+            if (this.lbPayItem.caption !== title) this.lbPayItem.caption = title;
+            const formattedAmount = `${FormatUtils.formatNumber(amount || 0, { decimalFigures: 2 })} ${currency || 'USD'}`;
+            if (this.lbAmount.caption !== formattedAmount) this.lbAmount.caption = formattedAmount;
+            if (this.lbPayAmount.caption !== formattedAmount) this.lbPayAmount.caption = formattedAmount;
         }
     }
 
@@ -250,7 +264,7 @@ export class WalletPayment extends Module {
                     this.lbCurrentNetwork.caption = network.chainName;
                     this.pnlNetwork.visible = true;
                 }
-                await this.renderTokens(chainId);
+                await this.renderErcTokens(chainId);
             } else if (paymentProvider === PaymentProvider.TonWallet) {
                 const account = this.tonConnectUI.account;
                 const address = account.address;
@@ -287,7 +301,7 @@ export class WalletPayment extends Module {
         await Promise.all(promises);
     }
 
-    private async renderTokens(chainId: number) {
+    private async renderErcTokens(chainId: number) {
         const tokens = this.tokens.filter(v => v.chainId === chainId);
         await this.updateTokenBalances(tokens);
         const network = this.state.getNetworkInfo(chainId);
@@ -356,7 +370,7 @@ export class WalletPayment extends Module {
         btnNetwork.click();
     }
 
-    private handleSelectToken(token: ITokenObject) {
+    private handleSelectToken(token: ITokenObject, isTon?: boolean) {
         this.pnlAmount.visible = false;
         this.pnlTokenItems.visible = false;
         this.pnlPayAmount.visible = true;
@@ -364,14 +378,16 @@ export class WalletPayment extends Module {
         this.btnPay.visible = true;
         this.btnBack.width = 'calc(50% - 1rem)';
         this.isToPay = true;
-        this.imgToken.url = tokenAssets.tokenPath(token, token.chainId);
+        const tokenImg = isTon ? assets.fullPath('img/ton.png') : tokenAssets.tokenPath(token, token.chainId);
+        this.imgToken.url = tokenImg;
         const { address, amount, currency } = this.payment;
         const toAddress = address || '';
         this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);
         const formattedAmount = FormatUtils.formatNumber(amount || 0, { decimalFigures: 2 });
         this.lbAmountToPay.caption = `${formattedAmount} ${token.symbol}`;
         this.lbUSD.caption = `${formattedAmount} ${currency || 'USD'}`;
-        this.imgPayToken.url = tokenAssets.tokenPath(token, token.chainId);
+        this.lbUSD.visible = !isTon;
+        this.imgPayToken.url = tokenImg;
     }
 
     private async handleCopyAddress() {
@@ -402,8 +418,14 @@ export class WalletPayment extends Module {
 
     private handlePay() {
         if (this.onPaid) {
-            const wallet = Wallet.getClientInstance();
-            const address = wallet.address;
+            let address = '';
+            if (this.payment.provider === PaymentProvider.Metamask) {
+                const wallet = Wallet.getClientInstance();
+                address = wallet.address;
+            } else if (this.payment.provider === PaymentProvider.TonWallet) {
+                const account = this.tonConnectUI.account;
+                address = account.address;
+            }
             this.onPaid({ status: 'pending', provider: this.payment.provider, receipt: '0x00000000000000000000000000000', ownerAddress: address });
             setTimeout(() => {
                 this.onPaid({ status: 'complete', provider: this.payment.provider, receipt: '0x00000000000000000000000000000', ownerAddress: address });
@@ -457,26 +479,34 @@ export class WalletPayment extends Module {
                     justifyContent="center"
                     alignItems="center"
                     width="100%"
-                    minHeight={60}
+                    minHeight={85}
                     padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}
                     background={{ color: Theme.colors.primary.main }}
                 >
+                    <i-label id="lbItem" class={textCenterStyle} font={{ size: '0.875rem', color: Theme.text.primary, bold: true }} wordBreak="break-word" />
                     <i-label caption="Amount to pay" font={{ size: '0.675rem', bold: true, transform: 'uppercase', color: Theme.text.primary }} />
                     <i-label id="lbAmount" font={{ size: '0.875rem', color: Theme.text.primary, bold: true }} />
                 </i-stack>
                 <i-stack
                     id="pnlPayAmount"
                     visible={false}
-                    direction="horizontal"
-                    gap="0.25rem"
-                    alignItems="center"
+                    direction="vertical"
+                    gap="0.5rem"
                     width="100%"
-                    minHeight={60}
+                    minHeight={85}
                     padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}
                     border={{ bottom: { style: 'solid', width: 1, color: Theme.divider } }}
                 >
-                    <i-image id="imgPayToken" width={20} height={20} minWidth={20} display="flex" />
-                    <i-label id="lbPayAmount" font={{ size: '1rem', color: Theme.text.primary, bold: true }} />
+                    <i-label id="lbPayItem" font={{ size: '1rem', color: Theme.text.primary, bold: true }} wordBreak="break-word" />
+                    <i-stack
+                        direction="horizontal"
+                        gap="0.25rem"
+                        alignItems="center"
+                        width="100%"
+                    >
+                        <i-image id="imgPayToken" width={20} height={20} minWidth={20} display="flex" />
+                        <i-label id="lbPayAmount" font={{ size: '1rem', color: Theme.text.primary, bold: true }} />
+                    </i-stack>
                 </i-stack>
             </i-stack>
             <i-stack direction="vertical" gap="1.5rem" width="100%" height="100%" alignItems="center" padding={{ top: '1rem', bottom: '1rem' }}>

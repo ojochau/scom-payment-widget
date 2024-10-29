@@ -147,6 +147,10 @@ export class ScomPaymentWidget extends Module {
 				this.stripePayment.visible = true;
 			}
 		};
+		this.paymentMethod.onBack = () => {
+			this.paymentMethod.visible = false;
+			this.invoiceCreation.visible = true;
+		};
 		this.walletPayment.onPaid = (paymentStatus: IPaymentStatus) => {
 			this.walletPayment.visible = false;
 			this.statusPayment.visible = true;
