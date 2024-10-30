@@ -112,9 +112,10 @@ define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "
         render() {
             return this.$render("i-stack", { direction: "vertical", gap: "1rem", height: "100%", alignItems: "center", padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' } },
                 this.$render("i-stack", { direction: "vertical", height: "100%" },
-                    this.$render("i-stack", { id: "pnlItemInfo", visible: false, direction: "vertical", gap: "1rem", alignItems: "center", width: "100%", margin: { bottom: '1.5rem' } },
+                    this.$render("i-stack", { id: "pnlItemInfo", visible: false, direction: "vertical", gap: "1rem", alignItems: "center", width: "100%", margin: { bottom: '1rem' } },
                         this.$render("i-label", { id: "lbItem", class: index_css_1.textCenterStyle, font: { size: '1.25rem', color: Theme.colors.primary.main, bold: true, transform: 'uppercase' } }),
-                        this.$render("i-image", { id: "imgItem", width: "auto", maxWidth: "80%", height: 80 })),
+                        this.$render("i-image", { id: "imgItem", width: "auto", maxWidth: "80%", height: 80 }),
+                        this.$render("i-panel", { height: 1, width: "80%", background: { color: Theme.divider } })),
                     this.$render("i-stack", { direction: "vertical", gap: "1rem", alignItems: "center", width: "100%", margin: { bottom: '1.5rem' } },
                         this.$render("i-stack", { direction: "vertical", gap: "0.5rem", alignItems: "center" },
                             this.$render("i-label", { caption: "Amount to pay", font: { color: Theme.text.primary, bold: true, transform: 'uppercase' } }),
@@ -558,7 +559,26 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                 console.log(err);
             }
         }
-        async loadLib() {
+        async loadTonWeb() {
+            if (this.tonWeb)
+                return;
+            const self = this;
+            const moduleDir = this['currentModuleDir'] || path;
+            return new Promise((resolve, reject) => {
+                components_6.RequireJS.config({
+                    baseUrl: `${moduleDir}/lib`,
+                    paths: {
+                        'tonweb': 'tonweb'
+                    }
+                });
+                components_6.RequireJS.require(['tonweb'], function (TonWeb) {
+                    // self.tonWeb = new TonWeb(new TonWeb.HttpProvider('https://testnet.toncenter.com/api/v2/jsonRPC'));
+                    self.tonWeb = new TonWeb();
+                    resolve();
+                });
+            });
+        }
+        async loadTonConnectUI() {
             if (window['TON_CONNECT_UI'])
                 return;
             const moduleDir = this['currentModuleDir'] || path;
@@ -574,6 +594,12 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                     resolve();
                 });
             });
+        }
+        async loadLib() {
+            const promises = [];
+            promises.push(this.loadTonConnectUI());
+            promises.push(this.loadTonWeb());
+            await Promise.all(promises);
         }
         updateAmount() {
             if (this.lbAmount && this.payment) {
@@ -624,9 +650,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                         this.imgCurrentWallet.url = assets_2.default.fullPath(`img/${provider.image}`);
                         this.lbCurrentAddress.caption = address.substr(0, 6) + '...' + address.substr(-4);
                     }
-                    // TODO - render tokens for ton wallet
-                    this.pnlTokenItems.clearInnerHTML();
-                    this.pnlTokenItems.appendChild(this.$render("i-label", { caption: "No tokens", class: index_css_3.textCenterStyle }));
+                    await this.renderTonToken();
                 }
             }
             else if (provider) {
@@ -671,6 +695,30 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             }
             this.pnlTokenItems.clearInnerHTML();
             this.pnlTokenItems.append(...nodeItems);
+        }
+        async getTonBalance() {
+            const account = this.tonConnectUI.account;
+            const balance = await this.tonWeb.getBalance(account.address);
+            return this.tonWeb.utils.fromNano(balance);
+        }
+        async renderTonToken() {
+            const tonToken = {
+                chainId: undefined,
+                name: 'Toncoin',
+                symbol: 'TON',
+                decimals: 18
+            };
+            const balance = await this.getTonBalance();
+            const formattedBalance = components_6.FormatUtils.formatNumber(balance, { decimalFigures: 2 });
+            this.pnlTokenItems.clearInnerHTML();
+            this.pnlTokenItems.appendChild(this.$render("i-stack", { direction: "horizontal", justifyContent: "space-between", alignItems: "center", wrap: "wrap", gap: "0.5rem", width: "100%", minHeight: 40, border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, cursor: "pointer", onClick: () => this.handleSelectToken(tonToken, true) },
+                this.$render("i-stack", { direction: "horizontal", alignItems: "center", gap: "0.75rem" },
+                    this.$render("i-image", { width: 20, height: 20, minWidth: 20, url: assets_2.default.fullPath('img/ton.png') }),
+                    this.$render("i-stack", { direction: "vertical", gap: "0.25rem" },
+                        this.$render("i-label", { caption: tonToken.name, font: { bold: true, color: Theme.text.primary } }),
+                        this.$render("i-label", { caption: "Ton", font: { size: '0.75rem', color: Theme.text.primary } }))),
+                this.$render("i-stack", { direction: "vertical", gap: "0.25rem" },
+                    this.$render("i-label", { caption: `${formattedBalance} ${tonToken.symbol}`, font: { bold: true, color: Theme.text.primary } }))));
         }
         updateDappContainer() {
             const dappContainer = this.closest('i-scom-dapp-container');
