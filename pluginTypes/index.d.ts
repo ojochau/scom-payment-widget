@@ -246,6 +246,7 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private iconCopyAddress;
         private iconCopyAmount;
         private tonConnectUI;
+        private tonWeb;
         private isTonWalletConnected;
         onBack: () => void;
         onPaid: (paymentStatus: IPaymentStatus) => void;
@@ -268,11 +269,15 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private initWallet;
         private initTonWallet;
         private connectTonWallet;
+        private loadTonWeb;
+        private loadTonConnectUI;
         private loadLib;
         private updateAmount;
         private checkWalletStatus;
         private updateTokenBalances;
         private renderErcTokens;
+        private getTonBalance;
+        private renderTonToken;
         private updateDappContainer;
         private handleConnectWallet;
         private handleShowNetworks;

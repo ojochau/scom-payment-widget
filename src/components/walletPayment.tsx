@@ -69,6 +69,7 @@ export class WalletPayment extends Module {
     private iconCopyAddress: Icon;
     private iconCopyAmount: Icon;
     private tonConnectUI: any;
+    private tonWeb: any;
     private isTonWalletConnected: boolean;
 
     public onBack: () => void;
@@ -212,7 +213,26 @@ export class WalletPayment extends Module {
         }
     }
 
-    private async loadLib() {
+    private async loadTonWeb() {
+        if (this.tonWeb) return;
+        const self = this;
+        const moduleDir = this['currentModuleDir'] || path;
+        return new Promise<void>((resolve, reject) => {
+            RequireJS.config({
+                baseUrl: `${moduleDir}/lib`,
+                paths: {
+                    'tonweb': 'tonweb'
+                }
+            })
+            RequireJS.require(['tonweb'], function (TonWeb: any) {
+                // self.tonWeb = new TonWeb(new TonWeb.HttpProvider('https://testnet.toncenter.com/api/v2/jsonRPC'));
+                self.tonWeb = new TonWeb();
+                resolve();
+            });
+        })
+    }
+
+    private async loadTonConnectUI() {
         if (window['TON_CONNECT_UI']) return;
         const moduleDir = this['currentModuleDir'] || path;
         return new Promise<void>((resolve, reject) => {
@@ -229,10 +249,17 @@ export class WalletPayment extends Module {
         })
     }
 
+    private async loadLib() {
+        const promises: Promise<void>[] = [];
+        promises.push(this.loadTonConnectUI())
+        promises.push(this.loadTonWeb())
+        await Promise.all(promises);
+    }
+
     private updateAmount() {
         if (this.lbAmount && this.payment) {
             const { amount, currency } = this.payment;
-            const title = this.payment.title || ''; 
+            const title = this.payment.title || '';
             if (this.lbItem.caption !== title) this.lbItem.caption = title;
             if (this.lbPayItem.caption !== title) this.lbPayItem.caption = title;
             const formattedAmount = `${FormatUtils.formatNumber(amount || 0, { decimalFigures: 2 })} ${currency || 'USD'}`;
@@ -273,9 +300,7 @@ export class WalletPayment extends Module {
                     this.imgCurrentWallet.url = assets.fullPath(`img/${provider.image}`);
                     this.lbCurrentAddress.caption = address.substr(0, 6) + '...' + address.substr(-4);
                 }
-                // TODO - render tokens for ton wallet
-                this.pnlTokenItems.clearInnerHTML();
-                this.pnlTokenItems.appendChild(<i-label caption="No tokens" class={textCenterStyle} />);
+                await this.renderTonToken();
             }
         } else if (provider) {
             this.imgWallet.url = assets.fullPath(`img/${provider.image}`);
@@ -339,6 +364,48 @@ export class WalletPayment extends Module {
         }
         this.pnlTokenItems.clearInnerHTML();
         this.pnlTokenItems.append(...nodeItems);
+    }
+
+    private async getTonBalance() {
+        const account = this.tonConnectUI.account;
+        const balance = await this.tonWeb.getBalance(account.address);
+        return this.tonWeb.utils.fromNano(balance);
+    }
+
+    private async renderTonToken() {
+        const tonToken = {
+            chainId: undefined,
+            name: 'Toncoin',
+            symbol: 'TON',
+            decimals: 18
+        }
+        const balance = await this.getTonBalance();
+        const formattedBalance = FormatUtils.formatNumber(balance, { decimalFigures: 2 });
+        this.pnlTokenItems.clearInnerHTML();
+        this.pnlTokenItems.appendChild(<i-stack
+            direction="horizontal"
+            justifyContent="space-between"
+            alignItems="center"
+            wrap="wrap"
+            gap="0.5rem"
+            width="100%"
+            minHeight={40}
+            border={{ width: 1, style: 'solid', color: Theme.divider, radius: 8 }}
+            padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}
+            cursor="pointer"
+            onClick={() => this.handleSelectToken(tonToken, true)}
+        >
+            <i-stack direction="horizontal" alignItems="center" gap="0.75rem">
+                <i-image width={20} height={20} minWidth={20} url={assets.fullPath('img/ton.png')} />
+                <i-stack direction="vertical" gap="0.25rem">
+                    <i-label caption={tonToken.name} font={{ bold: true, color: Theme.text.primary }} />
+                    <i-label caption="Ton" font={{ size: '0.75rem', color: Theme.text.primary }} />
+                </i-stack>
+            </i-stack>
+            <i-stack direction="vertical" gap="0.25rem">
+                <i-label caption={`${formattedBalance} ${tonToken.symbol}`} font={{ bold: true, color: Theme.text.primary }} />
+            </i-stack>
+        </i-stack>);
     }
 
     private updateDappContainer() {
