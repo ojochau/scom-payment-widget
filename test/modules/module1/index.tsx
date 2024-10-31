@@ -50,26 +50,7 @@ export default class Module1 extends Module {
   }
 
   private async handlePay() {
-    if (!this.scomPaymentWidget) {
-      this.scomPaymentWidget = new ScomPaymentWidget(undefined, { display: 'block', margin: { top: '1rem' }});
-      this.scomPaymentWidget.onPaymentSuccess = this.handlePaymentSuccess.bind(this);
-      await this.scomPaymentWidget.ready();
-    }
-    this.scomPaymentWidget.openModal({
-      title: 'Payment',
-      width: '100%',
-      maxWidth: '450px',
-      maxHeight: '100%',
-      zIndex: 1001
-    });
-    this.scomPaymentWidget.onStartPayment({
-      amount: 1000,
-      paymentId: '262951AA-D913-40A5-9468-7EB8B92706E3',
-      address: '0xA81961100920df22CF98703155029822f2F7f033',
-      title: 'Product Mix',
-      currency: 'USD',
-      photoUrl: 'https://cdn.corporatefinanceinstitute.com/assets/product-mix3.jpeg'
-    });
+    this.scomPaymentWidget.onStartPayment();
   }
 
   private async handlePaymentSuccess(status: string) {
@@ -79,7 +60,20 @@ export default class Module1 extends Module {
   render() {
     return <i-panel width="100%">
       <i-hstack id="mainStack" margin={{ top: '1rem', left: '1rem' }} gap="2rem" width="100%" justifyContent="center" padding={{ top: '1rem', bottom: '1rem' }}>
-        <i-button
+        <i-scom-payment-widget
+          id="scomPaymentWidget"
+          payment={{
+            amount: 1000,
+            paymentId: '262951AA-D913-40A5-9468-7EB8B92706E3',
+            address: '0xA81961100920df22CF98703155029822f2F7f033',
+            title: 'Product Mix',
+            currency: 'USD',
+            photoUrl: 'https://cdn.corporatefinanceinstitute.com/assets/product-mix3.jpeg'
+          }}
+          onPaymentSuccess={this.handlePaymentSuccess}
+          showButtonPay={true}
+        />
+        {/* <i-button
           caption="Pay"
           width="100%"
           maxWidth={180}
@@ -89,7 +83,7 @@ export default class Module1 extends Module {
           background={{ color: Theme.colors.primary.main }}
           border={{ radius: 12 }}
           onClick={this.handlePay}
-        />
+        /> */}
       </i-hstack>
     </i-panel>
   }

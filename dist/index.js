@@ -684,7 +684,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                 const balances = scom_token_list_1.tokenStore.getTokenBalancesByChainId(chainId) || {};
                 const tokenBalance = balances[token.address?.toLowerCase() || token.symbol] || 0;
                 const formattedBalance = components_6.FormatUtils.formatNumber(tokenBalance, { decimalFigures: 2 });
-                nodeItems.push(this.$render("i-stack", { direction: "horizontal", justifyContent: "space-between", alignItems: "center", wrap: "wrap", gap: "0.5rem", width: "100%", minHeight: 40, border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, cursor: "pointer", onClick: () => this.handleSelectToken(token) },
+                nodeItems.push(this.$render("i-stack", { direction: "horizontal", justifyContent: "space-between", alignItems: "center", wrap: "wrap", gap: "0.5rem", width: "100%", border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, cursor: "pointer", onClick: () => this.handleSelectToken(token) },
                     this.$render("i-stack", { direction: "horizontal", alignItems: "center", gap: "0.75rem" },
                         this.$render("i-image", { width: 20, height: 20, minWidth: 20, url: scom_token_list_1.assets.tokenPath(token, chainId) }),
                         this.$render("i-stack", { direction: "vertical", gap: "0.25rem" },
@@ -711,7 +711,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             const balance = await this.getTonBalance();
             const formattedBalance = components_6.FormatUtils.formatNumber(balance, { decimalFigures: 2 });
             this.pnlTokenItems.clearInnerHTML();
-            this.pnlTokenItems.appendChild(this.$render("i-stack", { direction: "horizontal", justifyContent: "space-between", alignItems: "center", wrap: "wrap", gap: "0.5rem", width: "100%", minHeight: 40, border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, cursor: "pointer", onClick: () => this.handleSelectToken(tonToken, true) },
+            this.pnlTokenItems.appendChild(this.$render("i-stack", { direction: "horizontal", justifyContent: "space-between", alignItems: "center", wrap: "wrap", gap: "0.5rem", width: "100%", border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, cursor: "pointer", onClick: () => this.handleSelectToken(tonToken, true) },
                 this.$render("i-stack", { direction: "horizontal", alignItems: "center", gap: "0.75rem" },
                     this.$render("i-image", { width: 20, height: 20, minWidth: 20, url: assets_2.default.fullPath('img/ton.png') }),
                     this.$render("i-stack", { direction: "vertical", gap: "0.25rem" },
@@ -866,7 +866,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                             this.$render("i-stack", { id: "pnlNetwork", direction: "horizontal", gap: "0.5rem", alignItems: "center", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }, border: { style: 'solid', width: 1, color: Theme.divider, radius: 8 }, cursor: "pointer", width: "fit-content", onClick: this.handleShowNetworks },
                                 this.$render("i-image", { id: "imgCurrentNetwork", width: 24, height: 24, minWidth: 24 }),
                                 this.$render("i-label", { id: "lbCurrentNetwork" }))),
-                        this.$render("i-stack", { id: "pnlTokenItems", direction: "vertical", gap: "1rem", width: "100%", height: "100%", minHeight: 200, maxHeight: "calc(100vh - 305px)", overflow: "auto", padding: { left: '1rem', right: '1rem' } }),
+                        this.$render("i-stack", { id: "pnlTokenItems", direction: "vertical", gap: "1rem", width: "100%", height: "100%", minHeight: 100, maxHeight: 240, overflow: "auto", padding: { left: '1rem', right: '1rem' } }),
                         this.$render("i-stack", { id: "pnlPayDetail", visible: false, direction: "vertical", gap: "0.25rem", width: "100%", height: "100%", alignItems: "center", padding: { left: '1rem', right: '1rem' } },
                             this.$render("i-label", { caption: "Paid to address" }),
                             this.$render("i-stack", { direction: "horizontal", alignItems: "center", width: "100%", margin: { bottom: '1rem' }, border: { radius: 8 }, background: { color: Theme.input.background }, overflow: "hidden" },
@@ -1090,7 +1090,8 @@ define("@scom/scom-payment-widget/index.css.ts", ["require", "exports", "@ijstec
     exports.dappContainerStyle = components_9.Styles.style({
         $nest: {
             '&>:first-child': {
-                borderRadius: 12
+                borderRadius: 12,
+                background: 'transparent'
             },
             '#pnlModule': {
                 height: '100%'
@@ -1122,8 +1123,25 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             return this._payment;
         }
         set payment(value) {
-            this._payment = value;
-            this.onStartPayment(value);
+            this.updatePayment(value);
+            if (this.btnPay)
+                this.btnPay.enabled = !!value;
+        }
+        get showButtonPay() {
+            return this._showButtonPay;
+        }
+        set showButtonPay(value) {
+            this._showButtonPay = value;
+            if (this.btnPay)
+                this.btnPay.visible = value;
+        }
+        get payButtonCaption() {
+            return this._payButtonCaption || 'Pay';
+        }
+        set payButtonCaption(value) {
+            this._payButtonCaption = value;
+            if (this.btnPay)
+                this.btnPay.caption = value;
         }
         get wallets() {
             return this._wallets ?? data_2.default.defaultData.wallets;
@@ -1152,7 +1170,8 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             const theme = {
                 [themeVar]: {
                     inputFontColor: '#fff',
-                    secondaryColor: '#444444'
+                    secondaryColor: '#444444',
+                    modalColor: '#000'
                 }
             };
             await this.containerDapp.ready();
@@ -1167,6 +1186,11 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             }
         }
         onStartPayment(payment) {
+            this.updatePayment(payment || this.payment);
+            if (this.mdPayment)
+                this.mdPayment.visible = true;
+        }
+        updatePayment(payment) {
             this._payment = payment;
             if (!this.invoiceCreation)
                 return;
@@ -1179,6 +1203,11 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             this.stripePayment.payment = payment;
             this.stripePayment.visible = false;
             this.statusPayment.visible = false;
+        }
+        handlePay() {
+            if (this.payment) {
+                this.onStartPayment(this.payment);
+            }
         }
         async init() {
             if (!this.state) {
@@ -1236,22 +1265,30 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             const lazyLoad = this.getAttribute('lazyLoad', true, false);
             if (!lazyLoad) {
                 const payment = this.getAttribute('payment', true);
+                this.showButtonPay = this.getAttribute('showButtonPay', true, false);
+                this.payButtonCaption = this.getAttribute('payButtonCaption', true, 'Pay');
                 this.networks = this.getAttribute('networks', true, data_2.default.defaultData.networks);
                 this.tokens = this.getAttribute('tokens', true, data_2.default.defaultData.tokens);
                 this.wallets = this.getAttribute('wallets', true, data_2.default.defaultData.wallets);
                 if (payment)
                     this.payment = payment;
             }
+            this.btnPay.visible = this.showButtonPay;
+            this.btnPay.enabled = !!this.payment;
+            this.btnPay.caption = this.payButtonCaption;
             this.executeReadyCallback();
         }
         render() {
             return this.$render("i-scom-dapp-container", { id: "containerDapp", showHeader: true, showFooter: false, class: index_css_6.dappContainerStyle },
-                this.$render("i-stack", { direction: "vertical", width: "100%", height: "100%", minHeight: 480, border: { radius: 12, style: 'solid', width: 1, color: Theme.action.activeBackground } },
-                    this.$render("scom-payment-widget--invoice-creation", { id: "invoiceCreation", visible: false, height: "100%" }),
-                    this.$render("scom-payment-widget--payment-method", { id: "paymentMethod", visible: false, height: "100%" }),
-                    this.$render("scom-payment-widget--wallet-payment", { id: "walletPayment", visible: false, height: "100%" }),
-                    this.$render("scom-payment-widget--stripe-payment", { id: "stripePayment", visible: false, height: "100%" }),
-                    this.$render("scom-payment-widget--status-payment", { id: "statusPayment", visible: false, height: "100%" })));
+                this.$render("i-stack", { direction: "vertical", alignItems: "center", width: "100%", height: "100%" },
+                    this.$render("i-button", { id: "btnPay", visible: false, enabled: false, caption: "Pay", width: "100%", minWidth: 60, maxWidth: 180, padding: { top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }, font: { size: '1rem', color: Theme.colors.primary.contrastText }, background: { color: Theme.colors.primary.main }, border: { radius: 12 }, onClick: this.handlePay })),
+                this.$render("i-modal", { id: "mdPayment", title: "Payment", closeIcon: { name: 'times', fill: Theme.colors.primary.main }, visible: false, width: 480, maxWidth: "100%", padding: { left: '1rem', right: '1rem', top: '0.75rem', bottom: '0.75rem' }, border: { radius: '1rem' } },
+                    this.$render("i-stack", { margin: { top: '1rem' }, direction: "vertical", width: "100%", height: 480, border: { radius: 12, style: 'solid', width: 1, color: Theme.action.hover }, overflow: "hidden" },
+                        this.$render("scom-payment-widget--invoice-creation", { id: "invoiceCreation", visible: false, height: "100%" }),
+                        this.$render("scom-payment-widget--payment-method", { id: "paymentMethod", visible: false, height: "100%" }),
+                        this.$render("scom-payment-widget--wallet-payment", { id: "walletPayment", visible: false, height: "100%" }),
+                        this.$render("scom-payment-widget--stripe-payment", { id: "stripePayment", visible: false, height: "100%" }),
+                        this.$render("scom-payment-widget--status-payment", { id: "statusPayment", visible: false, height: "100%" }))));
         }
     };
     ScomPaymentWidget = __decorate([

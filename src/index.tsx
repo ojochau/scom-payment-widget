@@ -1,4 +1,4 @@
-import { Module, Container, customElements, ControlElement, Styles } from '@ijstech/components';
+import { Module, Container, customElements, ControlElement, Styles, Button, Modal } from '@ijstech/components';
 import { InvoiceCreation, PaymentMethod, WalletPayment, StripePayment, StatusPayment } from './components/index';
 import { INetworkConfig, IPaymentInfo, IPaymentStatus, PaymentProvider } from './interface';
 import { State } from './store';
@@ -17,6 +17,8 @@ interface ScomPaymentWidgetElement extends ControlElement {
 	wallets?: IWalletPlugin[];
 	networks?: INetworkConfig[];
 	tokens?: ITokenObject[];
+	showButtonPay?: boolean;
+	payButtonCaption?: string;
 	onPaymentSuccess?: (status: string) => Promise<void>;
 }
 
@@ -31,6 +33,8 @@ declare global {
 @customElements('i-scom-payment-widget')
 export class ScomPaymentWidget extends Module {
 	private containerDapp: ScomDappContainer;
+	private btnPay: Button;
+	private mdPayment: Modal;
 	private state: State;
 	private invoiceCreation: InvoiceCreation;
 	private paymentMethod: PaymentMethod;
@@ -38,6 +42,8 @@ export class ScomPaymentWidget extends Module {
 	private stripePayment: StripePayment;
 	private statusPayment: StatusPayment;
 	private _payment: IPaymentInfo;
+	private _showButtonPay: boolean;
+	private _payButtonCaption: string;
 
 	private _wallets: IWalletPlugin[] = [];
 	private _networks: INetworkConfig[] = [];
@@ -53,8 +59,26 @@ export class ScomPaymentWidget extends Module {
 	}
 
 	set payment(value: IPaymentInfo) {
-		this._payment = value;
-		this.onStartPayment(value);
+		this.updatePayment(value);
+		if (this.btnPay) this.btnPay.enabled = !!value;
+	}
+
+	get showButtonPay() {
+		return this._showButtonPay;
+	}
+
+	set showButtonPay(value: boolean) {
+		this._showButtonPay = value;
+		if (this.btnPay) this.btnPay.visible = value;
+	}
+
+	get payButtonCaption() {
+		return this._payButtonCaption || 'Pay';
+	}
+
+	set payButtonCaption(value: string) {
+		this._payButtonCaption = value;
+		if (this.btnPay) this.btnPay.caption = value;
 	}
 
 	get wallets() {
@@ -91,7 +115,8 @@ export class ScomPaymentWidget extends Module {
 		const theme = {
 			[themeVar]: {
 				inputFontColor: '#fff',
-				secondaryColor: '#444444'
+				secondaryColor: '#444444',
+				modalColor: '#000'
 			}
 		};
 		await this.containerDapp.ready();
@@ -106,7 +131,12 @@ export class ScomPaymentWidget extends Module {
 		}
 	}
 
-	onStartPayment(payment: IPaymentInfo) {
+	onStartPayment(payment?: IPaymentInfo) {
+		this.updatePayment(payment || this.payment);
+		if (this.mdPayment) this.mdPayment.visible = true;
+	}
+
+	private updatePayment(payment: IPaymentInfo) {
 		this._payment = payment;
 		if (!this.invoiceCreation) return;
 		this.invoiceCreation.payment = payment;
@@ -118,6 +148,12 @@ export class ScomPaymentWidget extends Module {
 		this.stripePayment.payment = payment;
 		this.stripePayment.visible = false;
 		this.statusPayment.visible = false;
+	}
+
+	private handlePay() {
+		if (this.payment) {
+			this.onStartPayment(this.payment);
+		}
 	}
 
 	async init() {
@@ -173,11 +209,16 @@ export class ScomPaymentWidget extends Module {
 		const lazyLoad = this.getAttribute('lazyLoad', true, false);
 		if (!lazyLoad) {
 			const payment = this.getAttribute('payment', true);
+			this.showButtonPay = this.getAttribute('showButtonPay', true, false);
+			this.payButtonCaption = this.getAttribute('payButtonCaption', true, 'Pay');
 			this.networks = this.getAttribute('networks', true, configData.defaultData.networks);
 			this.tokens = this.getAttribute('tokens', true, configData.defaultData.tokens);
 			this.wallets = this.getAttribute('wallets', true, configData.defaultData.wallets);
 			if (payment) this.payment = payment;
 		}
+		this.btnPay.visible = this.showButtonPay;
+		this.btnPay.enabled = !!this.payment;
+		this.btnPay.caption = this.payButtonCaption;
 		this.executeReadyCallback();
 	}
 
@@ -185,17 +226,50 @@ export class ScomPaymentWidget extends Module {
 		return <i-scom-dapp-container id="containerDapp" showHeader={true} showFooter={false} class={dappContainerStyle}>
 			<i-stack
 				direction="vertical"
+				alignItems="center"
 				width="100%"
 				height="100%"
-				minHeight={480}
-				border={{ radius: 12, style: 'solid', width: 1, color: Theme.action.activeBackground }}
 			>
-				<scom-payment-widget--invoice-creation id="invoiceCreation" visible={false} height="100%" />
-				<scom-payment-widget--payment-method id="paymentMethod" visible={false} height="100%" />
-				<scom-payment-widget--wallet-payment id="walletPayment" visible={false} height="100%" />
-				<scom-payment-widget--stripe-payment id="stripePayment" visible={false} height="100%" />
-				<scom-payment-widget--status-payment id="statusPayment" visible={false} height="100%" />
+				<i-button
+					id="btnPay"
+					visible={false}
+					enabled={false}
+					caption="Pay"
+					width="100%"
+					minWidth={60}
+					maxWidth={180}
+					padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }}
+					font={{ size: '1rem', color: Theme.colors.primary.contrastText }}
+					background={{ color: Theme.colors.primary.main }}
+					border={{ radius: 12 }}
+					onClick={this.handlePay}
+				/>
 			</i-stack>
+			<i-modal
+				id="mdPayment"
+				title="Payment"
+				closeIcon={{ name: 'times', fill: Theme.colors.primary.main }}
+				visible={false}
+				width={480}
+				maxWidth="100%"
+				padding={{ left: '1rem', right: '1rem', top: '0.75rem', bottom: '0.75rem' }}
+				border={{ radius: '1rem' }}
+			>
+				<i-stack
+					margin={{ top: '1rem' }}
+					direction="vertical"
+					width="100%"
+					height={480}
+					border={{ radius: 12, style: 'solid', width: 1, color: Theme.action.hover }}
+					overflow="hidden"
+				>
+					<scom-payment-widget--invoice-creation id="invoiceCreation" visible={false} height="100%" />
+					<scom-payment-widget--payment-method id="paymentMethod" visible={false} height="100%" />
+					<scom-payment-widget--wallet-payment id="walletPayment" visible={false} height="100%" />
+					<scom-payment-widget--stripe-payment id="stripePayment" visible={false} height="100%" />
+					<scom-payment-widget--status-payment id="statusPayment" visible={false} height="100%" />
+				</i-stack>
+			</i-modal>
 		</i-scom-dapp-container>
 	}
 }

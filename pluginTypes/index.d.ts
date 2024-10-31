@@ -390,6 +390,8 @@ declare module "@scom/scom-payment-widget" {
         wallets?: IWalletPlugin[];
         networks?: INetworkConfig[];
         tokens?: ITokenObject[];
+        showButtonPay?: boolean;
+        payButtonCaption?: string;
         onPaymentSuccess?: (status: string) => Promise<void>;
     }
     global {
@@ -401,6 +403,8 @@ declare module "@scom/scom-payment-widget" {
     }
     export class ScomPaymentWidget extends Module {
         private containerDapp;
+        private btnPay;
+        private mdPayment;
         private state;
         private invoiceCreation;
         private paymentMethod;
@@ -408,6 +412,8 @@ declare module "@scom/scom-payment-widget" {
         private stripePayment;
         private statusPayment;
         private _payment;
+        private _showButtonPay;
+        private _payButtonCaption;
         private _wallets;
         private _networks;
         private _tokens;
@@ -415,6 +421,10 @@ declare module "@scom/scom-payment-widget" {
         constructor(parent?: Container, options?: ScomPaymentWidgetElement);
         get payment(): IPaymentInfo;
         set payment(value: IPaymentInfo);
+        get showButtonPay(): boolean;
+        set showButtonPay(value: boolean);
+        get payButtonCaption(): string;
+        set payButtonCaption(value: string);
         get wallets(): IWalletPlugin[];
         set wallets(value: IWalletPlugin[]);
         get networks(): INetworkConfig[];
@@ -424,7 +434,9 @@ declare module "@scom/scom-payment-widget" {
         get rpcWallet(): IRpcWallet;
         private updateTheme;
         private updateStyle;
-        onStartPayment(payment: IPaymentInfo): void;
+        onStartPayment(payment?: IPaymentInfo): void;
+        private updatePayment;
+        private handlePay;
         init(): Promise<void>;
         render(): any;
     }

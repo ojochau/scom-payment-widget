@@ -3,7 +3,8 @@ import { Styles } from '@ijstech/components';
 export const dappContainerStyle = Styles.style({
   $nest: {
     '&>:first-child': {
-      borderRadius: 12
+      borderRadius: 12,
+      background: 'transparent'
     },
     '#pnlModule': {
       height: '100%'
