@@ -343,7 +343,6 @@ export class WalletPayment extends Module {
                     wrap="wrap"
                     gap="0.5rem"
                     width="100%"
-                    minHeight={40}
                     border={{ width: 1, style: 'solid', color: Theme.divider, radius: 8 }}
                     padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}
                     cursor="pointer"
@@ -389,7 +388,6 @@ export class WalletPayment extends Module {
             wrap="wrap"
             gap="0.5rem"
             width="100%"
-            minHeight={40}
             border={{ width: 1, style: 'solid', color: Theme.divider, radius: 8 }}
             padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}
             cursor="pointer"
@@ -628,7 +626,7 @@ export class WalletPayment extends Module {
                             <i-label id="lbCurrentNetwork" />
                         </i-stack>
                     </i-stack>
-                    <i-stack id="pnlTokenItems" direction="vertical" gap="1rem" width="100%" height="100%" minHeight={200} maxHeight="calc(100vh - 305px)" overflow="auto" padding={{ left: '1rem', right: '1rem' }} />
+                    <i-stack id="pnlTokenItems" direction="vertical" gap="1rem" width="100%" height="100%" minHeight={100} maxHeight={240} overflow="auto" padding={{ left: '1rem', right: '1rem' }} />
                     <i-stack id="pnlPayDetail" visible={false} direction="vertical" gap="0.25rem" width="100%" height="100%" alignItems="center" padding={{ left: '1rem', right: '1rem' }}>
                         <i-label caption="Paid to address" />
                         <i-stack
