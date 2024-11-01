@@ -1,5 +1,5 @@
 import { Module, Container, customElements, ControlElement, Styles, Button, Modal } from '@ijstech/components';
-import { InvoiceCreation, PaymentMethod, WalletPayment, StripePayment, StatusPayment } from './components/index';
+import { PaymentModule } from './components';
 import { INetworkConfig, IPaymentInfo, IPaymentStatus, PaymentProvider } from './interface';
 import { State } from './store';
 import { IWalletPlugin } from '@scom/scom-wallet-modal';
@@ -34,13 +34,8 @@ declare global {
 export class ScomPaymentWidget extends Module {
 	private containerDapp: ScomDappContainer;
 	private btnPay: Button;
-	private mdPayment: Modal;
 	private state: State;
-	private invoiceCreation: InvoiceCreation;
-	private paymentMethod: PaymentMethod;
-	private walletPayment: WalletPayment;
-	private stripePayment: StripePayment;
-	private statusPayment: StatusPayment;
+	private paymentModule: PaymentModule;
 	private _payment: IPaymentInfo;
 	private _showButtonPay: boolean;
 	private _payButtonCaption: string;
@@ -133,21 +128,34 @@ export class ScomPaymentWidget extends Module {
 
 	onStartPayment(payment?: IPaymentInfo) {
 		this.updatePayment(payment || this.payment);
-		if (this.mdPayment) this.mdPayment.visible = true;
+		this.openPaymentModal();
 	}
 
 	private updatePayment(payment: IPaymentInfo) {
 		this._payment = payment;
-		if (!this.invoiceCreation) return;
-		this.invoiceCreation.payment = payment;
-		this.invoiceCreation.visible = true;
-		this.paymentMethod.payment = payment;
-		this.paymentMethod.visible = false;
-		this.walletPayment.visible = false;
-		this.walletPayment.state = this.state;
-		this.stripePayment.payment = payment;
-		this.stripePayment.visible = false;
-		this.statusPayment.visible = false;
+	}
+
+	private async openPaymentModal() {
+		if (!this.paymentModule) {
+			this.paymentModule = new PaymentModule();
+			this.paymentModule.state = this.state;
+			this.paymentModule.dappContainer = this.containerDapp;
+		}
+		this.paymentModule.wallets = this.wallets;
+		this.paymentModule.networks = this.networks;
+		this.paymentModule.tokens = this.tokens;
+		this.paymentModule.onPaymentSuccess = this.onPaymentSuccess;
+		const modal = this.paymentModule.openModal({
+			title: 'Payment',
+			closeIcon: { name: 'times', fill: Theme.colors.primary.main },
+			width: 480,
+			maxWidth: '100%',
+			padding: { left: '1rem', right: '1rem', top: '0.75rem', bottom: '0.75rem' },
+			border: { radius: '1rem' }
+		});
+		await this.paymentModule.ready();
+		this.paymentModule.show(this._payment);
+		modal.refresh();
 	}
 
 	private handlePay() {
@@ -162,50 +170,8 @@ export class ScomPaymentWidget extends Module {
 		}
 		super.init();
 		this.updateTheme();
+		this.openPaymentModal = this.openPaymentModal.bind(this);
 		this.onPaymentSuccess = this.getAttribute('onPaymentSuccess', true) || this.onPaymentSuccess;
-		this.invoiceCreation.onContinue = () => {
-			this.invoiceCreation.visible = false;
-			this.paymentMethod.visible = true;
-		};
-		this.paymentMethod.onSelectedPaymentProvider = (payment: IPaymentInfo, paymentProvider: PaymentProvider) => {
-			this.paymentMethod.visible = false;
-			if (paymentProvider === PaymentProvider.Metamask || paymentProvider === PaymentProvider.TonWallet) {
-				this.paymentMethod.visible = false;
-				this.walletPayment.wallets = this.wallets;
-				this.walletPayment.networks = this.networks;
-				this.walletPayment.tokens = this.tokens;
-				this.walletPayment.onStartPayment({
-					...payment,
-					provider: paymentProvider
-				})
-				this.walletPayment.visible = true;
-			} else {
-				this.stripePayment.visible = true;
-			}
-		};
-		this.paymentMethod.onBack = () => {
-			this.paymentMethod.visible = false;
-			this.invoiceCreation.visible = true;
-		};
-		this.walletPayment.onPaid = (paymentStatus: IPaymentStatus) => {
-			this.walletPayment.visible = false;
-			this.statusPayment.visible = true;
-			this.statusPayment.updateStatus(this.state, paymentStatus);
-		}
-		this.walletPayment.onBack = () => {
-			this.paymentMethod.visible = true;
-			this.walletPayment.visible = false;
-		};
-		this.stripePayment.onBack = () => {
-			this.paymentMethod.visible = true;
-			this.stripePayment.visible = false;
-		}
-		this.stripePayment.onPaymentSuccess = (status: string) => {
-			if (this.onPaymentSuccess) this.onPaymentSuccess(status);
-		}
-		this.statusPayment.onClose = (status: string) => {
-			if (this.onPaymentSuccess) this.onPaymentSuccess(status);
-		}
 		const lazyLoad = this.getAttribute('lazyLoad', true, false);
 		if (!lazyLoad) {
 			const payment = this.getAttribute('payment', true);
@@ -239,7 +205,7 @@ export class ScomPaymentWidget extends Module {
 					minWidth={60}
 					maxWidth={180}
 					padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }}
-					font={{ size: '1rem', color: Theme.colors.primary.contrastText }}
+					font={{ size: '1rem', color: Theme.colors.primary.contrastText, bold: true }}
 					background={{ color: Theme.colors.primary.main }}
 					border={{ radius: 12 }}
 					onClick={this.handlePay}
@@ -255,20 +221,6 @@ export class ScomPaymentWidget extends Module {
 				padding={{ left: '1rem', right: '1rem', top: '0.75rem', bottom: '0.75rem' }}
 				border={{ radius: '1rem' }}
 			>
-				<i-stack
-					margin={{ top: '1rem' }}
-					direction="vertical"
-					width="100%"
-					height={480}
-					border={{ radius: 12, style: 'solid', width: 1, color: Theme.action.hover }}
-					overflow="hidden"
-				>
-					<scom-payment-widget--invoice-creation id="invoiceCreation" visible={false} height="100%" />
-					<scom-payment-widget--payment-method id="paymentMethod" visible={false} height="100%" />
-					<scom-payment-widget--wallet-payment id="walletPayment" visible={false} height="100%" />
-					<scom-payment-widget--stripe-payment id="stripePayment" visible={false} height="100%" />
-					<scom-payment-widget--status-payment id="statusPayment" visible={false} height="100%" />
-				</i-stack>
 			</i-modal>
 		</i-scom-dapp-container>
 	}
