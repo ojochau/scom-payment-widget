@@ -1,0 +1,154 @@
+import { Module, Container, customElements, ControlElement, Styles, Label, Button, Image } from '@ijstech/components';
+import { State } from '../store';
+import configData from '../data';
+import { INetworkConfig, IPaymentInfo, IPaymentStatus, PaymentProvider } from '../interface';
+import { InvoiceCreation } from './invoiceCreation';
+import { PaymentMethod } from './paymentMethod';
+import { StatusPayment } from './statusPayment';
+import { StripePayment } from './stripePayment';
+import { WalletPayment } from './walletPayment';
+import { IWalletPlugin } from '@scom/scom-wallet-modal';
+import { ITokenObject } from '@scom/scom-token-list';
+const Theme = Styles.Theme.ThemeVars;
+
+interface ScomPaymentWidgetPaymentElement extends ControlElement {
+    state?: State;
+    wallets?: IWalletPlugin[];
+    networks?: INetworkConfig[];
+    tokens?: ITokenObject[];
+    onPaymentSuccess?: (status: string) => Promise<void>;
+}
+
+declare global {
+    namespace JSX {
+        interface IntrinsicElements {
+            ['scom-payment-widget--payment-module']: ScomPaymentWidgetPaymentElement;
+        }
+    }
+}
+
+@customElements('scom-payment-widget--payment-module')
+export class PaymentModule extends Module {
+	private invoiceCreation: InvoiceCreation;
+	private paymentMethod: PaymentMethod;
+	private walletPayment: WalletPayment;
+	private stripePayment: StripePayment;
+	private statusPayment: StatusPayment;
+    private _state: State;
+    private _wallets: IWalletPlugin[] = [];
+    private _networks: INetworkConfig[] = [];
+    private _tokens: ITokenObject[] = [];
+	public onPaymentSuccess: (status: string) => Promise<void>;
+
+    get state() {
+        return this._state;
+    }
+
+    set state(value: State) {
+        this._state = value;
+    }
+
+    get wallets() {
+        return this._wallets ?? configData.defaultData.wallets;
+    }
+
+    set wallets(value: IWalletPlugin[]) {
+        this._wallets = value;
+    }
+
+    get networks() {
+        return this._networks ?? configData.defaultData.networks;
+    }
+
+    set networks(value: INetworkConfig[]) {
+        this._networks = value;
+    }
+
+    get tokens() {
+        return this._tokens ?? configData.defaultData.tokens;
+    }
+
+    set tokens(value: ITokenObject[]) {
+        this._tokens = value;
+    }
+
+    show(payment: IPaymentInfo) {
+        this.invoiceCreation.payment = payment;
+		this.invoiceCreation.visible = true;
+		this.paymentMethod.payment = payment;
+		this.paymentMethod.visible = false;
+		this.walletPayment.visible = false;
+		this.walletPayment.state = this.state;
+		this.stripePayment.payment = payment;
+		this.stripePayment.visible = false;
+		this.statusPayment.visible = false;
+    }
+
+    async init() {
+        await super.init();
+        const state = this.getAttribute('state', true);
+        if (state) this.state = state;
+        this.invoiceCreation.onContinue = () => {
+			this.invoiceCreation.visible = false;
+			this.paymentMethod.visible = true;
+		};
+		this.paymentMethod.onSelectedPaymentProvider = (payment: IPaymentInfo, paymentProvider: PaymentProvider) => {
+			this.paymentMethod.visible = false;
+			if (paymentProvider === PaymentProvider.Metamask || paymentProvider === PaymentProvider.TonWallet) {
+				this.paymentMethod.visible = false;
+				this.walletPayment.wallets = this.wallets;
+				this.walletPayment.networks = this.networks;
+				this.walletPayment.tokens = this.tokens;
+				this.walletPayment.onStartPayment({
+					...payment,
+					provider: paymentProvider
+				})
+				this.walletPayment.visible = true;
+			} else {
+				this.stripePayment.visible = true;
+			}
+		};
+		this.paymentMethod.onBack = () => {
+			this.paymentMethod.visible = false;
+			this.invoiceCreation.visible = true;
+		};
+		this.walletPayment.onPaid = (paymentStatus: IPaymentStatus) => {
+			this.walletPayment.visible = false;
+			this.statusPayment.visible = true;
+			this.statusPayment.updateStatus(this.state, paymentStatus);
+		}
+		this.walletPayment.onBack = () => {
+			this.paymentMethod.visible = true;
+			this.walletPayment.visible = false;
+		};
+		this.stripePayment.onBack = () => {
+			this.paymentMethod.visible = true;
+			this.stripePayment.visible = false;
+		}
+		this.stripePayment.onPaymentSuccess = (status: string) => {
+			if (this.onPaymentSuccess) this.onPaymentSuccess(status);
+		}
+		this.statusPayment.onClose = (status: string) => {
+			if (this.onPaymentSuccess) this.onPaymentSuccess(status);
+		}
+    }
+
+    render() {
+        return (
+            <i-stack
+                margin={{ top: '1rem' }}
+                direction="vertical"
+                width="100%"
+                height={480}
+                border={{ radius: 12, style: 'solid', width: 1, color: Theme.action.hover }}
+                overflow="hidden"
+            >
+                <scom-payment-widget--invoice-creation id="invoiceCreation" visible={false} height="100%" />
+                <scom-payment-widget--payment-method id="paymentMethod" visible={false} height="100%" />
+                <scom-payment-widget--wallet-payment id="walletPayment" visible={false} height="100%" />
+                <scom-payment-widget--stripe-payment id="stripePayment" visible={false} height="100%" />
+                <scom-payment-widget--status-payment id="statusPayment" visible={false} height="100%" />
+            </i-stack>
+        )
+    }
+}
