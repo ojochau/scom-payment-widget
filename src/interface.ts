@@ -1,7 +1,7 @@
 export interface IPaymentInfo {
   title: string;
   description?: string;
-  paymentId: string;
+  // paymentId: string;
   amount: number;
   currency?: string;
   photoUrl?: string;

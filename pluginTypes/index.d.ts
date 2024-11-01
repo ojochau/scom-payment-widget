@@ -347,6 +347,7 @@ declare module "@scom/scom-payment-widget/components/stripePayment.tsx" {
         private _payment;
         private stripe;
         private stripeElements;
+        private clientSecret;
         private lbItem;
         private lbAmount;
         onPaymentSuccess: (status: string) => void;
@@ -357,6 +358,7 @@ declare module "@scom/scom-payment-widget/components/stripePayment.tsx" {
         private updateAmount;
         private loadLib;
         private initStripePayment;
+        private createPaymentIntent;
         private handleStripeCheckoutClick;
         private handleBack;
         init(): Promise<void>;

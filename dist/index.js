@@ -1013,6 +1013,11 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                 await this.loadLib();
             }
             if (window.Stripe) {
+                const clientSecret = await this.createPaymentIntent();
+                if (!clientSecret)
+                    return;
+                this.clientSecret = clientSecret;
+                console.log('client secret', clientSecret);
                 const currency = this.payment.currency?.toLowerCase();
                 const stripeCurrency = store_4.stripeCurrencies.find(v => v === currency) || 'usd';
                 if (this.stripeElements) {
@@ -1032,10 +1037,43 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                 paymentElement.mount('#pnlStripePaymentForm');
             }
         }
+        async createPaymentIntent() {
+            const response = await fetch('http://localhost:3000/payment-intent', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            });
+            if (response.ok) {
+                console.log('response', response);
+                const data = await response.json();
+                if (data.success) {
+                    const clientSecret = data.data.clientSecret;
+                    return clientSecret;
+                }
+                else
+                    return null;
+            }
+            else
+                return null;
+        }
         async handleStripeCheckoutClick() {
             if (!this.stripe)
                 return;
             this.stripeElements.submit().then((result) => {
+                this.stripe.confirmPayment({
+                    elements: this.stripeElements,
+                    confirmParams: {
+                        return_url: 'https://example.com',
+                        payment_method_data: {
+                            billing_details: {
+                                name: 'Anna Sings',
+                                email: 'johnny@example.com'
+                            }
+                        }
+                    },
+                    clientSecret: this.clientSecret
+                });
                 console.log('stripe result', result);
                 if (this.onPaymentSuccess) {
                     this.onPaymentSuccess(result);
