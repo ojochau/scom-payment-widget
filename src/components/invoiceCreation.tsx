@@ -61,7 +61,7 @@ export class InvoiceCreation extends Module {
             this.pnlPaymentId.visible = !!_paymentId;
             this.lbPaymentId.caption = _paymentId;
         }
-        if (this.checkboxAgree.checked) {
+        if (this.checkboxAgree?.checked) {
             this.checkboxAgree.checked = false;
             this.btnContinue.enabled = false;
         }

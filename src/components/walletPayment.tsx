@@ -55,6 +55,7 @@ export class WalletPayment extends Module {
     private lbCurrentAddress: Label;
     private imgCurrentNetwork: Image;
     private lbCurrentNetwork: Label;
+	private _dappContainer: ScomDappContainer;
     private _payment: IPaymentInfo;
     private _wallets: IWalletPlugin[] = [];
     private _networks: INetworkConfig[] = [];
@@ -77,6 +78,14 @@ export class WalletPayment extends Module {
 
     constructor(parent?: Container, options?: ScomPaymentWidgetWalletPaymentElement) {
         super(parent, options);
+    }
+
+    get dappContainer() {
+        return this._dappContainer;
+    }
+
+    set dappContainer(container: ScomDappContainer) {
+        this._dappContainer = container;
     }
 
     get payment() {
@@ -407,20 +416,18 @@ export class WalletPayment extends Module {
     }
 
     private updateDappContainer() {
-        const dappContainer = this.closest('i-scom-dapp-container') as ScomDappContainer;
         const containerData = {
             wallets: this.wallets,
             networks: this.networks,
             showHeader: true,
             rpcWalletId: this.state.getRpcWallet()?.instanceId
         }
-        dappContainer.setData(containerData)
+        this.dappContainer.setData(containerData)
     }
 
     private handleConnectWallet() {
         if (this.payment.provider === PaymentProvider.Metamask) {
-            const dappContainer = this.closest('i-scom-dapp-container');
-            const header = dappContainer.querySelector('dapp-container-header');
+            const header = this.dappContainer.querySelector('dapp-container-header');
             const btnConnectWallet = header.querySelector('#btnConnectWallet') as Button;
             btnConnectWallet.click();
         } else if (this.payment.provider === PaymentProvider.TonWallet) {
@@ -429,8 +436,7 @@ export class WalletPayment extends Module {
     }
 
     private handleShowNetworks() {
-        const dappContainer = this.closest('i-scom-dapp-container');
-        const header = dappContainer.querySelector('dapp-container-header');
+        const header = this.dappContainer.querySelector('dapp-container-header');
         const btnNetwork = header.querySelector('#btnNetwork') as Button;
         btnNetwork.click();
     }
