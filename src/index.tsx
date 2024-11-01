@@ -139,6 +139,7 @@ export class ScomPaymentWidget extends Module {
 		if (!this.paymentModule) {
 			this.paymentModule = new PaymentModule();
 			this.paymentModule.state = this.state;
+			this.paymentModule.dappContainer = this.containerDapp;
 		}
 		this.paymentModule.wallets = this.wallets;
 		this.paymentModule.networks = this.networks;

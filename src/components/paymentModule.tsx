@@ -9,6 +9,7 @@ import { StripePayment } from './stripePayment';
 import { WalletPayment } from './walletPayment';
 import { IWalletPlugin } from '@scom/scom-wallet-modal';
 import { ITokenObject } from '@scom/scom-token-list';
+import ScomDappContainer from '@scom/scom-dapp-container';
 const Theme = Styles.Theme.ThemeVars;
 
 interface ScomPaymentWidgetPaymentElement extends ControlElement {
@@ -34,11 +35,20 @@ export class PaymentModule extends Module {
 	private walletPayment: WalletPayment;
 	private stripePayment: StripePayment;
 	private statusPayment: StatusPayment;
+	private _dappContainer: ScomDappContainer;
     private _state: State;
     private _wallets: IWalletPlugin[] = [];
     private _networks: INetworkConfig[] = [];
     private _tokens: ITokenObject[] = [];
 	public onPaymentSuccess: (status: string) => Promise<void>;
+
+    get dappContainer() {
+        return this._dappContainer;
+    }
+
+    set dappContainer(container: ScomDappContainer) {
+        this._dappContainer = container;
+    }
 
     get state() {
         return this._state;
@@ -79,6 +89,7 @@ export class PaymentModule extends Module {
 		this.paymentMethod.visible = false;
 		this.walletPayment.visible = false;
 		this.walletPayment.state = this.state;
+        this.walletPayment.dappContainer = this.dappContainer;
 		this.stripePayment.payment = payment;
 		this.stripePayment.visible = false;
 		this.statusPayment.visible = false;

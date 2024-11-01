@@ -617,6 +617,12 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             this._tokens = [];
             this.rpcWalletEvents = [];
         }
+        get dappContainer() {
+            return this._dappContainer;
+        }
+        set dappContainer(container) {
+            this._dappContainer = container;
+        }
         get payment() {
             return this._payment;
         }
@@ -901,19 +907,17 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                     this.$render("i-label", { caption: `${formattedBalance} ${tonToken.symbol}`, font: { bold: true, color: Theme.text.primary } }))));
         }
         updateDappContainer() {
-            const dappContainer = this.closest('i-scom-dapp-container');
             const containerData = {
                 wallets: this.wallets,
                 networks: this.networks,
                 showHeader: true,
                 rpcWalletId: this.state.getRpcWallet()?.instanceId
             };
-            dappContainer.setData(containerData);
+            this.dappContainer.setData(containerData);
         }
         handleConnectWallet() {
             if (this.payment.provider === interface_4.PaymentProvider.Metamask) {
-                const dappContainer = this.closest('i-scom-dapp-container');
-                const header = dappContainer.querySelector('dapp-container-header');
+                const header = this.dappContainer.querySelector('dapp-container-header');
                 const btnConnectWallet = header.querySelector('#btnConnectWallet');
                 btnConnectWallet.click();
             }
@@ -922,8 +926,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             }
         }
         handleShowNetworks() {
-            const dappContainer = this.closest('i-scom-dapp-container');
-            const header = dappContainer.querySelector('dapp-container-header');
+            const header = this.dappContainer.querySelector('dapp-container-header');
             const btnNetwork = header.querySelector('#btnNetwork');
             btnNetwork.click();
         }
@@ -1085,6 +1088,12 @@ define("@scom/scom-payment-widget/components/paymentModule.tsx", ["require", "ex
             this._networks = [];
             this._tokens = [];
         }
+        get dappContainer() {
+            return this._dappContainer;
+        }
+        set dappContainer(container) {
+            this._dappContainer = container;
+        }
         get state() {
             return this._state;
         }
@@ -1116,6 +1125,7 @@ define("@scom/scom-payment-widget/components/paymentModule.tsx", ["require", "ex
             this.paymentMethod.visible = false;
             this.walletPayment.visible = false;
             this.walletPayment.state = this.state;
+            this.walletPayment.dappContainer = this.dappContainer;
             this.stripePayment.payment = payment;
             this.stripePayment.visible = false;
             this.statusPayment.visible = false;
@@ -1310,6 +1320,7 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             if (!this.paymentModule) {
                 this.paymentModule = new components_12.PaymentModule();
                 this.paymentModule.state = this.state;
+                this.paymentModule.dappContainer = this.containerDapp;
             }
             this.paymentModule.wallets = this.wallets;
             this.paymentModule.networks = this.networks;

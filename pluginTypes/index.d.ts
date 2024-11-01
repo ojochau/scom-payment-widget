@@ -264,6 +264,7 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
     import { State } from "@scom/scom-payment-widget/store.ts";
     import { IRpcWallet } from '@ijstech/eth-wallet';
     import { IWalletPlugin } from '@scom/scom-wallet-modal';
+    import ScomDappContainer from '@scom/scom-dapp-container';
     interface ScomPaymentWidgetWalletPaymentElement extends ControlElement {
         wallets?: IWalletPlugin[];
         networks?: INetworkConfig[];
@@ -305,6 +306,7 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private lbCurrentAddress;
         private imgCurrentNetwork;
         private lbCurrentNetwork;
+        private _dappContainer;
         private _payment;
         private _wallets;
         private _networks;
@@ -324,6 +326,8 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         onBack: () => void;
         onPaid: (paymentStatus: IPaymentStatus) => void;
         constructor(parent?: Container, options?: ScomPaymentWidgetWalletPaymentElement);
+        get dappContainer(): ScomDappContainer;
+        set dappContainer(container: ScomDappContainer);
         get payment(): IPaymentInfo;
         set payment(value: IPaymentInfo);
         get state(): State;
@@ -370,6 +374,7 @@ declare module "@scom/scom-payment-widget/components/paymentModule.tsx" {
     import { INetworkConfig, IPaymentInfo } from "@scom/scom-payment-widget/interface.ts";
     import { IWalletPlugin } from '@scom/scom-wallet-modal';
     import { ITokenObject } from '@scom/scom-token-list';
+    import ScomDappContainer from '@scom/scom-dapp-container';
     interface ScomPaymentWidgetPaymentElement extends ControlElement {
         state?: State;
         wallets?: IWalletPlugin[];
@@ -390,11 +395,14 @@ declare module "@scom/scom-payment-widget/components/paymentModule.tsx" {
         private walletPayment;
         private stripePayment;
         private statusPayment;
+        private _dappContainer;
         private _state;
         private _wallets;
         private _networks;
         private _tokens;
         onPaymentSuccess: (status: string) => Promise<void>;
+        get dappContainer(): ScomDappContainer;
+        set dappContainer(container: ScomDappContainer);
         get state(): State;
         set state(value: State);
         get wallets(): IWalletPlugin[];
