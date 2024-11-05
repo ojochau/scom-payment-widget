@@ -535,7 +535,7 @@ export class WalletPayment extends Module {
     }
 
     render() {
-        return <i-stack direction="vertical" alignItems="center" height="100%">
+        return <i-stack direction="vertical" alignItems="center" width="100%">
             <i-stack
                 direction="vertical"
                 alignItems="center"

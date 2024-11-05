@@ -1,12 +1,14 @@
-import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils } from '@ijstech/components';
+import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, Alert } from '@ijstech/components';
 import { IPaymentInfo } from '../interface';
-import { STRIPE_CONFIG, STRIPE_LIB_URL, stripeCurrencies } from '../store';
-import { textCenterStyle } from './index.css';
+import { STRIPE_PUBLISHABLE_KEY, stripeCurrencies } from '../store';
+import { alertStyle, textCenterStyle } from './index.css';
+import { loadStripe } from '../utils';
 const Theme = Styles.Theme.ThemeVars;
 declare const window: any;
 
 interface ScomPaymentWidgetStripePaymentElement extends ControlElement {
     payment?: IPaymentInfo;
+    baseStripeApi?: string;
     payBtnCaption?: string;
     onBack?: () => void;
     onPaymentSuccess?: (status: string) => void;
@@ -23,11 +25,14 @@ declare global {
 @customElements('scom-payment-widget--stripe-payment')
 export class StripePayment extends Module {
     private _payment: IPaymentInfo;
+    private _baseStripeApi: string;
+    private _urlStripeTracking: string;
     private stripe: any;
     private stripeElements: any;
     private clientSecret: string;
     private lbItem: Label;
     private lbAmount: Label;
+    private mdAlert: Alert;
     public onPaymentSuccess: (status: string) => void;
     public onBack: () => void;
 
@@ -44,6 +49,22 @@ export class StripePayment extends Module {
         return this._payment;
     }
 
+    get baseStripeApi() {
+        return this._baseStripeApi;
+    }
+
+    set baseStripeApi(value: string) {
+        this._baseStripeApi = value;
+    }
+
+    get urlStripeTracking() {
+        return this._urlStripeTracking;
+    }
+
+    set urlStripeTracking(value: string) {
+        this._urlStripeTracking = value;
+    }
+
     private updateAmount() {
         if (this.payment && this.lbAmount) {
             const { title, amount, currency } = this.payment;
@@ -53,30 +74,16 @@ export class StripePayment extends Module {
         }
     }
 
-    private async loadLib() {
-        if (window.Stripe) return;
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = STRIPE_LIB_URL;
-            script.async = true;
-            script.onload = () => {
-                resolve(true);
-            };
-            document.head.appendChild(script);
-        })
-    }
-
     private async initStripePayment() {
         if (!window.Stripe) {
-            await this.loadLib();
+            await loadStripe();
         }
         if (window.Stripe) {
-            const clientSecret = await this.createPaymentIntent();
-            if(!clientSecret) return;
-            this.clientSecret = clientSecret;
-            console.log('client secret', clientSecret)
             const currency = this.payment.currency?.toLowerCase();
             const stripeCurrency = stripeCurrencies.find(v => v === currency) || 'usd';
+            const clientSecret = await this.createPaymentIntent(stripeCurrency, this.payment.amount);
+            if (!clientSecret) return;
+            this.clientSecret = clientSecret;
             if (this.stripeElements) {
                 this.stripeElements.update({
                     currency: stripeCurrency,
@@ -84,7 +91,7 @@ export class StripePayment extends Module {
                 });
                 return;
             }
-            this.stripe = window.Stripe(STRIPE_CONFIG.STRIPE_PUBLISHABLE_KEY);
+            this.stripe = window.Stripe(STRIPE_PUBLISHABLE_KEY);
             this.stripeElements = this.stripe.elements({
                 mode: 'payment',
                 currency: stripeCurrency,
@@ -95,32 +102,35 @@ export class StripePayment extends Module {
         }
     }
 
-    private async createPaymentIntent(): Promise<string> {
-        const response = await fetch('http://localhost:3000/payment-intent', {
+    private async createPaymentIntent(currency: string, amount: number): Promise<string> {
+        const apiUrl = this.baseStripeApi ?? '/stripe';
+        const response = await fetch(`${apiUrl}/payment-intent`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
             },
+            body: JSON.stringify({ currency, amount })
         });
-        if(response.ok) {
-            console.log('response', response);
+        if (response.ok) {
             const data = await response.json();
-            if(data.success) {
-                const clientSecret = data.data.clientSecret;
+            if (data.clientSecret) {
+                const clientSecret = data.clientSecret;
                 return clientSecret;
             }
-            else return null;
+            return null;
         }
-        else return null;
+        return null;
     }
 
     private async handleStripeCheckoutClick() {
         if (!this.stripe) return;
-        this.stripeElements.submit().then((result) => {
-            this.stripe.confirmPayment({
+        const url = this.urlStripeTracking ?? `${window.location.origin}/#!/stripe-payment-status`;
+        this.stripeElements.submit().then(async (result) => {
+            const { error } = await this.stripe.confirmPayment({
                 elements: this.stripeElements,
                 confirmParams: {
-                    return_url: 'https://example.com',
+                    return_url: url,
                     payment_method_data: {
                         billing_details: {
                             name: 'Anna Sings',
@@ -130,11 +140,28 @@ export class StripePayment extends Module {
                 },
                 clientSecret: this.clientSecret
             })
-            console.log('stripe result', result);
-            if (this.onPaymentSuccess) {
-                this.onPaymentSuccess(result);
+            if (error) {
+                this.showAlert('error', 'Payment failed', error.message);
+            } else {
+                this.showAlert('success', 'Payment successfully', `Check your payment status here <a href='${url}?payment_intent_client_secret=${this.clientSecret}' target='_blank'>${this.clientSecret}</a>`);
             }
         })
+    }
+
+    private async showAlert(status: string, title: string, msg: string) {
+        if (status === 'success') {
+            this.mdAlert.onClose = () => {
+                if (this.onPaymentSuccess) {
+                    this.onPaymentSuccess('success');
+                }
+            };
+        } else {
+            this.mdAlert.onClose = () => { };
+        }
+        this.mdAlert.status = status;
+        this.mdAlert.title = title;
+        this.mdAlert.content = msg;
+        this.mdAlert.showModal();
     }
 
     private handleBack() {
@@ -146,13 +173,15 @@ export class StripePayment extends Module {
         this.onPaymentSuccess = this.getAttribute('onPaymentSuccess', true) || this.onPaymentSuccess;
         this.onBack = this.getAttribute('onBack', true) || this.onBack;
         const payment = this.getAttribute('payment', true);
-        if (payment) {
-            this.payment = payment;
-        }
+        if (payment) this.payment = payment;
+        const baseStripeApi = this.getAttribute('baseStripeApi', true);
+        if (baseStripeApi) this.baseStripeApi = baseStripeApi;
+        const urlStripeTracking = this.getAttribute('urlStripeTracking', true);
+        if (urlStripeTracking) this.urlStripeTracking = urlStripeTracking;
     }
 
     render() {
-        return <i-stack direction="vertical" gap="1rem" alignItems="center" height="100%">
+        return <i-stack direction="vertical" alignItems="center" width="100%">
             <i-stack
                 direction="vertical"
                 gap="0.5rem"
@@ -160,6 +189,7 @@ export class StripePayment extends Module {
                 alignItems="center"
                 width="100%"
                 minHeight={85}
+                margin={{ bottom: '1rem' }}
                 padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}
                 background={{ color: Theme.colors.primary.main }}
             >
@@ -194,6 +224,7 @@ export class StripePayment extends Module {
                     />
                 </i-stack>
             </i-stack>
+            <i-alert id="mdAlert" class={alertStyle} />
         </i-stack>
     }
 }

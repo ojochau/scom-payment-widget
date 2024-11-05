@@ -72,6 +72,8 @@ export default class Module1 extends Module {
           }}
           onPaymentSuccess={this.handlePaymentSuccess}
           showButtonPay={true}
+          baseStripeApi="http://127.0.0.1:8100/stripe"
+          urlStripeTracking="http://127.0.0.1:8100/#!/stripe-payment-status"
         />
         {/* <i-button
           caption="Pay"

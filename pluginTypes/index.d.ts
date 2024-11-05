@@ -41,10 +41,7 @@ declare module "@scom/scom-payment-widget/store.ts" {
     import { INetwork, IRpcWallet, IClientWallet } from "@ijstech/eth-wallet";
     import { PaymentProvider, PaymentType } from "@scom/scom-payment-widget/interface.ts";
     export const STRIPE_LIB_URL = "https://js.stripe.com/v3";
-    export const STRIPE_CONFIG: {
-        STRIPE_PUBLISHABLE_KEY: string;
-        STRIPE_SECRET_KEY: string;
-    };
+    export const STRIPE_PUBLISHABLE_KEY = "pk_test_51Q60lAP7pMwOSpCLJJQliRgIVHlmPlpkrstk43VlRG2vutqIPZKhoSv8XVzK3nbxawr2ru5cWQ1SFfkayFu5m25o00RHU1gBhl";
     interface IExtendedNetwork extends INetwork {
         explorerName?: string;
         explorerTxUrl?: string;
@@ -97,9 +94,11 @@ declare module "@scom/scom-payment-widget/data.ts" {
 }
 /// <amd-module name="@scom/scom-payment-widget/components/index.css.ts" />
 declare module "@scom/scom-payment-widget/components/index.css.ts" {
+    export const elementStyle: string;
     export const textCenterStyle: string;
     export const checkboxTextStyle: string;
     export const loadingImageStyle: string;
+    export const alertStyle: string;
 }
 /// <amd-module name="@scom/scom-payment-widget/components/invoiceCreation.tsx" />
 declare module "@scom/scom-payment-widget/components/invoiceCreation.tsx" {
@@ -219,12 +218,17 @@ declare module "@scom/scom-payment-widget/components/statusPayment.tsx" {
         render(): any;
     }
 }
+/// <amd-module name="@scom/scom-payment-widget/utils.ts" />
+declare module "@scom/scom-payment-widget/utils.ts" {
+    export function loadStripe(): Promise<unknown>;
+}
 /// <amd-module name="@scom/scom-payment-widget/components/stripePayment.tsx" />
 declare module "@scom/scom-payment-widget/components/stripePayment.tsx" {
     import { Module, Container, ControlElement } from '@ijstech/components';
     import { IPaymentInfo } from "@scom/scom-payment-widget/interface.ts";
     interface ScomPaymentWidgetStripePaymentElement extends ControlElement {
         payment?: IPaymentInfo;
+        baseStripeApi?: string;
         payBtnCaption?: string;
         onBack?: () => void;
         onPaymentSuccess?: (status: string) => void;
@@ -238,21 +242,28 @@ declare module "@scom/scom-payment-widget/components/stripePayment.tsx" {
     }
     export class StripePayment extends Module {
         private _payment;
+        private _baseStripeApi;
+        private _urlStripeTracking;
         private stripe;
         private stripeElements;
         private clientSecret;
         private lbItem;
         private lbAmount;
+        private mdAlert;
         onPaymentSuccess: (status: string) => void;
         onBack: () => void;
         constructor(parent?: Container, options?: ScomPaymentWidgetStripePaymentElement);
         set payment(data: IPaymentInfo);
         get payment(): IPaymentInfo;
+        get baseStripeApi(): string;
+        set baseStripeApi(value: string);
+        get urlStripeTracking(): string;
+        set urlStripeTracking(value: string);
         private updateAmount;
-        private loadLib;
         private initStripePayment;
         private createPaymentIntent;
         private handleStripeCheckoutClick;
+        private showAlert;
         private handleBack;
         init(): Promise<void>;
         render(): any;
@@ -382,6 +393,8 @@ declare module "@scom/scom-payment-widget/components/paymentModule.tsx" {
         wallets?: IWalletPlugin[];
         networks?: INetworkConfig[];
         tokens?: ITokenObject[];
+        baseStripeApi?: string;
+        urlStripeTracking?: string;
         onPaymentSuccess?: (status: string) => Promise<void>;
     }
     global {
@@ -399,6 +412,8 @@ declare module "@scom/scom-payment-widget/components/paymentModule.tsx" {
         private statusPayment;
         private _dappContainer;
         private _state;
+        private _baseStripeApi;
+        private _urlStripeTracking;
         private _wallets;
         private _networks;
         private _tokens;
@@ -407,6 +422,10 @@ declare module "@scom/scom-payment-widget/components/paymentModule.tsx" {
         set dappContainer(container: ScomDappContainer);
         get state(): State;
         set state(value: State);
+        get baseStripeApi(): string;
+        set baseStripeApi(value: string);
+        get urlStripeTracking(): string;
+        set urlStripeTracking(value: string);
         get wallets(): IWalletPlugin[];
         set wallets(value: IWalletPlugin[]);
         get networks(): INetworkConfig[];
@@ -414,6 +433,34 @@ declare module "@scom/scom-payment-widget/components/paymentModule.tsx" {
         get tokens(): ITokenObject[];
         set tokens(value: ITokenObject[]);
         show(payment: IPaymentInfo): void;
+        init(): Promise<void>;
+        render(): any;
+    }
+}
+/// <amd-module name="@scom/scom-payment-widget/components/stripePaymentTracking.tsx" />
+declare module "@scom/scom-payment-widget/components/stripePaymentTracking.tsx" {
+    import { Module, Container, ControlElement } from '@ijstech/components';
+    interface ScomPaymentWidgetStripePaymentTrackingElement extends ControlElement {
+    }
+    global {
+        namespace JSX {
+            interface IntrinsicElements {
+                ['scom-payment-widget--stripe-payment-tracking']: ScomPaymentWidgetStripePaymentTrackingElement;
+            }
+        }
+    }
+    export class StatusPaymentTracking extends Module {
+        private stripe;
+        private inputClientSecret;
+        private btnCheck;
+        private imgStatus;
+        private lbStatus;
+        constructor(parent?: Container, options?: ScomPaymentWidgetStripePaymentTrackingElement);
+        private checkPaymentStatus;
+        private handleInputChanged;
+        private handleSearch;
+        private getParamsFromUrl;
+        private updateURLParam;
         init(): Promise<void>;
         render(): any;
     }
@@ -426,7 +473,8 @@ declare module "@scom/scom-payment-widget/components/index.ts" {
     import { WalletPayment } from "@scom/scom-payment-widget/components/walletPayment.tsx";
     import { StatusPayment } from "@scom/scom-payment-widget/components/statusPayment.tsx";
     import { StripePayment } from "@scom/scom-payment-widget/components/stripePayment.tsx";
-    export { PaymentModule, InvoiceCreation, PaymentMethod, WalletPayment, StripePayment, StatusPayment };
+    import { StatusPaymentTracking } from "@scom/scom-payment-widget/components/stripePaymentTracking.tsx";
+    export { PaymentModule, InvoiceCreation, PaymentMethod, WalletPayment, StripePayment, StatusPaymentTracking, StatusPayment };
 }
 /// <amd-module name="@scom/scom-payment-widget/index.css.ts" />
 declare module "@scom/scom-payment-widget/index.css.ts" {
@@ -438,8 +486,8 @@ declare module "@scom/scom-payment-widget" {
     import { INetworkConfig, IPaymentInfo } from "@scom/scom-payment-widget/interface.ts";
     import { IWalletPlugin } from '@scom/scom-wallet-modal';
     import { ITokenObject } from "@scom/scom-token-list";
-    import '@scom/scom-dapp-container';
     import { IRpcWallet } from '@ijstech/eth-wallet';
+    type Mode = 'payment' | 'status';
     interface ScomPaymentWidgetElement extends ControlElement {
         lazyLoad?: boolean;
         payment?: IPaymentInfo;
@@ -448,6 +496,9 @@ declare module "@scom/scom-payment-widget" {
         tokens?: ITokenObject[];
         showButtonPay?: boolean;
         payButtonCaption?: string;
+        baseStripeApi?: string;
+        urlStripeTracking?: string;
+        mode?: Mode;
         onPaymentSuccess?: (status: string) => Promise<void>;
     }
     global {
@@ -460,9 +511,13 @@ declare module "@scom/scom-payment-widget" {
     export class ScomPaymentWidget extends Module {
         private containerDapp;
         private btnPay;
+        private statusPaymentTracking;
         private state;
         private paymentModule;
         private _payment;
+        private _mode;
+        private _baseStripeApi;
+        private _urlStripeTracking;
         private _showButtonPay;
         private _payButtonCaption;
         private _wallets;
@@ -472,10 +527,16 @@ declare module "@scom/scom-payment-widget" {
         constructor(parent?: Container, options?: ScomPaymentWidgetElement);
         get payment(): IPaymentInfo;
         set payment(value: IPaymentInfo);
+        get mode(): Mode;
+        set mode(value: Mode);
         get showButtonPay(): boolean;
         set showButtonPay(value: boolean);
         get payButtonCaption(): string;
         set payButtonCaption(value: string);
+        get baseStripeApi(): string;
+        set baseStripeApi(value: string);
+        get urlStripeTracking(): string;
+        set urlStripeTracking(value: string);
         get wallets(): IWalletPlugin[];
         set wallets(value: IWalletPlugin[]);
         get networks(): INetworkConfig[];
@@ -486,9 +547,9 @@ declare module "@scom/scom-payment-widget" {
         private updateTheme;
         private updateStyle;
         onStartPayment(payment?: IPaymentInfo): void;
-        private updatePayment;
         private openPaymentModal;
         private handlePay;
+        private updateUIByMode;
         init(): Promise<void>;
         render(): any;
     }

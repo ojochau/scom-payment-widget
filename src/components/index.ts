@@ -4,6 +4,7 @@ import { PaymentMethod } from './paymentMethod';
 import { WalletPayment } from './walletPayment';
 import { StatusPayment } from './statusPayment';
 import { StripePayment } from './stripePayment';
+import { StatusPaymentTracking } from './stripePaymentTracking';
 
 export {
   PaymentModule,
@@ -11,5 +12,6 @@ export {
   PaymentMethod,
   WalletPayment,
   StripePayment,
+  StatusPaymentTracking,
   StatusPayment
 }

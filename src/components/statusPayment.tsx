@@ -83,7 +83,7 @@ export class StatusPayment extends Module {
     }
 
     render() {
-        return <i-stack direction="vertical" gap="1rem" height="100%" width="100%" alignItems="center" padding={{ top: '1rem', bottom: '1rem' }}>
+        return <i-stack direction="vertical" gap="1rem" width="100%" alignItems="center" padding={{ top: '1rem', bottom: '1rem' }}>
             <i-stack direction="vertical" gap="1rem" height="100%" width="100%">
                 <i-stack
                     direction="horizontal"

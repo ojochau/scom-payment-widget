@@ -136,7 +136,7 @@ export class PaymentMethod extends Module {
     }
 
     render() {
-        return <i-stack direction="vertical" gap="1rem" alignItems="center" height="100%">
+        return <i-stack direction="vertical" gap="1rem" alignItems="center" width="100%">
             <i-stack
                 direction="vertical"
                 gap="0.5rem"

@@ -6,9 +6,14 @@ const spinnerAnim = Styles.keyframes({
     transform: 'rotate(0deg)'
   },
   "100%": {
-      transform: 'rotate(360deg)'
+    transform: 'rotate(360deg)'
   },
 });
+
+export const elementStyle = Styles.style({
+  display: 'flex',
+  flexGrow: 1
+})
 
 export const textCenterStyle = Styles.style({
   textAlign: 'center'
@@ -28,4 +33,19 @@ export const checkboxTextStyle = Styles.style({
 
 export const loadingImageStyle = Styles.style({
   animation: `${spinnerAnim} 2s linear infinite`
+})
+
+export const alertStyle = Styles.style({
+  $nest: {
+    'i-vstack i-label': {
+      textAlign: 'center'
+    },
+    'span': {
+      display: 'inline'
+    },
+    'a': {
+      display: 'inline',
+      color: Theme.colors.info.main
+    }
+  }
 })

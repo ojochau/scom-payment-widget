@@ -6,11 +6,7 @@ import { PaymentProvider, PaymentType } from "./interface";
 const infuraId = 'adc596bf88b648e2a8902bc9093930c5';
 
 export const STRIPE_LIB_URL = 'https://js.stripe.com/v3';
-
-export const STRIPE_CONFIG = {
-  STRIPE_PUBLISHABLE_KEY: 'pk_test_51Q60lAP7pMwOSpCLJJQliRgIVHlmPlpkrstk43VlRG2vutqIPZKhoSv8XVzK3nbxawr2ru5cWQ1SFfkayFu5m25o00RHU1gBhl',
-  STRIPE_SECRET_KEY: 'sk_test_51Q60lAP7pMwOSpCLNlbVBSZOIUOaqYVFVWihoOpqVOjOag6hUtOktCBYFudiXkVLiYKRlgZODmILVnr271jm9yQc00ANkHT99O'
-};
+export const STRIPE_PUBLISHABLE_KEY = 'pk_test_51Q60lAP7pMwOSpCLJJQliRgIVHlmPlpkrstk43VlRG2vutqIPZKhoSv8XVzK3nbxawr2ru5cWQ1SFfkayFu5m25o00RHU1gBhl';
 
 interface IExtendedNetwork extends INetwork {
   explorerName?: string;
