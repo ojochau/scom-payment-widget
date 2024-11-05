@@ -86,7 +86,7 @@ export class InvoiceCreation extends Module {
     }
 
     render() {
-        return <i-stack direction="vertical" gap="1rem" height="100%" alignItems="center" padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}>
+        return <i-stack direction="vertical" gap="1rem" width="100%" alignItems="center" padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}>
             <i-stack direction="vertical" height="100%">
                 <i-stack id="pnlItemInfo" visible={false} direction="vertical" gap="1rem" alignItems="center" width="100%" margin={{ bottom: '1rem' }}>
                     <i-label id="lbItem" class={textCenterStyle} font={{ size: '1.25rem', color: Theme.colors.primary.main, bold: true, transform: 'uppercase' }} />
