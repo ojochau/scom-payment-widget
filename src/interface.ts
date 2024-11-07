@@ -9,6 +9,10 @@ export interface IPaymentInfo {
   prices?: { label: string; amount: number | string }[];
   address?: string; //wallet
   provider?: PaymentProvider;
+  userInfo?: {
+    name: string;
+    email: string;
+  }
 }
 
 export enum PaymentType {

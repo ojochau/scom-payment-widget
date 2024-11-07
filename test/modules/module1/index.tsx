@@ -68,7 +68,11 @@ export default class Module1 extends Module {
             address: '0xA81961100920df22CF98703155029822f2F7f033',
             title: 'Product Mix',
             currency: 'USD',
-            photoUrl: 'https://cdn.corporatefinanceinstitute.com/assets/product-mix3.jpeg'
+            photoUrl: 'https://cdn.corporatefinanceinstitute.com/assets/product-mix3.jpeg',
+            userInfo: {
+              name: 'Test',
+              email: 'test@example.com'
+            }
           }}
           onPaymentSuccess={this.handlePaymentSuccess}
           showButtonPay={true}
