@@ -1,4 +1,4 @@
-import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, Alert } from '@ijstech/components';
+import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, Alert, Button } from '@ijstech/components';
 import { IPaymentInfo } from '../interface';
 import { STRIPE_PUBLISHABLE_KEY, stripeCurrencies } from '../store';
 import { alertStyle, textCenterStyle } from './index.css';
@@ -29,7 +29,7 @@ export class StripePayment extends Module {
     private _urlStripeTracking: string;
     private stripe: any;
     private stripeElements: any;
-    private clientSecret: string;
+    private btnCheckout: Button;
     private lbItem: Label;
     private lbAmount: Label;
     private mdAlert: Alert;
@@ -65,6 +65,12 @@ export class StripePayment extends Module {
         this._urlStripeTracking = value;
     }
 
+    private get stripeCurrency() {
+        const currency = this.payment.currency?.toLowerCase();
+        const stripeCurrency = stripeCurrencies.find(v => v === currency) || 'usd';
+        return stripeCurrency;
+    }
+
     private updateAmount() {
         if (this.payment && this.lbAmount) {
             const { title, amount, currency } = this.payment;
@@ -79,14 +85,9 @@ export class StripePayment extends Module {
             await loadStripe();
         }
         if (window.Stripe) {
-            const currency = this.payment.currency?.toLowerCase();
-            const stripeCurrency = stripeCurrencies.find(v => v === currency) || 'usd';
-            const clientSecret = await this.createPaymentIntent(stripeCurrency, this.payment.amount);
-            if (!clientSecret) return;
-            this.clientSecret = clientSecret;
             if (this.stripeElements) {
                 this.stripeElements.update({
-                    currency: stripeCurrency,
+                    currency: this.stripeCurrency,
                     amount: this.payment.amount,
                 });
                 return;
@@ -94,7 +95,7 @@ export class StripePayment extends Module {
             this.stripe = window.Stripe(STRIPE_PUBLISHABLE_KEY);
             this.stripeElements = this.stripe.elements({
                 mode: 'payment',
-                currency: stripeCurrency,
+                currency: this.stripeCurrency,
                 amount: this.payment.amount,
             });
             const paymentElement = this.stripeElements.create('payment');
@@ -112,39 +113,53 @@ export class StripePayment extends Module {
             },
             body: JSON.stringify({ currency, amount })
         });
-        if (response.ok) {
-            const data = await response.json();
-            if (data.clientSecret) {
-                const clientSecret = data.clientSecret;
-                return clientSecret;
+        try {
+            if (response.ok) {
+                const data = await response.json();
+                if (data.clientSecret) {
+                    const clientSecret = data.clientSecret;
+                    return clientSecret;
+                }
+                return null;
             }
-            return null;
-        }
+        } catch { }
         return null;
     }
 
     private async handleStripeCheckoutClick() {
         if (!this.stripe) return;
+        this.btnCheckout.rightIcon.spin = true;
+        this.btnCheckout.rightIcon.visible = true;
         const url = this.urlStripeTracking ?? `${window.location.origin}/#!/stripe-payment-status`;
         this.stripeElements.submit().then(async (result) => {
+            const clientSecret = await this.createPaymentIntent(this.stripeCurrency, this.payment.amount);
+            if (!clientSecret) {
+                this.btnCheckout.rightIcon.spin = false;
+                this.btnCheckout.rightIcon.visible = false;
+                this.showAlert('error', 'Payment failed', 'Cannot get payment info');
+                return;
+            };
+            const { userInfo } = this.payment;
             const { error } = await this.stripe.confirmPayment({
                 elements: this.stripeElements,
                 confirmParams: {
                     return_url: url,
                     payment_method_data: {
                         billing_details: {
-                            name: 'Anna Sings',
-                            email: 'johnny@example.com'
+                            name: userInfo?.name || '',
+                            email: userInfo?.email || ''
                         }
                     }
                 },
-                clientSecret: this.clientSecret
+                clientSecret
             })
             if (error) {
                 this.showAlert('error', 'Payment failed', error.message);
             } else {
-                this.showAlert('success', 'Payment successfully', `Check your payment status here <a href='${url}?payment_intent_client_secret=${this.clientSecret}' target='_blank'>${this.clientSecret}</a>`);
+                this.showAlert('success', 'Payment successfully', `Check your payment status here <a href='${url}?payment_intent_client_secret=${clientSecret}' target='_blank'>${clientSecret}</a>`);
             }
+            this.btnCheckout.rightIcon.spin = false;
+            this.btnCheckout.rightIcon.visible = false;
         })
     }
 
@@ -212,6 +227,7 @@ export class StripePayment extends Module {
                         onClick={this.handleBack}
                     />
                     <i-button
+                        id="btnCheckout"
                         caption="Checkout"
                         width="calc(50% - 0.5rem)"
                         maxWidth={180}

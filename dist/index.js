@@ -561,6 +561,11 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
         set urlStripeTracking(value) {
             this._urlStripeTracking = value;
         }
+        get stripeCurrency() {
+            const currency = this.payment.currency?.toLowerCase();
+            const stripeCurrency = store_4.stripeCurrencies.find(v => v === currency) || 'usd';
+            return stripeCurrency;
+        }
         updateAmount() {
             if (this.payment && this.lbAmount) {
                 const { title, amount, currency } = this.payment;
@@ -574,15 +579,9 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                 await (0, utils_1.loadStripe)();
             }
             if (window.Stripe) {
-                const currency = this.payment.currency?.toLowerCase();
-                const stripeCurrency = store_4.stripeCurrencies.find(v => v === currency) || 'usd';
-                const clientSecret = await this.createPaymentIntent(stripeCurrency, this.payment.amount);
-                if (!clientSecret)
-                    return;
-                this.clientSecret = clientSecret;
                 if (this.stripeElements) {
                     this.stripeElements.update({
-                        currency: stripeCurrency,
+                        currency: this.stripeCurrency,
                         amount: this.payment.amount,
                     });
                     return;
@@ -590,7 +589,7 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                 this.stripe = window.Stripe(store_4.STRIPE_PUBLISHABLE_KEY);
                 this.stripeElements = this.stripe.elements({
                     mode: 'payment',
-                    currency: stripeCurrency,
+                    currency: this.stripeCurrency,
                     amount: this.payment.amount,
                 });
                 const paymentElement = this.stripeElements.create('payment');
@@ -607,40 +606,56 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                 },
                 body: JSON.stringify({ currency, amount })
             });
-            if (response.ok) {
-                const data = await response.json();
-                if (data.clientSecret) {
-                    const clientSecret = data.clientSecret;
-                    return clientSecret;
+            try {
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.clientSecret) {
+                        const clientSecret = data.clientSecret;
+                        return clientSecret;
+                    }
+                    return null;
                 }
-                return null;
             }
+            catch { }
             return null;
         }
         async handleStripeCheckoutClick() {
             if (!this.stripe)
                 return;
+            this.btnCheckout.rightIcon.spin = true;
+            this.btnCheckout.rightIcon.visible = true;
             const url = this.urlStripeTracking ?? `${window.location.origin}/#!/stripe-payment-status`;
             this.stripeElements.submit().then(async (result) => {
+                const clientSecret = await this.createPaymentIntent(this.stripeCurrency, this.payment.amount);
+                if (!clientSecret) {
+                    this.btnCheckout.rightIcon.spin = false;
+                    this.btnCheckout.rightIcon.visible = false;
+                    this.showAlert('error', 'Payment failed', 'Cannot get payment info');
+                    return;
+                }
+                ;
+                const { userInfo } = this.payment;
                 const { error } = await this.stripe.confirmPayment({
                     elements: this.stripeElements,
                     confirmParams: {
                         return_url: url,
                         payment_method_data: {
                             billing_details: {
-                                name: 'Anna Sings',
-                                email: 'johnny@example.com'
+                                name: userInfo?.name || '',
+                                email: userInfo?.email || ''
                             }
                         }
                     },
-                    clientSecret: this.clientSecret
+                    clientSecret
                 });
                 if (error) {
                     this.showAlert('error', 'Payment failed', error.message);
                 }
                 else {
-                    this.showAlert('success', 'Payment successfully', `Check your payment status here <a href='${url}?payment_intent_client_secret=${this.clientSecret}' target='_blank'>${this.clientSecret}</a>`);
+                    this.showAlert('success', 'Payment successfully', `Check your payment status here <a href='${url}?payment_intent_client_secret=${clientSecret}' target='_blank'>${clientSecret}</a>`);
                 }
+                this.btnCheckout.rightIcon.spin = false;
+                this.btnCheckout.rightIcon.visible = false;
             });
         }
         async showAlert(status, title, msg) {
@@ -687,7 +702,7 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                     this.$render("i-stack", { direction: "vertical", id: "pnlStripePaymentForm", background: { color: '#fff' }, border: { radius: 12 }, padding: { top: '1rem', left: '1rem', bottom: '2rem', right: '1rem' } }),
                     this.$render("i-stack", { direction: "horizontal", width: "100%", alignItems: "center", justifyContent: "center", margin: { top: 'auto' }, gap: "1rem", wrap: "wrap-reverse" },
                         this.$render("i-button", { caption: "Back", width: "calc(50% - 0.5rem)", maxWidth: 180, minWidth: 90, padding: { top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }, font: { size: '1rem', color: Theme.colors.secondary.contrastText }, background: { color: Theme.colors.secondary.main }, border: { radius: 12 }, onClick: this.handleBack }),
-                        this.$render("i-button", { caption: "Checkout", width: "calc(50% - 0.5rem)", maxWidth: 180, minWidth: 90, padding: { top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }, font: { size: '1rem', color: Theme.colors.primary.contrastText }, background: { color: Theme.colors.primary.main }, border: { radius: 12 }, onClick: this.handleStripeCheckoutClick }))),
+                        this.$render("i-button", { id: "btnCheckout", caption: "Checkout", width: "calc(50% - 0.5rem)", maxWidth: 180, minWidth: 90, padding: { top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }, font: { size: '1rem', color: Theme.colors.primary.contrastText }, background: { color: Theme.colors.primary.main }, border: { radius: 12 }, onClick: this.handleStripeCheckoutClick }))),
                 this.$render("i-alert", { id: "mdAlert", class: index_css_4.alertStyle }));
         }
     };

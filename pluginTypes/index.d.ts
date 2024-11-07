@@ -14,6 +14,10 @@ declare module "@scom/scom-payment-widget/interface.ts" {
         }[];
         address?: string;
         provider?: PaymentProvider;
+        userInfo?: {
+            name: string;
+            email: string;
+        };
     }
     export enum PaymentType {
         Fiat = "Fiat",
@@ -246,7 +250,7 @@ declare module "@scom/scom-payment-widget/components/stripePayment.tsx" {
         private _urlStripeTracking;
         private stripe;
         private stripeElements;
-        private clientSecret;
+        private btnCheckout;
         private lbItem;
         private lbAmount;
         private mdAlert;
@@ -259,6 +263,7 @@ declare module "@scom/scom-payment-widget/components/stripePayment.tsx" {
         set baseStripeApi(value: string);
         get urlStripeTracking(): string;
         set urlStripeTracking(value: string);
+        private get stripeCurrency();
         private updateAmount;
         private initStripePayment;
         private createPaymentIntent;
