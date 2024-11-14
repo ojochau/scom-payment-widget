@@ -161,6 +161,8 @@ define("@scom/scom-payment-widget/data.ts", ["require", "exports"], function (re
     exports.default = {
         "infuraId": "adc596bf88b648e2a8902bc9093930c5",
         "defaultData": {
+            "baseStripeApi": "https://noto.fan/stripe",
+            "urlStripeTracking": "https://noto.fan/#!/stripe-payment-status",
             "defaultChainId": 97,
             "networks": [
                 {
@@ -1504,7 +1506,7 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
         set showButtonPay(value) {
             this._showButtonPay = value;
             if (this.btnPay)
-                this.btnPay.visible = value;
+                this.btnPay.visible = !this.isUrl && value;
         }
         get payButtonCaption() {
             return this._payButtonCaption || 'Pay';
@@ -1578,6 +1580,11 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
                 this.paymentModule = new components_13.PaymentModule();
                 this.paymentModule.state = this.state;
                 this.paymentModule.dappContainer = this.containerDapp;
+                if (this.isUrl) {
+                    this.paymentModule.width = '100%';
+                    this.paymentModule.maxWidth = 480;
+                    this.pnlWrapper.appendChild(this.paymentModule);
+                }
             }
             this.paymentModule.wallets = this.wallets;
             this.paymentModule.networks = this.networks;
@@ -1585,6 +1592,11 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             this.paymentModule.baseStripeApi = this.baseStripeApi;
             this.paymentModule.urlStripeTracking = this.urlStripeTracking;
             this.paymentModule.onPaymentSuccess = this.onPaymentSuccess;
+            if (this.isUrl) {
+                await this.paymentModule.ready();
+                this.paymentModule.show(this._payment);
+                return;
+            }
             const modal = this.paymentModule.openModal({
                 title: 'Payment',
                 closeIcon: { name: 'times', fill: Theme.colors.primary.main },
@@ -1606,7 +1618,25 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             if (!this.statusPaymentTracking)
                 return;
             this.statusPaymentTracking.visible = this.mode === 'status';
-            this.btnPay.visible = this.mode === 'payment' && this.showButtonPay;
+            this.btnPay.visible = !this.isUrl && this.mode === 'payment' && this.showButtonPay;
+        }
+        handleWidgetUrl() {
+            try {
+                const paths = window.location.hash.split('/');
+                const dataBase64 = decodeURIComponent(paths[paths.length - 1]);
+                const params = JSON.parse(atob(dataBase64));
+                if (params?.isUrl) {
+                    this.isUrl = true;
+                    const { payment, baseStripeApi } = params;
+                    if (baseStripeApi)
+                        this.baseStripeApi = baseStripeApi;
+                    this.width = '100%';
+                    this.maxWidth = 480;
+                    this.padding = { left: '1rem', right: '1rem', top: '1rem', bottom: '1rem' };
+                    this.onStartPayment(payment);
+                }
+            }
+            catch { }
         }
         async init() {
             if (!this.state) {
@@ -1616,12 +1646,13 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             this.updateTheme();
             this.openPaymentModal = this.openPaymentModal.bind(this);
             this.onPaymentSuccess = this.getAttribute('onPaymentSuccess', true) || this.onPaymentSuccess;
+            this.handleWidgetUrl();
             const lazyLoad = this.getAttribute('lazyLoad', true, false);
             if (!lazyLoad) {
                 const payment = this.getAttribute('payment', true);
                 this.mode = this.getAttribute('mode', true, 'payment');
-                this.baseStripeApi = this.getAttribute('baseStripeApi', true, this.baseStripeApi);
-                this.urlStripeTracking = this.getAttribute('urlStripeTracking', true, this.urlStripeTracking);
+                this.baseStripeApi = this.getAttribute('baseStripeApi', true, data_3.default.defaultData.baseStripeApi);
+                this.urlStripeTracking = this.getAttribute('urlStripeTracking', true, data_3.default.defaultData.urlStripeTracking);
                 this.showButtonPay = this.getAttribute('showButtonPay', true, false);
                 this.payButtonCaption = this.getAttribute('payButtonCaption', true, 'Pay');
                 this.networks = this.getAttribute('networks', true, data_3.default.defaultData.networks);
@@ -1630,7 +1661,7 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
                 if (payment)
                     this.payment = payment;
             }
-            this.btnPay.visible = this.showButtonPay;
+            this.btnPay.visible = !this.isUrl && this.showButtonPay;
             this.btnPay.enabled = !!this.payment;
             this.btnPay.caption = this.payButtonCaption;
             this.updateUIByMode();
@@ -1638,7 +1669,7 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
         }
         render() {
             return this.$render("i-scom-dapp-container", { id: "containerDapp", showHeader: true, showFooter: false, class: index_css_8.dappContainerStyle },
-                this.$render("i-stack", { direction: "vertical", alignItems: "center", width: "100%", height: "100%" },
+                this.$render("i-stack", { id: "pnlWrapper", direction: "vertical", alignItems: "center", width: "100%", height: "100%" },
                     this.$render("i-button", { id: "btnPay", visible: false, enabled: false, caption: "Pay", width: "100%", minWidth: 60, maxWidth: 180, padding: { top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }, font: { size: '1rem', color: Theme.colors.primary.contrastText, bold: true }, background: { color: Theme.colors.primary.main }, border: { radius: 12 }, onClick: this.handlePay }),
                     this.$render("scom-payment-widget--stripe-payment-tracking", { id: "statusPaymentTracking", visible: false, width: "100%", height: "100%" })));
         }

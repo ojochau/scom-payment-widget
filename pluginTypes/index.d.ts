@@ -78,6 +78,8 @@ declare module "@scom/scom-payment-widget/data.ts" {
     const _default: {
         infuraId: string;
         defaultData: {
+            baseStripeApi: string;
+            urlStripeTracking: string;
             defaultChainId: number;
             networks: {
                 chainId: number;
@@ -515,6 +517,7 @@ declare module "@scom/scom-payment-widget" {
     }
     export class ScomPaymentWidget extends Module {
         private containerDapp;
+        private pnlWrapper;
         private btnPay;
         private statusPaymentTracking;
         private state;
@@ -525,6 +528,7 @@ declare module "@scom/scom-payment-widget" {
         private _urlStripeTracking;
         private _showButtonPay;
         private _payButtonCaption;
+        private isUrl;
         private _wallets;
         private _networks;
         private _tokens;
@@ -555,6 +559,7 @@ declare module "@scom/scom-payment-widget" {
         private openPaymentModal;
         private handlePay;
         private updateUIByMode;
+        private handleWidgetUrl;
         init(): Promise<void>;
         render(): any;
     }
