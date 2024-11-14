@@ -1,4 +1,4 @@
-import { Module, Container, customElements, ControlElement, Styles, Button } from '@ijstech/components';
+import { Module, Container, customElements, ControlElement, Styles, Button, StackLayout } from '@ijstech/components';
 import { PaymentModule } from './components';
 import { INetworkConfig, IPaymentInfo } from './interface';
 import { State } from './store';
@@ -37,6 +37,7 @@ declare global {
 @customElements('i-scom-payment-widget')
 export class ScomPaymentWidget extends Module {
 	private containerDapp: ScomDappContainer;
+	private pnlWrapper: StackLayout;
 	private btnPay: Button;
 	private statusPaymentTracking: StatusPaymentTracking;
 	private state: State;
@@ -47,6 +48,7 @@ export class ScomPaymentWidget extends Module {
 	private _urlStripeTracking: string;
 	private _showButtonPay: boolean;
 	private _payButtonCaption: string;
+	private isUrl: boolean;
 
 	private _wallets: IWalletPlugin[] = [];
 	private _networks: INetworkConfig[] = [];
@@ -81,7 +83,7 @@ export class ScomPaymentWidget extends Module {
 
 	set showButtonPay(value: boolean) {
 		this._showButtonPay = value;
-		if (this.btnPay) this.btnPay.visible = value;
+		if (this.btnPay) this.btnPay.visible = !this.isUrl && value;
 	}
 
 	get payButtonCaption() {
@@ -169,6 +171,11 @@ export class ScomPaymentWidget extends Module {
 			this.paymentModule = new PaymentModule();
 			this.paymentModule.state = this.state;
 			this.paymentModule.dappContainer = this.containerDapp;
+			if (this.isUrl) {
+				this.paymentModule.width = '100%';
+				this.paymentModule.maxWidth = 480;
+				this.pnlWrapper.appendChild(this.paymentModule);
+			}
 		}
 		this.paymentModule.wallets = this.wallets;
 		this.paymentModule.networks = this.networks;
@@ -176,6 +183,11 @@ export class ScomPaymentWidget extends Module {
 		this.paymentModule.baseStripeApi = this.baseStripeApi;
 		this.paymentModule.urlStripeTracking = this.urlStripeTracking;
 		this.paymentModule.onPaymentSuccess = this.onPaymentSuccess;
+		if (this.isUrl) {
+			await this.paymentModule.ready();
+			this.paymentModule.show(this._payment);
+			return;
+		}
 		const modal = this.paymentModule.openModal({
 			title: 'Payment',
 			closeIcon: { name: 'times', fill: Theme.colors.primary.main },
@@ -198,7 +210,24 @@ export class ScomPaymentWidget extends Module {
 	private updateUIByMode() {
 		if (!this.statusPaymentTracking) return;
 		this.statusPaymentTracking.visible = this.mode === 'status';
-		this.btnPay.visible = this.mode === 'payment' && this.showButtonPay;
+		this.btnPay.visible = !this.isUrl && this.mode === 'payment' && this.showButtonPay;
+	}
+
+	private handleWidgetUrl() {
+		try {
+			const paths = window.location.hash.split('/');
+			const dataBase64 = decodeURIComponent(paths[paths.length - 1]);
+			const params = JSON.parse(atob(dataBase64));
+			if (params?.isUrl) {
+				this.isUrl = true;
+				const { payment, baseStripeApi } = params;
+				if (baseStripeApi) this.baseStripeApi = baseStripeApi;
+				this.width = '100%';
+				this.maxWidth = 480;
+				this.padding = { left: '1rem', right: '1rem', top: '1rem', bottom: '1rem' };
+				this.onStartPayment(payment);
+			}
+		} catch { }
 	}
 
 	async init() {
@@ -209,12 +238,13 @@ export class ScomPaymentWidget extends Module {
 		this.updateTheme();
 		this.openPaymentModal = this.openPaymentModal.bind(this);
 		this.onPaymentSuccess = this.getAttribute('onPaymentSuccess', true) || this.onPaymentSuccess;
+		this.handleWidgetUrl();
 		const lazyLoad = this.getAttribute('lazyLoad', true, false);
 		if (!lazyLoad) {
 			const payment = this.getAttribute('payment', true);
 			this.mode = this.getAttribute('mode', true, 'payment');
-			this.baseStripeApi = this.getAttribute('baseStripeApi', true, this.baseStripeApi);
-			this.urlStripeTracking = this.getAttribute('urlStripeTracking', true, this.urlStripeTracking);
+			this.baseStripeApi = this.getAttribute('baseStripeApi', true, configData.defaultData.baseStripeApi);
+			this.urlStripeTracking = this.getAttribute('urlStripeTracking', true, configData.defaultData.urlStripeTracking);
 			this.showButtonPay = this.getAttribute('showButtonPay', true, false);
 			this.payButtonCaption = this.getAttribute('payButtonCaption', true, 'Pay');
 			this.networks = this.getAttribute('networks', true, configData.defaultData.networks);
@@ -222,7 +252,7 @@ export class ScomPaymentWidget extends Module {
 			this.wallets = this.getAttribute('wallets', true, configData.defaultData.wallets);
 			if (payment) this.payment = payment;
 		}
-		this.btnPay.visible = this.showButtonPay;
+		this.btnPay.visible = !this.isUrl && this.showButtonPay;
 		this.btnPay.enabled = !!this.payment;
 		this.btnPay.caption = this.payButtonCaption;
 		this.updateUIByMode();
@@ -232,6 +262,7 @@ export class ScomPaymentWidget extends Module {
 	render() {
 		return <i-scom-dapp-container id="containerDapp" showHeader={true} showFooter={false} class={dappContainerStyle}>
 			<i-stack
+				id="pnlWrapper"
 				direction="vertical"
 				alignItems="center"
 				width="100%"
