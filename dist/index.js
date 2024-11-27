@@ -187,7 +187,7 @@ define("@scom/scom-payment-widget/data.ts", ["require", "exports"], function (re
 define("@scom/scom-payment-widget/components/index.css.ts", ["require", "exports", "@ijstech/components"], function (require, exports, components_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.alertStyle = exports.loadingImageStyle = exports.checkboxTextStyle = exports.textCenterStyle = exports.elementStyle = void 0;
+    exports.carouselSliderStyle = exports.alertStyle = exports.loadingImageStyle = exports.checkboxTextStyle = exports.textUpperCaseStyle = exports.textCenterStyle = exports.elementStyle = void 0;
     const Theme = components_2.Styles.Theme.ThemeVars;
     const spinnerAnim = components_2.Styles.keyframes({
         "0%": {
@@ -203,6 +203,9 @@ define("@scom/scom-payment-widget/components/index.css.ts", ["require", "exports
     });
     exports.textCenterStyle = components_2.Styles.style({
         textAlign: 'center'
+    });
+    exports.textUpperCaseStyle = components_2.Styles.style({
+        textTransform: 'uppercase'
     });
     exports.checkboxTextStyle = components_2.Styles.style({
         $nest: {
@@ -232,6 +235,24 @@ define("@scom/scom-payment-widget/components/index.css.ts", ["require", "exports
             }
         }
     });
+    exports.carouselSliderStyle = components_2.Styles.style({
+        position: 'relative',
+        $nest: {
+            '.wrapper-slider': {
+                $nest: {
+                    '.slider-arrow:first-child': {
+                        left: '-30px'
+                    },
+                    '.slider-arrow:last-child': {
+                        right: '-30px'
+                    }
+                }
+            },
+            '.slider-arrow': {
+                position: 'absolute'
+            }
+        }
+    });
 });
 define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts"], function (require, exports, components_3, index_css_1) {
     "use strict";
@@ -246,23 +267,56 @@ define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "
             this._payment = value;
             this.updateInfo();
         }
+        get totalPrice() {
+            return (this.payment.products?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0) + this.totalShippingCost;
+        }
+        get totalShippingCost() {
+            return this.payment.products?.reduce((sum, item) => sum + (Number(item.shippingCost || 0) * item.quantity), 0) || 0;
+        }
         constructor(parent, options) {
             super(parent, options);
-            this._payment = { title: '', paymentId: '', amount: 0 };
+            this._payment = { title: '', paymentId: '', products: [] };
+        }
+        renderProducts() {
+            if (this.payment?.products.length) {
+                const nodeItems = [];
+                for (const product of this.payment.products) {
+                    const element = (this.$render("i-vstack", { gap: "1rem", width: "100%" },
+                        product.images?.length ? this.$render("i-image", { url: product.images[0], width: "auto", maxWidth: "100%", height: 100, margin: { left: 'auto', right: 'auto' } }) : [],
+                        this.$render("i-label", { caption: product.name, font: { bold: true } }),
+                        this.$render("i-hstack", { gap: "0.5rem", verticalAlignment: "center", horizontalAlignment: "space-between", wrap: "wrap" },
+                            this.$render("i-label", { caption: "Price", font: { color: Theme.text.hint } }),
+                            this.$render("i-label", { caption: `${components_3.FormatUtils.formatNumber(product.price, { decimalFigures: 2 })} ${this.payment.currency || 'USD'}`, font: { bold: true }, class: index_css_1.textUpperCaseStyle })),
+                        this.$render("i-hstack", { gap: "0.5rem", verticalAlignment: "center", horizontalAlignment: "space-between", wrap: "wrap" },
+                            this.$render("i-label", { caption: "Quantity", font: { color: Theme.text.hint } }),
+                            this.$render("i-label", { caption: components_3.FormatUtils.formatNumber(product.quantity, { hasTrailingZero: false }), font: { bold: true } }))));
+                    nodeItems.push(element);
+                }
+                this.carouselSlider.items = nodeItems.map((item, idx) => {
+                    return {
+                        name: `Product ${idx}`,
+                        controls: [item]
+                    };
+                });
+                this.carouselSlider.refresh();
+                this.carouselSlider.visible = true;
+            }
+            else {
+                this.carouselSlider.visible = false;
+            }
         }
         updateInfo() {
-            const { paymentId, amount, currency, title, photoUrl } = this.payment;
+            const { paymentId, currency, title, products } = this.payment;
             if (this.pnlItemInfo) {
                 const hasTitle = !!title;
-                const hasImg = !!photoUrl;
-                this.pnlItemInfo.visible = hasTitle || hasImg;
+                const hasProduct = !!products?.length;
+                this.pnlItemInfo.visible = hasTitle || hasProduct;
                 this.lbItem.caption = title || '';
                 this.lbItem.visible = hasTitle;
-                this.imgItem.url = photoUrl || '';
-                this.imgItem.visible = hasImg;
+                this.renderProducts();
             }
             if (this.lbAmount) {
-                this.lbAmount.caption = `${components_3.FormatUtils.formatNumber(amount || 0, { decimalFigures: 2 })} ${currency || 'USD'}`;
+                this.lbAmount.caption = `${components_3.FormatUtils.formatNumber(this.totalPrice, { decimalFigures: 2 })} ${currency || 'USD'}`;
             }
             if (this.pnlPaymentId) {
                 const _paymentId = paymentId || '';
@@ -295,7 +349,7 @@ define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "
                 this.$render("i-stack", { direction: "vertical", height: "100%" },
                     this.$render("i-stack", { id: "pnlItemInfo", visible: false, direction: "vertical", gap: "1rem", alignItems: "center", width: "100%", margin: { bottom: '1rem' } },
                         this.$render("i-label", { id: "lbItem", class: index_css_1.textCenterStyle, font: { size: '1.25rem', color: Theme.colors.primary.main, bold: true, transform: 'uppercase' } }),
-                        this.$render("i-image", { id: "imgItem", width: "auto", maxWidth: "80%", height: 80 }),
+                        this.$render("i-carousel-slider", { id: "carouselSlider", width: "calc(100% - 60px)", maxWidth: 250, height: "100%", overflow: "inherit", minHeight: 80, slidesToShow: 1, transitionSpeed: 300, autoplay: true, autoplaySpeed: 6000, items: [], type: "arrow", class: index_css_1.carouselSliderStyle }),
                         this.$render("i-panel", { height: 1, width: "80%", background: { color: Theme.divider } })),
                     this.$render("i-stack", { direction: "vertical", gap: "1rem", alignItems: "center", width: "100%", margin: { bottom: '1.5rem' } },
                         this.$render("i-stack", { direction: "vertical", gap: "0.5rem", alignItems: "center" },
@@ -305,7 +359,7 @@ define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "
                             this.$render("i-label", { caption: "Payment ID", font: { color: Theme.text.primary, bold: true, transform: 'uppercase' } }),
                             this.$render("i-label", { id: "lbPaymentId", class: index_css_1.textCenterStyle, font: { color: Theme.text.primary, bold: true, transform: 'uppercase' } }))),
                     this.$render("i-stack", { direction: "horizontal", gap: "0.25rem" },
-                        this.$render("i-checkbox", { id: "checkboxAgree", onChanged: this.handleCheckboxChanged }),
+                        this.$render("i-checkbox", { caption: '', id: "checkboxAgree", onChanged: this.handleCheckboxChanged }),
                         this.$render("i-label", { caption: "I have read and accept the <a href='' target='_blank'>Terms of Service</a> and <a href='' target='_blank'>Privacy Policy</a>", class: index_css_1.checkboxTextStyle }))),
                 this.$render("i-button", { id: "btnContinue", enabled: false, width: "100%", maxWidth: 180, caption: "Continue", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }, font: { size: '1rem', color: Theme.colors.primary.contrastText }, background: { color: Theme.colors.primary.main }, border: { radius: 12 }, rightIcon: { name: 'arrow-right', visible: true }, onClick: this.handleContinue }));
         }
@@ -356,14 +410,20 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
             this._payment = value;
             this.updateAmount();
         }
+        get totalPrice() {
+            return (this.payment.products?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0) + this.totalShippingCost;
+        }
+        get totalShippingCost() {
+            return this.payment.products?.reduce((sum, item) => sum + (Number(item.shippingCost || 0) * item.quantity), 0) || 0;
+        }
         constructor(parent, options) {
             super(parent, options);
         }
         updateAmount() {
             if (this.lbAmount && this.payment) {
-                const { title, amount, currency } = this.payment;
+                const { title, currency } = this.payment;
                 this.lbItem.caption = title || '';
-                const formattedAmount = components_5.FormatUtils.formatNumber(amount || 0, { decimalFigures: 2 });
+                const formattedAmount = components_5.FormatUtils.formatNumber(this.totalPrice, { decimalFigures: 2 });
                 this.lbAmount.caption = `${formattedAmount} ${currency || 'USD'}`;
             }
         }
@@ -551,6 +611,12 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
         get payment() {
             return this._payment;
         }
+        get totalPrice() {
+            return (this.payment.products?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0) + this.totalShippingCost;
+        }
+        get totalShippingCost() {
+            return this.payment.products?.reduce((sum, item) => sum + (Number(item.shippingCost || 0) * item.quantity), 0) || 0;
+        }
         get baseStripeApi() {
             return this._baseStripeApi;
         }
@@ -570,9 +636,9 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
         }
         updateAmount() {
             if (this.payment && this.lbAmount) {
-                const { title, amount, currency } = this.payment;
+                const { title, currency } = this.payment;
                 this.lbItem.caption = title || '';
-                this.lbAmount.caption = `${components_7.FormatUtils.formatNumber(amount, { decimalFigures: 2 })} ${currency?.toUpperCase()}`;
+                this.lbAmount.caption = `${components_7.FormatUtils.formatNumber(this.totalPrice, { decimalFigures: 2 })} ${currency?.toUpperCase()}`;
                 this.initStripePayment();
             }
         }
@@ -584,7 +650,7 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                 if (this.stripeElements) {
                     this.stripeElements.update({
                         currency: this.stripeCurrency,
-                        amount: this.payment.amount,
+                        amount: this.totalPrice,
                     });
                     return;
                 }
@@ -592,7 +658,7 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                 this.stripeElements = this.stripe.elements({
                     mode: 'payment',
                     currency: this.stripeCurrency,
-                    amount: this.payment.amount,
+                    amount: this.totalPrice,
                 });
                 const paymentElement = this.stripeElements.create('payment');
                 paymentElement.mount('#pnlStripePaymentForm');
@@ -628,7 +694,7 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
             this.btnCheckout.rightIcon.visible = true;
             const url = this.urlStripeTracking ?? `${window.location.origin}/#!/stripe-payment-status`;
             this.stripeElements.submit().then(async (result) => {
-                const clientSecret = await this.createPaymentIntent(this.stripeCurrency, this.payment.amount);
+                const clientSecret = await this.createPaymentIntent(this.stripeCurrency, this.totalPrice);
                 if (!clientSecret) {
                     this.btnCheckout.rightIcon.spin = false;
                     this.btnCheckout.rightIcon.visible = false;
@@ -739,6 +805,12 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         set payment(value) {
             this._payment = value;
             this.updateAmount();
+        }
+        get totalPrice() {
+            return (this.payment.products?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0) + this.totalShippingCost;
+        }
+        get totalShippingCost() {
+            return this.payment.products?.reduce((sum, item) => sum + (Number(item.shippingCost || 0) * item.quantity), 0) || 0;
         }
         get state() {
             return this._state;
@@ -899,13 +971,13 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         }
         updateAmount() {
             if (this.lbAmount && this.payment) {
-                const { amount, currency } = this.payment;
+                const currency = this.payment.currency || 'USD';
                 const title = this.payment.title || '';
                 if (this.lbItem.caption !== title)
                     this.lbItem.caption = title;
                 if (this.lbPayItem.caption !== title)
                     this.lbPayItem.caption = title;
-                const formattedAmount = `${components_8.FormatUtils.formatNumber(amount || 0, { decimalFigures: 2 })} ${currency || 'USD'}`;
+                const formattedAmount = `${components_8.FormatUtils.formatNumber(this.totalPrice, { decimalFigures: 2 })} ${currency || 'USD'}`;
                 if (this.lbAmount.caption !== formattedAmount)
                     this.lbAmount.caption = formattedAmount;
                 if (this.lbPayAmount.caption !== formattedAmount)
@@ -1050,10 +1122,10 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             this.isToPay = true;
             const tokenImg = isTon ? assets_3.default.fullPath('img/ton.png') : scom_token_list_1.assets.tokenPath(token, token.chainId);
             this.imgToken.url = tokenImg;
-            const { address, amount, currency } = this.payment;
+            const { address, currency } = this.payment;
             const toAddress = address || '';
             this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);
-            const formattedAmount = components_8.FormatUtils.formatNumber(amount || 0, { decimalFigures: 2 });
+            const formattedAmount = components_8.FormatUtils.formatNumber(this.totalPrice || 0, { decimalFigures: 2 });
             this.lbAmountToPay.caption = `${formattedAmount} ${token.symbol}`;
             this.lbUSD.caption = `${formattedAmount} ${currency || 'USD'}`;
             this.lbUSD.visible = !isTon;
@@ -1075,7 +1147,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         }
         async handleCopyAmount() {
             try {
-                await components_8.application.copyToClipboard(this.payment.amount.toString());
+                await components_8.application.copyToClipboard(this.totalPrice.toString());
                 this.iconCopyAmount.name = 'check';
                 this.iconCopyAmount.fill = Theme.colors.success.main;
                 if (this.copyAmountTimer)

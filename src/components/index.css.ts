@@ -19,6 +19,10 @@ export const textCenterStyle = Styles.style({
   textAlign: 'center'
 })
 
+export const textUpperCaseStyle = Styles.style({
+  textTransform: 'uppercase'
+})
+
 export const checkboxTextStyle = Styles.style({
   $nest: {
     'span': {
@@ -46,6 +50,25 @@ export const alertStyle = Styles.style({
     'a': {
       display: 'inline',
       color: Theme.colors.info.main
+    }
+  }
+})
+
+export const carouselSliderStyle = Styles.style({
+  position: 'relative',
+  $nest: {
+    '.wrapper-slider': {
+      $nest: {
+        '.slider-arrow:first-child': {
+          left: '-30px'
+        },
+        '.slider-arrow:last-child': {
+          right: '-30px'
+        }
+      }
+    },
+    '.slider-arrow': {
+      position: 'absolute'
     }
   }
 })

@@ -1,5 +1,5 @@
-import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, Button, Checkbox, StackLayout, Image } from '@ijstech/components';
-import { checkboxTextStyle, textCenterStyle } from './index.css';
+import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, Button, Checkbox, StackLayout, Image, CarouselSlider } from '@ijstech/components';
+import { carouselSliderStyle, checkboxTextStyle, textCenterStyle, textUpperCaseStyle } from './index.css';
 import { IPaymentInfo } from '../interface';
 const Theme = Styles.Theme.ThemeVars;
 
@@ -20,13 +20,13 @@ declare global {
 export class InvoiceCreation extends Module {
     private pnlItemInfo: StackLayout;
     private lbItem: Label;
-    private imgItem: Image;
     private lbAmount: Label;
     private pnlPaymentId: Label;
     private lbPaymentId: Label;
     private checkboxAgree: Checkbox;
     private btnContinue: Button;
-    private _payment: IPaymentInfo = { title: '', paymentId: '', amount: 0 };
+    private carouselSlider: CarouselSlider;
+    private _payment: IPaymentInfo = { title: '', paymentId: '', products: [] };
     public onContinue: () => void;
 
     get payment() {
@@ -38,23 +38,63 @@ export class InvoiceCreation extends Module {
         this.updateInfo();
     }
 
+    get totalPrice() {
+        return (this.payment.products?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0) + this.totalShippingCost;
+    }
+
+    get totalShippingCost() {
+        return this.payment.products?.reduce((sum, item) => sum + (Number(item.shippingCost || 0) * item.quantity), 0) || 0;
+    }
+
     constructor(parent?: Container, options?: ScomPaymentWidgetInvoiceCreationElement) {
         super(parent, options);
     }
 
+    private renderProducts() {
+        if (this.payment?.products.length) {
+            const nodeItems: HTMLElement[] = [];
+            for (const product of this.payment.products) {
+                const element = (
+                    <i-vstack gap="1rem" width="100%">
+                        {product.images?.length ? <i-image url={product.images[0]} width="auto" maxWidth="100%" height={100} margin={{ left: 'auto', right: 'auto' }} /> : []}
+                        <i-label caption={product.name} font={{ bold: true }} />
+                        <i-hstack gap="0.5rem" verticalAlignment="center" horizontalAlignment="space-between" wrap="wrap">
+                            <i-label caption="Price" font={{ color: Theme.text.hint }} />
+                            <i-label caption={`${FormatUtils.formatNumber(product.price, { decimalFigures: 2 })} ${this.payment.currency || 'USD'}`} font={{ bold: true }} class={textUpperCaseStyle} />
+                        </i-hstack>
+                        <i-hstack gap="0.5rem" verticalAlignment="center" horizontalAlignment="space-between" wrap="wrap">
+                            <i-label caption="Quantity" font={{ color: Theme.text.hint }} />
+                            <i-label caption={FormatUtils.formatNumber(product.quantity, { hasTrailingZero: false })} font={{ bold: true }} />
+                        </i-hstack>
+                    </i-vstack>
+                );
+                nodeItems.push(element);
+            }
+            this.carouselSlider.items = nodeItems.map((item, idx) => {
+                return {
+                    name: `Product ${idx}`,
+                    controls: [item]
+                }
+            });
+            this.carouselSlider.refresh();
+            this.carouselSlider.visible = true;
+        } else {
+            this.carouselSlider.visible = false;
+        }
+    }
+
     private updateInfo() {
-        const { paymentId, amount, currency, title, photoUrl } = this.payment;
+        const { paymentId, currency, title, products } = this.payment;
         if (this.pnlItemInfo) {
             const hasTitle = !!title;
-            const hasImg = !!photoUrl;
-            this.pnlItemInfo.visible = hasTitle || hasImg;
+            const hasProduct = !!products?.length;
+            this.pnlItemInfo.visible = hasTitle || hasProduct;
             this.lbItem.caption = title || '';
             this.lbItem.visible = hasTitle;
-            this.imgItem.url = photoUrl || '';
-            this.imgItem.visible = hasImg;
+            this.renderProducts();
         }
         if (this.lbAmount) {
-            this.lbAmount.caption = `${FormatUtils.formatNumber(amount || 0, { decimalFigures: 2 })} ${currency || 'USD'}`;
+            this.lbAmount.caption = `${FormatUtils.formatNumber(this.totalPrice, { decimalFigures: 2 })} ${currency || 'USD'}`;
         }
         if (this.pnlPaymentId) {
             const _paymentId = paymentId || '';
@@ -90,7 +130,21 @@ export class InvoiceCreation extends Module {
             <i-stack direction="vertical" height="100%">
                 <i-stack id="pnlItemInfo" visible={false} direction="vertical" gap="1rem" alignItems="center" width="100%" margin={{ bottom: '1rem' }}>
                     <i-label id="lbItem" class={textCenterStyle} font={{ size: '1.25rem', color: Theme.colors.primary.main, bold: true, transform: 'uppercase' }} />
-                    <i-image id="imgItem" width="auto" maxWidth="80%" height={80} />
+                    <i-carousel-slider
+                        id="carouselSlider"
+                        width="calc(100% - 60px)"
+                        maxWidth={250}
+                        height="100%"
+                        overflow="inherit"
+                        minHeight={80}
+                        slidesToShow={1}
+                        transitionSpeed={300}
+                        autoplay={true}
+                        autoplaySpeed={6000}
+                        items={[]}
+                        type="arrow"
+                        class={carouselSliderStyle}
+                    />
                     <i-panel height={1} width="80%" background={{ color: Theme.divider }} />
                 </i-stack>
                 <i-stack direction="vertical" gap="1rem" alignItems="center" width="100%" margin={{ bottom: '1.5rem' }}>
@@ -104,7 +158,7 @@ export class InvoiceCreation extends Module {
                     </i-stack>
                 </i-stack>
                 <i-stack direction="horizontal" gap="0.25rem">
-                    <i-checkbox id="checkboxAgree" onChanged={this.handleCheckboxChanged} />
+                    <i-checkbox caption={''} id="checkboxAgree" onChanged={this.handleCheckboxChanged} />
                     <i-label
                         caption="I have read and accept the <a href='' target='_blank'>Terms of Service</a> and <a href='' target='_blank'>Privacy Policy</a>"
                         class={checkboxTextStyle}

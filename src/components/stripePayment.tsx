@@ -49,6 +49,14 @@ export class StripePayment extends Module {
         return this._payment;
     }
 
+    get totalPrice() {
+        return (this.payment.products?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0) + this.totalShippingCost;
+    }
+
+    get totalShippingCost() {
+        return this.payment.products?.reduce((sum, item) => sum + (Number(item.shippingCost || 0) * item.quantity), 0) || 0;
+    }
+
     get baseStripeApi() {
         return this._baseStripeApi;
     }
@@ -73,9 +81,9 @@ export class StripePayment extends Module {
 
     private updateAmount() {
         if (this.payment && this.lbAmount) {
-            const { title, amount, currency } = this.payment;
+            const { title, currency } = this.payment;
             this.lbItem.caption = title || '';
-            this.lbAmount.caption = `${FormatUtils.formatNumber(amount, { decimalFigures: 2 })} ${currency?.toUpperCase()}`;
+            this.lbAmount.caption = `${FormatUtils.formatNumber(this.totalPrice, { decimalFigures: 2 })} ${currency?.toUpperCase()}`;
             this.initStripePayment();
         }
     }
@@ -88,7 +96,7 @@ export class StripePayment extends Module {
             if (this.stripeElements) {
                 this.stripeElements.update({
                     currency: this.stripeCurrency,
-                    amount: this.payment.amount,
+                    amount: this.totalPrice,
                 });
                 return;
             }
@@ -96,7 +104,7 @@ export class StripePayment extends Module {
             this.stripeElements = this.stripe.elements({
                 mode: 'payment',
                 currency: this.stripeCurrency,
-                amount: this.payment.amount,
+                amount: this.totalPrice,
             });
             const paymentElement = this.stripeElements.create('payment');
             paymentElement.mount('#pnlStripePaymentForm');
@@ -132,7 +140,7 @@ export class StripePayment extends Module {
         this.btnCheckout.rightIcon.visible = true;
         const url = this.urlStripeTracking ?? `${window.location.origin}/#!/stripe-payment-status`;
         this.stripeElements.submit().then(async (result) => {
-            const clientSecret = await this.createPaymentIntent(this.stripeCurrency, this.payment.amount);
+            const clientSecret = await this.createPaymentIntent(this.stripeCurrency, this.totalPrice);
             if (!clientSecret) {
                 this.btnCheckout.rightIcon.spin = false;
                 this.btnCheckout.rightIcon.visible = false;

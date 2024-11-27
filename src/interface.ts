@@ -1,12 +1,18 @@
+export interface IProduct {
+  name: string;
+  price: number | string;
+  quantity: number;
+  shippingCost?: number;
+  images?: string[];
+}
+
 export interface IPaymentInfo {
   title: string;
+  products: IProduct[];
   description?: string;
   paymentId?: string;
-  amount: number;
   currency?: string;
-  photoUrl?: string;
   payload?: string;
-  prices?: { label: string; amount: number | string }[];
   address?: string; //wallet
   provider?: PaymentProvider;
   userInfo?: {
