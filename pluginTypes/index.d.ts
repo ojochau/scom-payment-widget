@@ -1,17 +1,19 @@
 /// <amd-module name="@scom/scom-payment-widget/interface.ts" />
 declare module "@scom/scom-payment-widget/interface.ts" {
+    export interface IProduct {
+        name: string;
+        price: number | string;
+        quantity: number;
+        shippingCost?: number;
+        images?: string[];
+    }
     export interface IPaymentInfo {
         title: string;
+        products: IProduct[];
         description?: string;
         paymentId?: string;
-        amount: number;
         currency?: string;
-        photoUrl?: string;
         payload?: string;
-        prices?: {
-            label: string;
-            amount: number | string;
-        }[];
         address?: string;
         provider?: PaymentProvider;
         userInfo?: {
@@ -102,9 +104,11 @@ declare module "@scom/scom-payment-widget/data.ts" {
 declare module "@scom/scom-payment-widget/components/index.css.ts" {
     export const elementStyle: string;
     export const textCenterStyle: string;
+    export const textUpperCaseStyle: string;
     export const checkboxTextStyle: string;
     export const loadingImageStyle: string;
     export const alertStyle: string;
+    export const carouselSliderStyle: string;
 }
 /// <amd-module name="@scom/scom-payment-widget/components/invoiceCreation.tsx" />
 declare module "@scom/scom-payment-widget/components/invoiceCreation.tsx" {
@@ -124,17 +128,20 @@ declare module "@scom/scom-payment-widget/components/invoiceCreation.tsx" {
     export class InvoiceCreation extends Module {
         private pnlItemInfo;
         private lbItem;
-        private imgItem;
         private lbAmount;
         private pnlPaymentId;
         private lbPaymentId;
         private checkboxAgree;
         private btnContinue;
+        private carouselSlider;
         private _payment;
         onContinue: () => void;
         get payment(): IPaymentInfo;
         set payment(value: IPaymentInfo);
+        get totalPrice(): number;
+        get totalShippingCost(): number;
         constructor(parent?: Container, options?: ScomPaymentWidgetInvoiceCreationElement);
+        private renderProducts;
         private updateInfo;
         private handleCheckboxChanged;
         private handleContinue;
@@ -178,6 +185,8 @@ declare module "@scom/scom-payment-widget/components/paymentMethod.tsx" {
         onBack: () => void;
         get payment(): IPaymentInfo;
         set payment(value: IPaymentInfo);
+        get totalPrice(): number;
+        get totalShippingCost(): number;
         constructor(parent?: Container, options?: ScomPaymentWidgetPaymentMethodElement);
         private updateAmount;
         private renderMethodItems;
@@ -261,6 +270,8 @@ declare module "@scom/scom-payment-widget/components/stripePayment.tsx" {
         constructor(parent?: Container, options?: ScomPaymentWidgetStripePaymentElement);
         set payment(data: IPaymentInfo);
         get payment(): IPaymentInfo;
+        get totalPrice(): number;
+        get totalShippingCost(): number;
         get baseStripeApi(): string;
         set baseStripeApi(value: string);
         get urlStripeTracking(): string;
@@ -350,6 +361,8 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         set dappContainer(container: ScomDappContainer);
         get payment(): IPaymentInfo;
         set payment(value: IPaymentInfo);
+        get totalPrice(): number;
+        get totalShippingCost(): number;
         get state(): State;
         set state(value: State);
         get wallets(): IWalletPlugin[];

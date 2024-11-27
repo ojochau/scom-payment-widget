@@ -58,15 +58,23 @@ export class PaymentMethod extends Module {
         this.updateAmount();
     }
 
+    get totalPrice() {
+        return (this.payment.products?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0) + this.totalShippingCost;
+    }
+
+    get totalShippingCost() {
+        return this.payment.products?.reduce((sum, item) => sum + (Number(item.shippingCost || 0) * item.quantity), 0) || 0;
+    }
+
     constructor(parent?: Container, options?: ScomPaymentWidgetPaymentMethodElement) {
         super(parent, options);
     }
 
     private updateAmount() {
         if (this.lbAmount && this.payment) {
-            const { title, amount, currency } = this.payment;
+            const { title, currency } = this.payment;
             this.lbItem.caption = title || '';
-            const formattedAmount = FormatUtils.formatNumber(amount || 0, { decimalFigures: 2 });
+            const formattedAmount = FormatUtils.formatNumber(this.totalPrice, { decimalFigures: 2 });
             this.lbAmount.caption = `${formattedAmount} ${currency || 'USD'}`;
         }
     }

@@ -55,7 +55,7 @@ export class WalletPayment extends Module {
     private lbCurrentAddress: Label;
     private imgCurrentNetwork: Image;
     private lbCurrentNetwork: Label;
-	private _dappContainer: ScomDappContainer;
+    private _dappContainer: ScomDappContainer;
     private _payment: IPaymentInfo;
     private _wallets: IWalletPlugin[] = [];
     private _networks: INetworkConfig[] = [];
@@ -95,6 +95,14 @@ export class WalletPayment extends Module {
     set payment(value: IPaymentInfo) {
         this._payment = value;
         this.updateAmount();
+    }
+
+    get totalPrice() {
+        return (this.payment.products?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0) + this.totalShippingCost;
+    }
+
+    get totalShippingCost() {
+        return this.payment.products?.reduce((sum, item) => sum + (Number(item.shippingCost || 0) * item.quantity), 0) || 0;
     }
 
     get state() {
@@ -267,11 +275,11 @@ export class WalletPayment extends Module {
 
     private updateAmount() {
         if (this.lbAmount && this.payment) {
-            const { amount, currency } = this.payment;
+            const currency = this.payment.currency || 'USD';
             const title = this.payment.title || '';
             if (this.lbItem.caption !== title) this.lbItem.caption = title;
             if (this.lbPayItem.caption !== title) this.lbPayItem.caption = title;
-            const formattedAmount = `${FormatUtils.formatNumber(amount || 0, { decimalFigures: 2 })} ${currency || 'USD'}`;
+            const formattedAmount = `${FormatUtils.formatNumber(this.totalPrice, { decimalFigures: 2 })} ${currency || 'USD'}`;
             if (this.lbAmount.caption !== formattedAmount) this.lbAmount.caption = formattedAmount;
             if (this.lbPayAmount.caption !== formattedAmount) this.lbPayAmount.caption = formattedAmount;
         }
@@ -451,10 +459,10 @@ export class WalletPayment extends Module {
         this.isToPay = true;
         const tokenImg = isTon ? assets.fullPath('img/ton.png') : tokenAssets.tokenPath(token, token.chainId);
         this.imgToken.url = tokenImg;
-        const { address, amount, currency } = this.payment;
+        const { address, currency } = this.payment;
         const toAddress = address || '';
         this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);
-        const formattedAmount = FormatUtils.formatNumber(amount || 0, { decimalFigures: 2 });
+        const formattedAmount = FormatUtils.formatNumber(this.totalPrice || 0, { decimalFigures: 2 });
         this.lbAmountToPay.caption = `${formattedAmount} ${token.symbol}`;
         this.lbUSD.caption = `${formattedAmount} ${currency || 'USD'}`;
         this.lbUSD.visible = !isTon;
@@ -476,7 +484,7 @@ export class WalletPayment extends Module {
 
     private async handleCopyAmount() {
         try {
-            await application.copyToClipboard(this.payment.amount.toString());
+            await application.copyToClipboard(this.totalPrice.toString());
             this.iconCopyAmount.name = 'check';
             this.iconCopyAmount.fill = Theme.colors.success.main;
             if (this.copyAmountTimer) clearTimeout(this.copyAmountTimer);

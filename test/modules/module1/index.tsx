@@ -63,12 +63,30 @@ export default class Module1 extends Module {
         <i-scom-payment-widget
           id="scomPaymentWidget"
           payment={{
-            amount: 1000,
+            title: 'Product Mix',
+            products: [
+              {
+                name: 'Canon minimal',
+                images: ['https://images.pexels.com/photos/90946/pexels-photo-90946.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'],
+                price: 200,
+                quantity: 1,
+              },
+              {
+                name: 'Lens',
+                images: ['https://images.pexels.com/photos/279906/pexels-photo-279906.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'],
+                price: 50,
+                quantity: 2,
+              },
+              {
+                name: 'Venus mascara',
+                images: ['https://images.pexels.com/photos/2697787/pexels-photo-2697787.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'],
+                price: 100,
+                quantity: 1,
+              }
+            ],
             paymentId: '262951AA-D913-40A5-9468-7EB8B92706E3',
             address: '0xA81961100920df22CF98703155029822f2F7f033',
-            title: 'Product Mix',
             currency: 'USD',
-            photoUrl: 'https://cdn.corporatefinanceinstitute.com/assets/product-mix3.jpeg',
             userInfo: {
               name: 'Test',
               email: 'test@example.com'
