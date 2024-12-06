@@ -3,6 +3,7 @@ import { loadingImageStyle, textCenterStyle } from './index.css';
 import assets from '../assets';
 import { STRIPE_PUBLISHABLE_KEY } from '../store';
 import { loadStripe } from '../utils';
+import translations from '../translations.json';
 const Theme = Styles.Theme.ThemeVars;
 declare const window: any;
 
@@ -53,17 +54,17 @@ export class StatusPaymentTracking extends Module {
             switch (data?.paymentIntent.status) {
                 case 'succeeded':
                     img = assets.fullPath('img/success.svg');
-                    msg = 'Success! Payment received.';
+                    msg = this.i18n.get('$payment_received_success');
                     break;
                 case 'processing':
-                    msg = "Payment processing. We'll update you when payment is received.";
+                    msg = this.i18n.get('$payment_processing');
                     break;
                 case 'requires_payment_method':
-                    msg = 'Payment failed!';
+                    msg = this.i18n.get('$payment_failed');
                     img = assets.fullPath('img/error.png');
                     break;
                 default:
-                    msg = 'Something went wrong!';
+                    msg = this.i18n.get('$something_went_wrong');
                     img = assets.fullPath('img/error.png');
                     break;
             }
@@ -75,7 +76,7 @@ export class StatusPaymentTracking extends Module {
             }
             this.lbStatus.caption = msg;
         } catch {
-            this.lbStatus.caption = 'The payment ID is invalid!';
+            this.lbStatus.caption = this.i18n.get('$invalid_payment_id');
             this.imgStatus.classList.remove(loadingImageStyle);
             this.imgStatus.url = assets.fullPath('img/error.png');
         }
@@ -110,6 +111,7 @@ export class StatusPaymentTracking extends Module {
     }
 
     async init() {
+        this.i18n.init({ ...translations });
         super.init();
         const params: any = this.getParamsFromUrl();
         if (params?.payment_intent_client_secret) {
@@ -120,7 +122,7 @@ export class StatusPaymentTracking extends Module {
 
     render() {
         return <i-stack direction="vertical" gap="1rem" height="100%" width="100%" alignItems="center" padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}>
-            <i-label caption="Check Stripe payment status" font={{ size: '1rem' }} class={textCenterStyle} />
+            <i-label caption="$check_stripe_payment_status" font={{ size: '1rem' }} class={textCenterStyle} />
             <i-stack direction="horizontal" gap="0.5rem" width="100%" alignItems="center" justifyContent="center" wrap="wrap">
                 <i-input
                     id="inputClientSecret"
@@ -135,7 +137,7 @@ export class StatusPaymentTracking extends Module {
                 <i-button
                     id="btnCheck"
                     enabled={false}
-                    caption="Check"
+                    caption="$check"
                     width={100}
                     padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }}
                     font={{ color: Theme.colors.primary.contrastText }}

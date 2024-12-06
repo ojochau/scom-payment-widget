@@ -12,7 +12,15 @@ export const dappContainerStyle = Styles.style({
     'dapp-container-header': {
       width: 0,
       height: 0,
-      overflow: 'hidden'
+      overflow: 'hidden',
+      $nest: {
+        'i-modal .modal-overlay': {
+          zIndex: 999
+        },
+        'i-modal .modal-wrapper': {
+          zIndex: 999
+        }
+      }
     },
     'dapp-container-footer': {
       display: 'none'

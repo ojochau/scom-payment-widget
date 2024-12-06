@@ -1,8 +1,10 @@
-import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, IconName, Control, StackLayout } from '@ijstech/components';
+import { Module, Container, customElements, ControlElement, Styles, Label, IconName, Control, StackLayout } from '@ijstech/components';
 import { IPaymentInfo, PaymentProvider, PaymentType } from '../interface';
 import assets from '../assets';
 import { PaymentProviders } from '../store';
-import { textCenterStyle } from './index.css';
+import { fullWidthButtonStyle } from './index.css';
+import { PaymentHeader } from './common/index';
+import translations from '../translations.json';
 const Theme = Styles.Theme.ThemeVars;
 
 interface ScomPaymentWidgetPaymentMethodElement extends ControlElement {
@@ -23,14 +25,14 @@ declare global {
 const paymentTypes: { type: PaymentType, title: string, description?: string, iconName: IconName, providerImages?: string[] }[] = [
     {
         type: PaymentType.Fiat,
-        title: 'Fiat currency',
+        title: '$fiat_currency',
         // description: 'Stripe, Paypal, Payme,...etc',
         iconName: 'exchange-alt',
         // providerImages: ['stripe.png', 'paypal.png']
     },
     {
         type: PaymentType.Crypto,
-        title: 'Crypto currency',
+        title: '$crypto_currency',
         description: 'Metamask, Ton Wallet,...etc',
         iconName: 'wallet',
         providerImages: ['metamask.png', 'ton.png']
@@ -39,8 +41,7 @@ const paymentTypes: { type: PaymentType, title: string, description?: string, ic
 
 @customElements('scom-payment-widget--payment-method')
 export class PaymentMethod extends Module {
-    private lbItem: Label;
-    private lbAmount: Label;
+    private header: PaymentHeader;
     private lbPayMethod: Label;
     private pnlPaymentType: StackLayout;
     private pnlPaymentMethod: StackLayout;
@@ -71,16 +72,14 @@ export class PaymentMethod extends Module {
     }
 
     private updateAmount() {
-        if (this.lbAmount && this.payment) {
+        if (this.header && this.payment) {
             const { title, currency } = this.payment;
-            this.lbItem.caption = title || '';
-            const formattedAmount = FormatUtils.formatNumber(this.totalPrice, { decimalFigures: 2 });
-            this.lbAmount.caption = `${formattedAmount} ${currency || 'USD'}`;
+            this.header.setHeader(title, currency, this.totalPrice);
         }
     }
 
     private renderMethodItems(type: PaymentType) {
-        this.lbPayMethod.caption = type === PaymentType.Fiat ? 'Select a payment gateway' : 'Select your wallet';
+        this.lbPayMethod.caption = this.i18n.get(type === PaymentType.Fiat ? '$select_payment_gateway' : '$select_your_wallet');
         const providers = PaymentProviders.filter(v => v.type === type);
         const nodeItems: HTMLElement[] = [];
         for (const item of providers) {
@@ -128,12 +127,13 @@ export class PaymentMethod extends Module {
             this.onBack();
             return;
         }
-        this.lbPayMethod.caption = 'How will you pay?';
+        this.lbPayMethod.caption = this.i18n.get('$how_will_you_pay');
         this.pnlPaymentType.visible = true;
         this.pnlPaymentMethod.visible = false;
     }
 
     async init() {
+        this.i18n.init({ ...translations });
         super.init();
         this.onBack = this.getAttribute('onBack', true) || this.onBack;
         this.onSelectedPaymentProvider = this.getAttribute('onSelectedPaymentProvider', true) || this.onSelectedPaymentProvider;
@@ -145,22 +145,9 @@ export class PaymentMethod extends Module {
 
     render() {
         return <i-stack direction="vertical" gap="1rem" alignItems="center" width="100%">
-            <i-stack
-                direction="vertical"
-                gap="0.5rem"
-                justifyContent="center"
-                alignItems="center"
-                width="100%"
-                minHeight={85}
-                padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}
-                background={{ color: Theme.colors.primary.main }}
-            >
-                <i-label id="lbItem" class={textCenterStyle} font={{ size: '0.875rem', color: Theme.text.primary, bold: true }} wordBreak="break-word" />
-                <i-label caption="Amount to pay" font={{ size: '0.675rem', bold: true, transform: 'uppercase', color: Theme.text.primary }} />
-                <i-label id="lbAmount" font={{ size: '0.875rem', color: Theme.text.primary, bold: true }} />
-            </i-stack>
+            <scom-payment-widget--header id="header" />
             <i-stack direction="vertical" gap="1rem" width="100%" height="100%" alignItems="center" padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}>
-                <i-label id="lbPayMethod" caption="How will you pay?" font={{ size: '1rem', bold: true, color: Theme.colors.primary.main }} />
+                <i-label id="lbPayMethod" caption="$how_will_you_pay" font={{ size: '1rem', bold: true, color: Theme.colors.primary.main }} />
                 <i-stack id="pnlPaymentType" direction="vertical" gap="1rem" width="100%" height="100%" alignItems="center">
                     {paymentTypes.map(v =>
                         <i-stack
@@ -194,13 +181,9 @@ export class PaymentMethod extends Module {
                     <i-stack id="pnlMethodItems" direction="vertical" gap="1rem" width="100%" height="100%" />
                 </i-stack>
                 <i-button
-                    width="100%"
-                    maxWidth={180}
-                    caption="Back"
-                    padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }}
-                    font={{ size: '1rem', color: Theme.colors.secondary.contrastText }}
+                    caption="$back"
+                    class={fullWidthButtonStyle}
                     background={{ color: Theme.colors.secondary.main }}
-                    border={{ radius: 12 }}
                     onClick={this.handleBack}
                 />
             </i-stack>

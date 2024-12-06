@@ -1,13 +1,15 @@
 import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, StackLayout, Image, Button, application, Icon, RequireJS } from '@ijstech/components';
 import { INetworkConfig, IPaymentInfo, IPaymentStatus, PaymentProvider } from '../interface';
 import assets from '../assets';
-import configData from '../data';
+import configData from '../defaultData';
 import { ITokenObject, assets as tokenAssets, tokenStore } from '@scom/scom-token-list';
 import { isClientWalletConnected, State, PaymentProviders } from '../store';
 import { Constants, IEventBusRegistry, IRpcWallet, Wallet } from '@ijstech/eth-wallet';
 import { IWalletPlugin } from '@scom/scom-wallet-modal';
-import ScomDappContainer from '@scom/scom-dapp-container';
-import { textCenterStyle } from './index.css';
+import ScomDappContainer, { DappContainerHeader } from '@scom/scom-dapp-container';
+import { fullWidthButtonStyle, halfWidthButtonStyle } from './index.css';
+import { PaymentHeader } from './common/index';
+import translations from '../translations.json';
 const path = application.currentModuleDir;
 const Theme = Styles.Theme.ThemeVars;
 
@@ -30,10 +32,8 @@ declare global {
 
 @customElements('scom-payment-widget--wallet-payment')
 export class WalletPayment extends Module {
-    private pnlAmount: StackLayout;
     private pnlPayAmount: StackLayout;
-    private lbItem: Label;
-    private lbAmount: Label;
+    private header: PaymentHeader;
     private lbPayItem: Label;
     private lbPayAmount: Label;
     private imgPayToken: Image;
@@ -143,7 +143,7 @@ export class WalletPayment extends Module {
 
     async onStartPayment(payment: IPaymentInfo) {
         this.payment = payment;
-        if (!this.pnlAmount) return;
+        if (!this.header) return;
         this.isInitialized = true;
         if (this.payment.provider === PaymentProvider.Metamask) {
             await this.initWallet();
@@ -156,7 +156,7 @@ export class WalletPayment extends Module {
     }
 
     private showFirstScreen() {
-        this.pnlAmount.visible = true;
+        this.header.visible = true;
         this.pnlPayAmount.visible = false;
         this.pnlTokenItems.visible = true;
         this.pnlPayDetail.visible = false;
@@ -274,13 +274,12 @@ export class WalletPayment extends Module {
     }
 
     private updateAmount() {
-        if (this.lbAmount && this.payment) {
+        if (this.header && this.payment) {
             const currency = this.payment.currency || 'USD';
             const title = this.payment.title || '';
-            if (this.lbItem.caption !== title) this.lbItem.caption = title;
+            this.header.setHeader(title, currency, this.totalPrice);
             if (this.lbPayItem.caption !== title) this.lbPayItem.caption = title;
             const formattedAmount = `${FormatUtils.formatNumber(this.totalPrice, { decimalFigures: 2 })} ${currency || 'USD'}`;
-            if (this.lbAmount.caption !== formattedAmount) this.lbAmount.caption = formattedAmount;
             if (this.lbPayAmount.caption !== formattedAmount) this.lbPayAmount.caption = formattedAmount;
         }
     }
@@ -435,22 +434,20 @@ export class WalletPayment extends Module {
 
     private handleConnectWallet() {
         if (this.payment.provider === PaymentProvider.Metamask) {
-            const header = this.dappContainer.querySelector('dapp-container-header');
-            const btnConnectWallet = header.querySelector('#btnConnectWallet') as Button;
-            btnConnectWallet.click();
+            const header = this.dappContainer.querySelector('dapp-container-header') as DappContainerHeader;
+            header?.openConnectModal();
         } else if (this.payment.provider === PaymentProvider.TonWallet) {
             this.connectTonWallet();
         }
     }
 
     private handleShowNetworks() {
-        const header = this.dappContainer.querySelector('dapp-container-header');
-        const btnNetwork = header.querySelector('#btnNetwork') as Button;
-        btnNetwork.click();
+        const header = this.dappContainer.querySelector('dapp-container-header') as DappContainerHeader;
+        header?.openNetworkModal();
     }
 
     private handleSelectToken(token: ITokenObject, isTon?: boolean) {
-        this.pnlAmount.visible = false;
+        this.header.visible = false;
         this.pnlTokenItems.visible = false;
         this.pnlPayAmount.visible = true;
         this.pnlPayDetail.visible = true;
@@ -521,6 +518,7 @@ export class WalletPayment extends Module {
     }
 
     async init() {
+        this.i18n.init({ ...translations });
         super.init();
         this.loadLib();
         this.onBack = this.getAttribute('onBack', true) || this.onBack;
@@ -551,21 +549,7 @@ export class WalletPayment extends Module {
                 minHeight={60}
                 margin={{ bottom: '1rem' }}
             >
-                <i-stack
-                    id="pnlAmount"
-                    direction="vertical"
-                    gap="0.5rem"
-                    justifyContent="center"
-                    alignItems="center"
-                    width="100%"
-                    minHeight={85}
-                    padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}
-                    background={{ color: Theme.colors.primary.main }}
-                >
-                    <i-label id="lbItem" class={textCenterStyle} font={{ size: '0.875rem', color: Theme.text.primary, bold: true }} wordBreak="break-word" />
-                    <i-label caption="Amount to pay" font={{ size: '0.675rem', bold: true, transform: 'uppercase', color: Theme.text.primary }} />
-                    <i-label id="lbAmount" font={{ size: '0.875rem', color: Theme.text.primary, bold: true }} />
-                </i-stack>
+                <scom-payment-widget--header id="header" />
                 <i-stack
                     id="pnlPayAmount"
                     visible={false}
@@ -593,23 +577,15 @@ export class WalletPayment extends Module {
                     <i-image id="imgWallet" width={64} height={64} />
                     <i-label id="lbWallet" font={{ size: '0.825rem', bold: true }} />
                     <i-button
-                        caption="Connect Wallet"
-                        width="100%"
-                        maxWidth={180}
-                        padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }}
-                        font={{ size: '1rem', color: Theme.colors.primary.contrastText }}
+                        caption="$connect_wallet"
                         background={{ color: Theme.colors.primary.main }}
-                        border={{ radius: 12 }}
+                        class={fullWidthButtonStyle}
                         onClick={this.handleConnectWallet}
                     />
                     <i-button
-                        caption="Back"
-                        width="100%"
-                        maxWidth={180}
-                        padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }}
-                        font={{ size: '1rem', color: Theme.colors.secondary.contrastText }}
+                        caption="$back"
                         background={{ color: Theme.colors.secondary.main }}
-                        border={{ radius: 12 }}
+                        class={fullWidthButtonStyle}
                         onClick={this.handleBack}
                     />
                 </i-stack>
@@ -642,7 +618,7 @@ export class WalletPayment extends Module {
                     </i-stack>
                     <i-stack id="pnlTokenItems" direction="vertical" gap="1rem" width="100%" height="100%" minHeight={100} maxHeight={240} overflow="auto" padding={{ left: '1rem', right: '1rem' }} />
                     <i-stack id="pnlPayDetail" visible={false} direction="vertical" gap="0.25rem" width="100%" height="100%" alignItems="center" padding={{ left: '1rem', right: '1rem' }}>
-                        <i-label caption="Paid to address" />
+                        <i-label caption="$paid_to_address" />
                         <i-stack
                             direction="horizontal"
                             alignItems="center"
@@ -716,27 +692,18 @@ export class WalletPayment extends Module {
                     <i-stack direction="horizontal" width="100%" alignItems="center" justifyContent="center" gap="1rem" wrap="wrap-reverse" padding={{ left: '1rem', right: '1rem' }}>
                         <i-button
                             id="btnBack"
-                            caption="Back"
-                            width="100%"
-                            maxWidth={180}
+                            caption="$back"
                             minWidth={90}
-                            padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }}
-                            font={{ size: '1rem', color: Theme.colors.secondary.contrastText }}
                             background={{ color: Theme.colors.secondary.main }}
-                            border={{ radius: 12 }}
+                            class={fullWidthButtonStyle}
                             onClick={this.handleBack}
                         />
                         <i-button
                             id="btnPay"
                             visible={false}
-                            caption="Pay"
-                            width="calc(50% - 1rem)"
-                            maxWidth={180}
-                            minWidth={90}
-                            padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }}
-                            font={{ size: '1rem', color: Theme.colors.primary.contrastText }}
+                            caption="$pay"
                             background={{ color: Theme.colors.primary.main }}
-                            border={{ radius: 12 }}
+                            class={halfWidthButtonStyle}
                             onClick={this.handlePay}
                         />
                     </i-stack>

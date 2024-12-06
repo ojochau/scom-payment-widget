@@ -1,8 +1,9 @@
 import { Module, Container, customElements, ControlElement, Styles, Label, Button, Image } from '@ijstech/components';
-import { loadingImageStyle, textCenterStyle } from './index.css';
+import { fullWidthButtonStyle, loadingImageStyle, textCenterStyle } from './index.css';
 import assets from '../assets';
 import { PaymentProviders, State } from '../store';
 import { IPaymentStatus, PaymentProvider } from '../interface';
+import translations from '../translations.json';
 const Theme = Styles.Theme.ThemeVars;
 
 interface ScomPaymentWidgetStatusPaymentElement extends ControlElement {
@@ -36,6 +37,16 @@ export class StatusPayment extends Module {
         super(parent, options);
     }
 
+    private getStatusText(status: "pending" | "complete" | "failed") {
+        if (status === 'complete') {
+            return this.i18n.get('$payment_completed');
+        }
+        if (status === 'failed') {
+            return this.i18n.get('$payment_failed');
+        }
+        return this.i18n.get('$payment_pending');
+    }
+
     updateStatus(state: State, info: IPaymentStatus) {
         this.state = state;
         const { status, receipt, provider, ownerAddress } = info;
@@ -44,11 +55,11 @@ export class StatusPayment extends Module {
         this.provider = provider;
         const isPending = status === 'pending';
         const isCompleted = status === 'complete';
-        this.lbHeaderStatus.caption = isPending ? 'Payment Pending' : isCompleted ? 'Success' : 'Failed';
+        this.lbHeaderStatus.caption = this.i18n.get(isPending ? '$payment_pending' : isCompleted ? '$success' : '$failed');
         this.lbHeaderStatus.style.color = isPending ? Theme.colors.primary.main : isCompleted ? Theme.colors.success.main : Theme.colors.error.main;
         this.lbHeaderStatus.style.marginInline = isPending ? 'inherit' : 'auto';
         this.imgHeaderStatus.visible = isPending;
-        this.lbStatus.caption = `Payment ${status}`;
+        this.lbStatus.caption = this.getStatusText(status);
         if (isPending) {
             this.imgStatus.classList.add(loadingImageStyle);
         } else {
@@ -78,6 +89,7 @@ export class StatusPayment extends Module {
     }
 
     async init() {
+        this.i18n.init({ ...translations });
         super.init();
         this.onClose = this.getAttribute('onClose', true) || this.onClose;
     }
@@ -120,7 +132,7 @@ export class StatusPayment extends Module {
                             width="fit-content"
                             onClick={this.handleViewTransaction}
                         >
-                            <i-label caption="View transaction" />
+                            <i-label caption="$view_transaction" />
                         </i-stack>
                     </i-stack>
                     <i-stack direction="vertical" alignItems="center" justifyContent="center" gap="1rem" width="100%" height="100%">
@@ -132,13 +144,9 @@ export class StatusPayment extends Module {
             <i-button
                 id="btnClose"
                 visible={false}
-                width="100%"
-                maxWidth={180}
-                caption="Close"
-                padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }}
-                font={{ size: '1rem', color: Theme.colors.primary.contrastText }}
+                caption="$close"
                 background={{ color: Theme.colors.primary.main }}
-                border={{ radius: 12 }}
+                class={fullWidthButtonStyle}
                 onClick={this.handleClose}
             />
         </i-stack>

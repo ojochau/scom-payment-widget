@@ -1,11 +1,20 @@
 /// <amd-module name="@scom/scom-payment-widget/interface.ts" />
 declare module "@scom/scom-payment-widget/interface.ts" {
+    export enum ProductType {
+        Physical = "Physical",
+        Digital = "Digital",
+        Course = "Course",
+        Ebook = "Ebook",
+        Membership = "Membership",
+        Bundle = "Bundle"
+    }
     export interface IProduct {
         name: string;
         price: number | string;
         quantity: number;
         shippingCost?: number;
         images?: string[];
+        productType: ProductType;
     }
     export interface IPaymentInfo {
         title: string;
@@ -74,9 +83,11 @@ declare module "@scom/scom-payment-widget/store.ts" {
         image: string;
     }[];
     export const stripeCurrencies: string[];
+    export const stripeZeroDecimalCurrencies: string[];
+    export const stripeSpecialCurrencies: string[];
 }
-/// <amd-module name="@scom/scom-payment-widget/data.ts" />
-declare module "@scom/scom-payment-widget/data.ts" {
+/// <amd-module name="@scom/scom-payment-widget/defaultData.ts" />
+declare module "@scom/scom-payment-widget/defaultData.ts" {
     const _default: {
         infuraId: string;
         defaultData: {
@@ -105,10 +116,116 @@ declare module "@scom/scom-payment-widget/components/index.css.ts" {
     export const elementStyle: string;
     export const textCenterStyle: string;
     export const textUpperCaseStyle: string;
-    export const checkboxTextStyle: string;
     export const loadingImageStyle: string;
     export const alertStyle: string;
     export const carouselSliderStyle: string;
+    export const fullWidthButtonStyle: string;
+    export const halfWidthButtonStyle: string;
+}
+/// <amd-module name="@scom/scom-payment-widget/translations.json.ts" />
+declare module "@scom/scom-payment-widget/translations.json.ts" {
+    const _default_1: {
+        en: {
+            pay: string;
+            amount_to_pay: string;
+            payment: string;
+            continue: string;
+            back: string;
+            close: string;
+            payment_id: string;
+            price: string;
+            quantity: string;
+            fiat_currency: string;
+            crypto_currency: string;
+            select_payment_gateway: string;
+            select_your_wallet: string;
+            how_will_you_pay: string;
+            success: string;
+            failed: string;
+            payment_completed: string;
+            payment_pending: string;
+            payment_failed: string;
+            view_transaction: string;
+            checkout: string;
+            check_payment_status: string;
+            cannot_get_payment_info: string;
+            paid_to_address: string;
+            connect_wallet: string;
+            payment_received_success: string;
+            payment_processing: string;
+            something_went_wrong: string;
+            invalid_payment_id: string;
+            check_stripe_payment_status: string;
+            check: string;
+        };
+        "zh-hant": {
+            pay: string;
+            amount_to_pay: string;
+            payment: string;
+            continue: string;
+            back: string;
+            close: string;
+            payment_id: string;
+            price: string;
+            quantity: string;
+            fiat_currency: string;
+            crypto_currency: string;
+            select_payment_gateway: string;
+            select_your_wallet: string;
+            how_will_you_pay: string;
+            success: string;
+            failed: string;
+            payment_completed: string;
+            payment_pending: string;
+            payment_failed: string;
+            view_transaction: string;
+            checkout: string;
+            check_payment_status: string;
+            cannot_get_payment_info: string;
+            paid_to_address: string;
+            connect_wallet: string;
+            payment_received_success: string;
+            payment_processing: string;
+            something_went_wrong: string;
+            invalid_payment_id: string;
+            check_stripe_payment_status: string;
+            check: string;
+        };
+        vi: {
+            pay: string;
+            amount_to_pay: string;
+            payment: string;
+            continue: string;
+            back: string;
+            close: string;
+            payment_id: string;
+            price: string;
+            quantity: string;
+            fiat_currency: string;
+            crypto_currency: string;
+            select_payment_gateway: string;
+            select_your_wallet: string;
+            how_will_you_pay: string;
+            success: string;
+            failed: string;
+            payment_completed: string;
+            payment_pending: string;
+            payment_failed: string;
+            view_transaction: string;
+            checkout: string;
+            check_payment_status: string;
+            cannot_get_payment_info: string;
+            paid_to_address: string;
+            connect_wallet: string;
+            payment_received_success: string;
+            payment_processing: string;
+            something_went_wrong: string;
+            invalid_payment_id: string;
+            check_stripe_payment_status: string;
+            check: string;
+        };
+    };
+    export default _default_1;
 }
 /// <amd-module name="@scom/scom-payment-widget/components/invoiceCreation.tsx" />
 declare module "@scom/scom-payment-widget/components/invoiceCreation.tsx" {
@@ -117,6 +234,7 @@ declare module "@scom/scom-payment-widget/components/invoiceCreation.tsx" {
     interface ScomPaymentWidgetInvoiceCreationElement extends ControlElement {
         payment?: IPaymentInfo;
         onContinue?: () => void;
+        onBack?: () => void;
     }
     global {
         namespace JSX {
@@ -131,11 +249,12 @@ declare module "@scom/scom-payment-widget/components/invoiceCreation.tsx" {
         private lbAmount;
         private pnlPaymentId;
         private lbPaymentId;
-        private checkboxAgree;
         private btnContinue;
+        private btnBack;
         private carouselSlider;
         private _payment;
         onContinue: () => void;
+        onBack: () => void;
         get payment(): IPaymentInfo;
         set payment(value: IPaymentInfo);
         get totalPrice(): number;
@@ -143,8 +262,8 @@ declare module "@scom/scom-payment-widget/components/invoiceCreation.tsx" {
         constructor(parent?: Container, options?: ScomPaymentWidgetInvoiceCreationElement);
         private renderProducts;
         private updateInfo;
-        private handleCheckboxChanged;
         private handleContinue;
+        private handleBack;
         init(): Promise<void>;
         render(): any;
     }
@@ -152,10 +271,35 @@ declare module "@scom/scom-payment-widget/components/invoiceCreation.tsx" {
 /// <amd-module name="@scom/scom-payment-widget/assets.ts" />
 declare module "@scom/scom-payment-widget/assets.ts" {
     function fullPath(path: string): string;
-    const _default_1: {
+    const _default_2: {
         fullPath: typeof fullPath;
     };
-    export default _default_1;
+    export default _default_2;
+}
+/// <amd-module name="@scom/scom-payment-widget/components/common/header.tsx" />
+declare module "@scom/scom-payment-widget/components/common/header.tsx" {
+    import { Module, ControlElement } from "@ijstech/components";
+    interface HeaderElement extends ControlElement {
+    }
+    global {
+        namespace JSX {
+            interface IntrinsicElements {
+                ['scom-payment-widget--header']: HeaderElement;
+            }
+        }
+    }
+    export class PaymentHeader extends Module {
+        private lbTitle;
+        private lbAmount;
+        setHeader(title: string, currency: string, amount: number): void;
+        init(): void;
+        render(): any;
+    }
+}
+/// <amd-module name="@scom/scom-payment-widget/components/common/index.ts" />
+declare module "@scom/scom-payment-widget/components/common/index.ts" {
+    import { PaymentHeader } from "@scom/scom-payment-widget/components/common/header.tsx";
+    export { PaymentHeader, };
 }
 /// <amd-module name="@scom/scom-payment-widget/components/paymentMethod.tsx" />
 declare module "@scom/scom-payment-widget/components/paymentMethod.tsx" {
@@ -174,8 +318,7 @@ declare module "@scom/scom-payment-widget/components/paymentMethod.tsx" {
         }
     }
     export class PaymentMethod extends Module {
-        private lbItem;
-        private lbAmount;
+        private header;
         private lbPayMethod;
         private pnlPaymentType;
         private pnlPaymentMethod;
@@ -226,6 +369,7 @@ declare module "@scom/scom-payment-widget/components/statusPayment.tsx" {
         private btnClose;
         onClose: (status: string) => void;
         constructor(parent?: Container, options?: ScomPaymentWidgetStatusPaymentElement);
+        private getStatusText;
         updateStatus(state: State, info: IPaymentStatus): void;
         private handleViewTransaction;
         private handleClose;
@@ -262,8 +406,7 @@ declare module "@scom/scom-payment-widget/components/stripePayment.tsx" {
         private stripe;
         private stripeElements;
         private btnCheckout;
-        private lbItem;
-        private lbAmount;
+        private header;
         private mdAlert;
         onPaymentSuccess: (status: string) => void;
         onBack: () => void;
@@ -278,9 +421,11 @@ declare module "@scom/scom-payment-widget/components/stripePayment.tsx" {
         set urlStripeTracking(value: string);
         private get stripeCurrency();
         private updateAmount;
+        private convertToSmallestUnit;
         private initStripePayment;
         private createPaymentIntent;
         private handleStripeCheckoutClick;
+        private showButtonIcon;
         private showAlert;
         private handleBack;
         init(): Promise<void>;
@@ -312,10 +457,8 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         }
     }
     export class WalletPayment extends Module {
-        private pnlAmount;
         private pnlPayAmount;
-        private lbItem;
-        private lbAmount;
+        private header;
         private lbPayItem;
         private lbPayAmount;
         private imgPayToken;
@@ -437,6 +580,7 @@ declare module "@scom/scom-payment-widget/components/paymentModule.tsx" {
         private _wallets;
         private _networks;
         private _tokens;
+        private isModal;
         onPaymentSuccess: (status: string) => Promise<void>;
         get dappContainer(): ScomDappContainer;
         set dappContainer(container: ScomDappContainer);
@@ -452,7 +596,7 @@ declare module "@scom/scom-payment-widget/components/paymentModule.tsx" {
         set networks(value: INetworkConfig[]);
         get tokens(): ITokenObject[];
         set tokens(value: ITokenObject[]);
-        show(payment: IPaymentInfo): void;
+        show(payment: IPaymentInfo, isModal?: boolean): void;
         init(): Promise<void>;
         render(): any;
     }
@@ -503,10 +647,11 @@ declare module "@scom/scom-payment-widget/index.css.ts" {
 /// <amd-module name="@scom/scom-payment-widget" />
 declare module "@scom/scom-payment-widget" {
     import { Module, Container, ControlElement } from '@ijstech/components';
-    import { INetworkConfig, IPaymentInfo } from "@scom/scom-payment-widget/interface.ts";
+    import { INetworkConfig, IPaymentInfo, ProductType } from "@scom/scom-payment-widget/interface.ts";
     import { IWalletPlugin } from '@scom/scom-wallet-modal';
     import { ITokenObject } from "@scom/scom-token-list";
     import { IRpcWallet } from '@ijstech/eth-wallet';
+    export { ProductType };
     type Mode = 'payment' | 'status';
     interface ScomPaymentWidgetElement extends ControlElement {
         lazyLoad?: boolean;

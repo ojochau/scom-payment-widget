@@ -1,6 +1,6 @@
-import { Module, customElements, ControlElement, Styles } from '@ijstech/components';
+import { Module, customElements, ControlElement } from '@ijstech/components';
 import { State } from '../store';
-import configData from '../data';
+import configData from '../defaultData';
 import { INetworkConfig, IPaymentInfo, IPaymentStatus, PaymentProvider } from '../interface';
 import { InvoiceCreation } from './invoiceCreation';
 import { PaymentMethod } from './paymentMethod';
@@ -11,7 +11,6 @@ import { IWalletPlugin } from '@scom/scom-wallet-modal';
 import { ITokenObject } from '@scom/scom-token-list';
 import ScomDappContainer from '@scom/scom-dapp-container';
 import { elementStyle } from './index.css';
-const Theme = Styles.Theme.ThemeVars;
 
 interface ScomPaymentWidgetPaymentElement extends ControlElement {
     state?: State;
@@ -45,6 +44,7 @@ export class PaymentModule extends Module {
     private _wallets: IWalletPlugin[] = [];
     private _networks: INetworkConfig[] = [];
     private _tokens: ITokenObject[] = [];
+    private isModal: boolean;
     public onPaymentSuccess: (status: string) => Promise<void>;
 
     get dappContainer() {
@@ -105,7 +105,7 @@ export class PaymentModule extends Module {
         this._tokens = value;
     }
 
-    show(payment: IPaymentInfo) {
+    show(payment: IPaymentInfo, isModal: boolean = true) {
         this.invoiceCreation.payment = payment;
         this.invoiceCreation.visible = true;
         this.paymentMethod.payment = payment;
@@ -116,6 +116,7 @@ export class PaymentModule extends Module {
         this.stripePayment.payment = payment;
         this.stripePayment.visible = false;
         this.statusPayment.visible = false;
+        this.isModal = isModal;
     }
 
     async init() {
@@ -169,6 +170,7 @@ export class PaymentModule extends Module {
         this.stripePayment.baseStripeApi = this.baseStripeApi;
         this.stripePayment.urlStripeTracking = this.urlStripeTracking;
         this.statusPayment.onClose = (status: string) => {
+            if (this.isModal) this.closeModal();
             if (this.onPaymentSuccess) this.onPaymentSuccess(status);
         }
     }
