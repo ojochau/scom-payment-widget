@@ -1,8 +1,10 @@
-import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, Alert, Button } from '@ijstech/components';
+import { Module, Container, customElements, ControlElement, Styles, Alert, Button } from '@ijstech/components';
 import { IPaymentInfo } from '../interface';
-import { STRIPE_PUBLISHABLE_KEY, stripeCurrencies } from '../store';
-import { alertStyle, textCenterStyle } from './index.css';
+import { STRIPE_PUBLISHABLE_KEY, stripeCurrencies, stripeSpecialCurrencies, stripeZeroDecimalCurrencies } from '../store';
+import { alertStyle, halfWidthButtonStyle } from './index.css';
 import { loadStripe } from '../utils';
+import { PaymentHeader } from './common/index';
+import translations from '../translations.json';
 const Theme = Styles.Theme.ThemeVars;
 declare const window: any;
 
@@ -30,8 +32,7 @@ export class StripePayment extends Module {
     private stripe: any;
     private stripeElements: any;
     private btnCheckout: Button;
-    private lbItem: Label;
-    private lbAmount: Label;
+    private header: PaymentHeader;
     private mdAlert: Alert;
     public onPaymentSuccess: (status: string) => void;
     public onBack: () => void;
@@ -80,12 +81,18 @@ export class StripePayment extends Module {
     }
 
     private updateAmount() {
-        if (this.payment && this.lbAmount) {
+        if (this.payment && this.header) {
             const { title, currency } = this.payment;
-            this.lbItem.caption = title || '';
-            this.lbAmount.caption = `${FormatUtils.formatNumber(this.totalPrice, { decimalFigures: 2 })} ${currency?.toUpperCase()}`;
+            this.header.setHeader(title, currency, this.totalPrice);
             this.initStripePayment();
         }
+    }
+
+    private convertToSmallestUnit(amount: number) {
+        const currency = this.stripeCurrency.toLowerCase();
+        if (stripeZeroDecimalCurrencies.includes(currency)) return Math.round(amount);
+        if (stripeSpecialCurrencies.includes(currency)) return Math.round(amount) * 100;
+        return Math.round(amount * 100);
     }
 
     private async initStripePayment() {
@@ -96,7 +103,7 @@ export class StripePayment extends Module {
             if (this.stripeElements) {
                 this.stripeElements.update({
                     currency: this.stripeCurrency,
-                    amount: this.totalPrice,
+                    amount: this.convertToSmallestUnit(this.totalPrice)
                 });
                 return;
             }
@@ -104,7 +111,7 @@ export class StripePayment extends Module {
             this.stripeElements = this.stripe.elements({
                 mode: 'payment',
                 currency: this.stripeCurrency,
-                amount: this.totalPrice,
+                amount: this.convertToSmallestUnit(this.totalPrice)
             });
             const paymentElement = this.stripeElements.create('payment');
             paymentElement.mount('#pnlStripePaymentForm');
@@ -113,15 +120,15 @@ export class StripePayment extends Module {
 
     private async createPaymentIntent(currency: string, amount: number): Promise<string> {
         const apiUrl = this.baseStripeApi ?? '/stripe';
-        const response = await fetch(`${apiUrl}/payment-intent`, {
-            method: 'POST',
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ currency, amount })
-        });
         try {
+            const response = await fetch(`${apiUrl}/payment-intent`, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ currency, amount })
+            });
             if (response.ok) {
                 const data = await response.json();
                 if (data.clientSecret) {
@@ -136,15 +143,17 @@ export class StripePayment extends Module {
 
     private async handleStripeCheckoutClick() {
         if (!this.stripe) return;
-        this.btnCheckout.rightIcon.spin = true;
-        this.btnCheckout.rightIcon.visible = true;
+        this.showButtonIcon(true);
         const url = this.urlStripeTracking ?? `${window.location.origin}/#!/stripe-payment-status`;
         this.stripeElements.submit().then(async (result) => {
-            const clientSecret = await this.createPaymentIntent(this.stripeCurrency, this.totalPrice);
+            if (result.error) {
+                this.showButtonIcon(false);
+                return;
+            }
+            const clientSecret = await this.createPaymentIntent(this.stripeCurrency, this.convertToSmallestUnit(this.totalPrice));
             if (!clientSecret) {
-                this.btnCheckout.rightIcon.spin = false;
-                this.btnCheckout.rightIcon.visible = false;
-                this.showAlert('error', 'Payment failed', 'Cannot get payment info');
+                this.showButtonIcon(false);
+                this.showAlert('error', this.i18n.get('$payment_failed'), this.i18n.get('$cannot_get_payment_info'));
                 return;
             };
             const { userInfo } = this.payment;
@@ -162,13 +171,17 @@ export class StripePayment extends Module {
                 clientSecret
             })
             if (error) {
-                this.showAlert('error', 'Payment failed', error.message);
+                this.showAlert('error', this.i18n.get('$payment_failed'), error.message);
             } else {
-                this.showAlert('success', 'Payment successfully', `Check your payment status here <a href='${url}?payment_intent_client_secret=${clientSecret}' target='_blank'>${clientSecret}</a>`);
+                this.showAlert('success', this.i18n.get('$payment_completed'), `${this.i18n.get('$check_payment_status')} <a href='${url}?payment_intent_client_secret=${clientSecret}' target='_blank'>${clientSecret}</a>`);
             }
-            this.btnCheckout.rightIcon.spin = false;
-            this.btnCheckout.rightIcon.visible = false;
+            this.showButtonIcon(false);
         })
+    }
+
+    private showButtonIcon(value: boolean) {
+        this.btnCheckout.rightIcon.spin = value;
+        this.btnCheckout.rightIcon.visible = value;
     }
 
     private async showAlert(status: string, title: string, msg: string) {
@@ -192,6 +205,7 @@ export class StripePayment extends Module {
     }
 
     async init() {
+        this.i18n.init({ ...translations });
         super.init();
         this.onPaymentSuccess = this.getAttribute('onPaymentSuccess', true) || this.onPaymentSuccess;
         this.onBack = this.getAttribute('onBack', true) || this.onBack;
@@ -205,45 +219,21 @@ export class StripePayment extends Module {
 
     render() {
         return <i-stack direction="vertical" alignItems="center" width="100%">
-            <i-stack
-                direction="vertical"
-                gap="0.5rem"
-                justifyContent="center"
-                alignItems="center"
-                width="100%"
-                minHeight={85}
-                margin={{ bottom: '1rem' }}
-                padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}
-                background={{ color: Theme.colors.primary.main }}
-            >
-                <i-label id="lbItem" class={textCenterStyle} font={{ size: '0.875rem', color: Theme.text.primary, bold: true }} wordBreak="break-word" />
-                <i-label caption="Amount to pay" font={{ size: '0.675rem', bold: true, transform: 'uppercase', color: Theme.text.primary }} />
-                <i-label id="lbAmount" font={{ size: '0.875rem', color: Theme.text.primary, bold: true }} />
-            </i-stack>
+            <scom-payment-widget--header id="header" margin={{ bottom: '1rem' }} display="flex" />
             <i-stack direction="vertical" gap="1rem" width="100%" height="100%" alignItems="center" padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}>
                 <i-stack direction="vertical" id="pnlStripePaymentForm" background={{ color: '#fff' }} border={{ radius: 12 }} padding={{ top: '1rem', left: '1rem', bottom: '2rem', right: '1rem' }} />
                 <i-stack direction="horizontal" width="100%" alignItems="center" justifyContent="center" margin={{ top: 'auto' }} gap="1rem" wrap="wrap-reverse">
                     <i-button
-                        caption="Back"
-                        width="calc(50% - 0.5rem)"
-                        maxWidth={180}
-                        minWidth={90}
-                        padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }}
-                        font={{ size: '1rem', color: Theme.colors.secondary.contrastText }}
+                        caption="$back"
                         background={{ color: Theme.colors.secondary.main }}
-                        border={{ radius: 12 }}
+                        class={halfWidthButtonStyle}
                         onClick={this.handleBack}
                     />
                     <i-button
                         id="btnCheckout"
-                        caption="Checkout"
-                        width="calc(50% - 0.5rem)"
-                        maxWidth={180}
-                        minWidth={90}
-                        padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }}
-                        font={{ size: '1rem', color: Theme.colors.primary.contrastText }}
+                        caption="$checkout"
                         background={{ color: Theme.colors.primary.main }}
-                        border={{ radius: 12 }}
+                        class={halfWidthButtonStyle}
                         onClick={this.handleStripeCheckoutClick}
                     />
                 </i-stack>

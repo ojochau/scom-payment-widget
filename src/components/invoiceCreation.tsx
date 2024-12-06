@@ -1,11 +1,13 @@
-import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, Button, Checkbox, StackLayout, Image, CarouselSlider } from '@ijstech/components';
-import { carouselSliderStyle, checkboxTextStyle, textCenterStyle, textUpperCaseStyle } from './index.css';
-import { IPaymentInfo } from '../interface';
+import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, Button, StackLayout, CarouselSlider } from '@ijstech/components';
+import { halfWidthButtonStyle, carouselSliderStyle, textCenterStyle, textUpperCaseStyle, fullWidthButtonStyle } from './index.css';
+import { IPaymentInfo, ProductType } from '../interface';
+import translations from '../translations.json';
 const Theme = Styles.Theme.ThemeVars;
 
 interface ScomPaymentWidgetInvoiceCreationElement extends ControlElement {
     payment?: IPaymentInfo;
     onContinue?: () => void;
+    onBack?: () => void;
 }
 
 declare global {
@@ -23,11 +25,12 @@ export class InvoiceCreation extends Module {
     private lbAmount: Label;
     private pnlPaymentId: Label;
     private lbPaymentId: Label;
-    private checkboxAgree: Checkbox;
     private btnContinue: Button;
+    private btnBack: Button;
     private carouselSlider: CarouselSlider;
     private _payment: IPaymentInfo = { title: '', paymentId: '', products: [] };
     public onContinue: () => void;
+    public onBack: () => void;
 
     get payment() {
         return this._payment;
@@ -59,11 +62,11 @@ export class InvoiceCreation extends Module {
                         {product.images?.length ? <i-image url={product.images[0]} width="auto" maxWidth="100%" height={100} margin={{ left: 'auto', right: 'auto' }} /> : []}
                         <i-label caption={product.name} font={{ bold: true }} />
                         <i-hstack gap="0.5rem" verticalAlignment="center" horizontalAlignment="space-between" wrap="wrap">
-                            <i-label caption="Price" font={{ color: Theme.text.hint }} />
+                            <i-label caption={this.i18n.get('$price')} font={{ color: Theme.text.hint }} />
                             <i-label caption={`${FormatUtils.formatNumber(product.price, { decimalFigures: 2 })} ${this.payment.currency || 'USD'}`} font={{ bold: true }} class={textUpperCaseStyle} />
                         </i-hstack>
                         <i-hstack gap="0.5rem" verticalAlignment="center" horizontalAlignment="space-between" wrap="wrap">
-                            <i-label caption="Quantity" font={{ color: Theme.text.hint }} />
+                            <i-label caption={this.i18n.get('$quantity')} font={{ color: Theme.text.hint }} />
                             <i-label caption={FormatUtils.formatNumber(product.quantity, { hasTrailingZero: false })} font={{ bold: true }} />
                         </i-hstack>
                     </i-vstack>
@@ -101,24 +104,26 @@ export class InvoiceCreation extends Module {
             this.pnlPaymentId.visible = !!_paymentId;
             this.lbPaymentId.caption = _paymentId;
         }
-        if (this.checkboxAgree?.checked) {
-            this.checkboxAgree.checked = false;
-            this.btnContinue.enabled = false;
+        if (this.btnBack) {
+            const hasPhysicalProduct = products.some(v => v.productType === ProductType.Physical);
+            this.btnBack.visible = hasPhysicalProduct;
+            this.btnContinue.width = hasPhysicalProduct ? 'calc(50% - 1rem)' : '100%';
         }
-    }
-
-    private handleCheckboxChanged() {
-        const checked = this.checkboxAgree.checked;
-        this.btnContinue.enabled = checked;
     }
 
     private handleContinue() {
         if (this.onContinue) this.onContinue();
     }
 
+    private handleBack() {
+        if (this.onBack) this.onBack();
+    }
+
     async init() {
+        this.i18n.init({ ...translations });
         super.init();
         this.onContinue = this.getAttribute('onContinue', true) || this.onContinue;
+        this.onBack = this.getAttribute('onBack', true) || this.onBack;
         const payment = this.getAttribute('payment', true);
         if (payment) {
             this.payment = payment;
@@ -133,7 +138,7 @@ export class InvoiceCreation extends Module {
                     <i-carousel-slider
                         id="carouselSlider"
                         width="calc(100% - 60px)"
-                        maxWidth={250}
+                        maxWidth={280}
                         height="100%"
                         overflow="inherit"
                         minHeight={80}
@@ -149,35 +154,32 @@ export class InvoiceCreation extends Module {
                 </i-stack>
                 <i-stack direction="vertical" gap="1rem" alignItems="center" width="100%" margin={{ bottom: '1.5rem' }}>
                     <i-stack direction="vertical" gap="0.5rem" alignItems="center">
-                        <i-label caption="Amount to pay" font={{ color: Theme.text.primary, bold: true, transform: 'uppercase' }} />
+                        <i-label caption="$amount_to_pay" font={{ color: Theme.text.primary, bold: true, transform: 'uppercase' }} />
                         <i-label id="lbAmount" class={textCenterStyle} font={{ size: '1.25rem', color: Theme.colors.primary.main, bold: true }} />
                     </i-stack>
                     <i-stack id="pnlPaymentId" visible={false} direction="vertical" gap="0.25rem" alignItems="center">
-                        <i-label caption="Payment ID" font={{ color: Theme.text.primary, bold: true, transform: 'uppercase' }} />
+                        <i-label caption="$payment_id" font={{ color: Theme.text.primary, bold: true, transform: 'uppercase' }} />
                         <i-label id="lbPaymentId" class={textCenterStyle} font={{ color: Theme.text.primary, bold: true, transform: 'uppercase' }} />
                     </i-stack>
                 </i-stack>
-                <i-stack direction="horizontal" gap="0.25rem">
-                    <i-checkbox caption={''} id="checkboxAgree" onChanged={this.handleCheckboxChanged} />
-                    <i-label
-                        caption="I have read and accept the <a href='' target='_blank'>Terms of Service</a> and <a href='' target='_blank'>Privacy Policy</a>"
-                        class={checkboxTextStyle}
-                    />
-                </i-stack>
             </i-stack>
-            <i-button
-                id="btnContinue"
-                enabled={false}
-                width="100%"
-                maxWidth={180}
-                caption="Continue"
-                padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }}
-                font={{ size: '1rem', color: Theme.colors.primary.contrastText }}
-                background={{ color: Theme.colors.primary.main }}
-                border={{ radius: 12 }}
-                rightIcon={{ name: 'arrow-right', visible: true }}
-                onClick={this.handleContinue}
-            />
+            <i-stack direction="horizontal" width="100%" alignItems="center" justifyContent="center" margin={{ top: 'auto' }} gap="1rem" wrap="wrap-reverse">
+                <i-button
+                    id="btnBack"
+                    caption="$back"
+                    visible={false}
+                    class={halfWidthButtonStyle}
+                    background={{ color: Theme.colors.secondary.main }}
+                    onClick={this.handleBack}
+                />
+                <i-button
+                    id="btnContinue"
+                    caption="$continue"
+                    background={{ color: Theme.colors.primary.main }}
+                    class={fullWidthButtonStyle}
+                    onClick={this.handleContinue}
+                />
+            </i-stack>
         </i-stack>
     }
 }

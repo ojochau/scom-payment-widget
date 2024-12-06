@@ -129,5 +129,14 @@ export const stripeCurrencies = [
   "vnd", "vuv", "wst", "xaf", "xag", "xau", "xcd", "xdr", "xof", "xpf",
   "yer", "zar", "zmk", "zmw", "btc", "jep", "eek", "ghc", "mtl", "tmm",
   "yen", "zwd", "zwl", "zwn", "zwr"
-];
+]
+
+export const stripeZeroDecimalCurrencies = [
+  "bif", "clp", "djf", "gnf", "jpy", "kmf", "krw", "mga",
+  "pyg", "rwf", "ugx", "vnd", "vuv", "xaf", "xof", "xpf"
+]
+
+export const stripeSpecialCurrencies = [
+  'isk', 'huf', 'twd', 'ugx'
+]
 

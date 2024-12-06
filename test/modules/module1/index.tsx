@@ -2,7 +2,7 @@ import { Module, customModule, Container, application, Styles } from '@ijstech/c
 import { INetwork } from '@ijstech/eth-wallet';
 import { getMulticallInfoList } from '@scom/scom-multicall';
 import getNetworkList from '@scom/scom-network-list';
-import { ScomPaymentWidget } from '@scom/scom-payment-widget';
+import { ProductType, ScomPaymentWidget } from '@scom/scom-payment-widget';
 const Theme = Styles.Theme.ThemeVars;
 
 @customModule
@@ -66,21 +66,24 @@ export default class Module1 extends Module {
             title: 'Product Mix',
             products: [
               {
+                productType: ProductType.Physical,
                 name: 'Canon minimal',
                 images: ['https://images.pexels.com/photos/90946/pexels-photo-90946.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'],
                 price: 200,
                 quantity: 1,
               },
               {
+                productType: ProductType.Physical,
                 name: 'Lens',
                 images: ['https://images.pexels.com/photos/279906/pexels-photo-279906.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'],
                 price: 50,
                 quantity: 2,
               },
               {
+                productType: ProductType.Physical,
                 name: 'Venus mascara',
                 images: ['https://images.pexels.com/photos/2697787/pexels-photo-2697787.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'],
-                price: 100,
+                price: 99.90,
                 quantity: 1,
               }
             ],

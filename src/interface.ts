@@ -1,9 +1,19 @@
+export enum ProductType {
+	Physical = "Physical",
+	Digital = "Digital",
+	Course = "Course",
+	Ebook = "Ebook",
+	Membership = "Membership",
+	Bundle = "Bundle"
+}
+
 export interface IProduct {
   name: string;
   price: number | string;
   quantity: number;
   shippingCost?: number;
   images?: string[];
+  productType: ProductType;
 }
 
 export interface IPaymentInfo {

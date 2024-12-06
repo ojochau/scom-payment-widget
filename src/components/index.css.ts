@@ -23,18 +23,6 @@ export const textUpperCaseStyle = Styles.style({
   textTransform: 'uppercase'
 })
 
-export const checkboxTextStyle = Styles.style({
-  $nest: {
-    'span': {
-      display: 'inline'
-    },
-    'a': {
-      display: 'inline',
-      color: Theme.colors.info.main
-    }
-  }
-})
-
 export const loadingImageStyle = Styles.style({
   animation: `${spinnerAnim} 2s linear infinite`
 })
@@ -71,4 +59,23 @@ export const carouselSliderStyle = Styles.style({
       position: 'absolute'
     }
   }
+})
+
+const baseButtonStyle = {
+  padding: '0.5rem 0.75rem',
+  fontSize: '1rem',
+  color: Theme.colors.secondary.contrastText,
+  borderRadius: 12,
+  maxWidth: 180
+}
+
+export const fullWidthButtonStyle = Styles.style({
+  ...baseButtonStyle,
+  width: '100%'
+})
+
+export const halfWidthButtonStyle = Styles.style({
+  ...baseButtonStyle,
+  width: 'calc(50% - 0.5rem)',
+  minWidth: 90
 })

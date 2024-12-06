@@ -1,16 +1,18 @@
 import { Module, Container, customElements, ControlElement, Styles, Button, StackLayout } from '@ijstech/components';
 import { PaymentModule } from './components';
-import { INetworkConfig, IPaymentInfo } from './interface';
+import { INetworkConfig, IPaymentInfo, ProductType } from './interface';
 import { State } from './store';
 import { IWalletPlugin } from '@scom/scom-wallet-modal';
 import { ITokenObject } from "@scom/scom-token-list";
-import configData from './data';
+import configData from './defaultData';
 import { dappContainerStyle } from './index.css';
 import { IRpcWallet } from '@ijstech/eth-wallet';
 import ScomDappContainer from '@scom/scom-dapp-container';
 import { StatusPaymentTracking } from './components/index';
+import translations from './translations.json';
 const Theme = Styles.Theme.ThemeVars;
 
+export { ProductType };
 type Mode = 'payment' | 'status';
 interface ScomPaymentWidgetElement extends ControlElement {
 	lazyLoad?: boolean;
@@ -87,7 +89,7 @@ export class ScomPaymentWidget extends Module {
 	}
 
 	get payButtonCaption() {
-		return this._payButtonCaption || 'Pay';
+		return this._payButtonCaption || this.i18n.get('$pay');
 	}
 
 	set payButtonCaption(value: string) {
@@ -185,11 +187,11 @@ export class ScomPaymentWidget extends Module {
 		this.paymentModule.onPaymentSuccess = this.onPaymentSuccess;
 		if (this.isUrl) {
 			await this.paymentModule.ready();
-			this.paymentModule.show(this._payment);
+			this.paymentModule.show(this._payment, false);
 			return;
 		}
 		const modal = this.paymentModule.openModal({
-			title: 'Payment',
+			title: this.i18n.get('$payment'),
 			closeIcon: { name: 'times', fill: Theme.colors.primary.main },
 			width: 480,
 			maxWidth: '100%',
@@ -234,6 +236,7 @@ export class ScomPaymentWidget extends Module {
 		if (!this.state) {
 			this.state = new State(configData);
 		}
+		this.i18n.init({ ...translations });
 		super.init();
 		this.updateTheme();
 		this.openPaymentModal = this.openPaymentModal.bind(this);
@@ -246,7 +249,7 @@ export class ScomPaymentWidget extends Module {
 			this.baseStripeApi = this.getAttribute('baseStripeApi', true, configData.defaultData.baseStripeApi);
 			this.urlStripeTracking = this.getAttribute('urlStripeTracking', true, configData.defaultData.urlStripeTracking);
 			this.showButtonPay = this.getAttribute('showButtonPay', true, false);
-			this.payButtonCaption = this.getAttribute('payButtonCaption', true, 'Pay');
+			this.payButtonCaption = this.getAttribute('payButtonCaption', true, this.i18n.get('$pay'));
 			this.networks = this.getAttribute('networks', true, configData.defaultData.networks);
 			this.tokens = this.getAttribute('tokens', true, configData.defaultData.tokens);
 			this.wallets = this.getAttribute('wallets', true, configData.defaultData.wallets);
@@ -272,7 +275,7 @@ export class ScomPaymentWidget extends Module {
 					id="btnPay"
 					visible={false}
 					enabled={false}
-					caption="Pay"
+					caption="$pay"
 					width="100%"
 					minWidth={60}
 					maxWidth={180}

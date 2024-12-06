@@ -9,7 +9,10 @@
   },
   "dependencies": {
     "@scom/dapp": "*",
-    "@scom/scom-payment-widget": "*"
+    "@scom/scom-payment-widget": "*",
+    "@scom/scom-wallet-modal": "*",
+    "@scom/scom-token-list": "*",
+    "@scom/scom-dapp-container": "*"
   },
   "packages": [],
   "menus": [
