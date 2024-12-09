@@ -197,8 +197,8 @@ define("@scom/scom-payment-widget/defaultData.ts", ["require", "exports"], funct
     exports.default = {
         "infuraId": "adc596bf88b648e2a8902bc9093930c5",
         "defaultData": {
-            "baseStripeApi": "https://noto.fan/stripe",
-            "urlStripeTracking": "https://noto.fan/#!/stripe-payment-status",
+            "baseStripeApi": "",
+            "urlStripeTracking": "",
             "defaultChainId": 97,
             "networks": [
                 {
@@ -1958,8 +1958,8 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             if (!lazyLoad) {
                 const payment = this.getAttribute('payment', true);
                 this.mode = this.getAttribute('mode', true, 'payment');
-                this.baseStripeApi = this.getAttribute('baseStripeApi', true, defaultData_3.default.defaultData.baseStripeApi);
-                this.urlStripeTracking = this.getAttribute('urlStripeTracking', true, defaultData_3.default.defaultData.urlStripeTracking);
+                this.baseStripeApi = this.getAttribute('baseStripeApi', true);
+                this.urlStripeTracking = this.getAttribute('urlStripeTracking', true);
                 this.showButtonPay = this.getAttribute('showButtonPay', true, false);
                 this.payButtonCaption = this.getAttribute('payButtonCaption', true, this.i18n.get('$pay'));
                 this.networks = this.getAttribute('networks', true, defaultData_3.default.defaultData.networks);

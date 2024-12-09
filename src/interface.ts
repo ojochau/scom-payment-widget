@@ -13,7 +13,7 @@ export interface IProduct {
   quantity: number;
   shippingCost?: number;
   images?: string[];
-  productType: ProductType;
+  productType?: ProductType;
 }
 
 export interface IPaymentInfo {

@@ -248,8 +248,8 @@ export class ScomPaymentWidget extends Module {
 		if (!lazyLoad) {
 			const payment = this.getAttribute('payment', true);
 			this.mode = this.getAttribute('mode', true, 'payment');
-			this.baseStripeApi = this.getAttribute('baseStripeApi', true, configData.defaultData.baseStripeApi);
-			this.urlStripeTracking = this.getAttribute('urlStripeTracking', true, configData.defaultData.urlStripeTracking);
+			this.baseStripeApi = this.getAttribute('baseStripeApi', true);
+			this.urlStripeTracking = this.getAttribute('urlStripeTracking', true);
 			this.showButtonPay = this.getAttribute('showButtonPay', true, false);
 			this.payButtonCaption = this.getAttribute('payButtonCaption', true, this.i18n.get('$pay'));
 			this.networks = this.getAttribute('networks', true, configData.defaultData.networks);
