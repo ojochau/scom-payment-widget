@@ -1,6 +1,6 @@
 import { Module, Container, customElements, ControlElement, Styles, Alert, Button } from '@ijstech/components';
 import { IPaymentInfo } from '../interface';
-import { STRIPE_PUBLISHABLE_KEY, stripeCurrencies, stripeSpecialCurrencies, stripeZeroDecimalCurrencies } from '../store';
+import { getStripeKey, stripeCurrencies, stripeSpecialCurrencies, stripeZeroDecimalCurrencies } from '../store';
 import { alertStyle, halfWidthButtonStyle } from './index.css';
 import { loadStripe } from '../utils';
 import { PaymentHeader } from './common/index';
@@ -34,6 +34,7 @@ export class StripePayment extends Module {
     private btnCheckout: Button;
     private header: PaymentHeader;
     private mdAlert: Alert;
+    private publishableKey: string;
     public onPaymentSuccess: (status: string) => void;
     public onBack: () => void;
 
@@ -107,7 +108,12 @@ export class StripePayment extends Module {
                 });
                 return;
             }
-            this.stripe = window.Stripe(STRIPE_PUBLISHABLE_KEY);
+            const apiUrl = this.baseStripeApi ?? '/stripe';
+            if (!this.publishableKey) {
+                this.publishableKey = await getStripeKey(`${apiUrl}/key`);
+                if (!this.publishableKey) return;
+            }
+            this.stripe = window.Stripe(this.publishableKey);
             this.stripeElements = this.stripe.elements({
                 mode: 'payment',
                 currency: this.stripeCurrency,

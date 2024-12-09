@@ -103,6 +103,7 @@ export class ScomPaymentWidget extends Module {
 
 	set baseStripeApi(value: string) {
 		this._baseStripeApi = value;
+		if (this.statusPaymentTracking) this.statusPaymentTracking.baseStripeApi = value;
 	}
 
 	get urlStripeTracking() {
@@ -211,6 +212,7 @@ export class ScomPaymentWidget extends Module {
 
 	private updateUIByMode() {
 		if (!this.statusPaymentTracking) return;
+		this.statusPaymentTracking.baseStripeApi = this.baseStripeApi;
 		this.statusPaymentTracking.visible = this.mode === 'status';
 		this.btnPay.visible = !this.isUrl && this.mode === 'payment' && this.showButtonPay;
 	}

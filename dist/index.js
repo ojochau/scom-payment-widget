@@ -34,10 +34,9 @@ define("@scom/scom-payment-widget/interface.ts", ["require", "exports"], functio
 define("@scom/scom-payment-widget/store.ts", ["require", "exports", "@ijstech/components", "@ijstech/eth-wallet", "@scom/scom-network-list", "@scom/scom-payment-widget/interface.ts"], function (require, exports, components_1, eth_wallet_1, scom_network_list_1, interface_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.stripeSpecialCurrencies = exports.stripeZeroDecimalCurrencies = exports.stripeCurrencies = exports.PaymentProviders = exports.isClientWalletConnected = exports.getClientWallet = exports.State = exports.STRIPE_PUBLISHABLE_KEY = exports.STRIPE_LIB_URL = void 0;
+    exports.stripeSpecialCurrencies = exports.stripeZeroDecimalCurrencies = exports.stripeCurrencies = exports.PaymentProviders = exports.getStripeKey = exports.isClientWalletConnected = exports.getClientWallet = exports.State = exports.STRIPE_LIB_URL = void 0;
     const infuraId = 'adc596bf88b648e2a8902bc9093930c5';
     exports.STRIPE_LIB_URL = 'https://js.stripe.com/v3';
-    exports.STRIPE_PUBLISHABLE_KEY = 'pk_test_51Q60lAP7pMwOSpCLJJQliRgIVHlmPlpkrstk43VlRG2vutqIPZKhoSv8XVzK3nbxawr2ru5cWQ1SFfkayFu5m25o00RHU1gBhl';
     class State {
         constructor(options) {
             this.rpcWalletId = '';
@@ -110,6 +109,26 @@ define("@scom/scom-payment-widget/store.ts", ["require", "exports", "@ijstech/co
         return wallet.isConnected;
     }
     exports.isClientWalletConnected = isClientWalletConnected;
+    async function getStripeKey(apiUrl) {
+        let publishableKey;
+        try {
+            const response = await fetch(apiUrl);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.publishableKey) {
+                    publishableKey = data.publishableKey;
+                }
+            }
+        }
+        catch (error) {
+            console.log(error);
+        }
+        if (publishableKey) {
+            console.log('initStripePayment', 'Cannot get the publishableKey');
+        }
+        return publishableKey;
+    }
+    exports.getStripeKey = getStripeKey;
     exports.PaymentProviders = [
         {
             provider: interface_1.PaymentProvider.Stripe,
@@ -835,7 +854,13 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                     });
                     return;
                 }
-                this.stripe = window.Stripe(store_4.STRIPE_PUBLISHABLE_KEY);
+                const apiUrl = this.baseStripeApi ?? '/stripe';
+                if (!this.publishableKey) {
+                    this.publishableKey = await (0, store_4.getStripeKey)(`${apiUrl}/key`);
+                    if (!this.publishableKey)
+                        return;
+                }
+                this.stripe = window.Stripe(this.publishableKey);
                 this.stripeElements = this.stripe.elements({
                     mode: 'payment',
                     currency: this.stripeCurrency,
@@ -1555,6 +1580,8 @@ define("@scom/scom-payment-widget/components/paymentModule.tsx", ["require", "ex
                 this.stripePayment.visible = false;
             };
             this.stripePayment.onPaymentSuccess = (status) => {
+                if (this.isModal)
+                    this.closeModal();
                 if (this.onPaymentSuccess)
                     this.onPaymentSuccess(status);
             };
@@ -1587,6 +1614,12 @@ define("@scom/scom-payment-widget/components/stripePaymentTracking.tsx", ["requi
     exports.StatusPaymentTracking = void 0;
     const Theme = components_11.Styles.Theme.ThemeVars;
     let StatusPaymentTracking = class StatusPaymentTracking extends components_11.Module {
+        get baseStripeApi() {
+            return this._baseStripeApi;
+        }
+        set baseStripeApi(value) {
+            this._baseStripeApi = value;
+        }
         constructor(parent, options) {
             super(parent, options);
         }
@@ -1602,8 +1635,14 @@ define("@scom/scom-payment-widget/components/stripePaymentTracking.tsx", ["requi
             if (!window.Stripe) {
                 await (0, utils_2.loadStripe)();
             }
+            const apiUrl = this.baseStripeApi ?? '/stripe';
+            if (!this.publishableKey) {
+                this.publishableKey = await (0, store_6.getStripeKey)(`${apiUrl}/key`);
+                if (!this.publishableKey)
+                    return;
+            }
             if (window.Stripe && !this.stripe) {
-                this.stripe = window.Stripe(store_6.STRIPE_PUBLISHABLE_KEY);
+                this.stripe = window.Stripe(this.publishableKey);
             }
             const clientSecret = this.inputClientSecret.value;
             this.updateURLParam('payment_intent_client_secret', clientSecret);
@@ -1667,6 +1706,9 @@ define("@scom/scom-payment-widget/components/stripePaymentTracking.tsx", ["requi
         async init() {
             this.i18n.init({ ...translations_json_7.default });
             super.init();
+            const baseStripeApi = this.getAttribute('baseStripeApi', true);
+            if (baseStripeApi)
+                this.baseStripeApi = baseStripeApi;
             const params = this.getParamsFromUrl();
             if (params?.payment_intent_client_secret) {
                 this.inputClientSecret.value = params.payment_intent_client_secret;
@@ -1782,6 +1824,8 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
         }
         set baseStripeApi(value) {
             this._baseStripeApi = value;
+            if (this.statusPaymentTracking)
+                this.statusPaymentTracking.baseStripeApi = value;
         }
         get urlStripeTracking() {
             return this._urlStripeTracking;
@@ -1878,6 +1922,7 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
         updateUIByMode() {
             if (!this.statusPaymentTracking)
                 return;
+            this.statusPaymentTracking.baseStripeApi = this.baseStripeApi;
             this.statusPaymentTracking.visible = this.mode === 'status';
             this.btnPay.visible = !this.isUrl && this.mode === 'payment' && this.showButtonPay;
         }

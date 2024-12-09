@@ -6,7 +6,6 @@ import { PaymentProvider, PaymentType } from "./interface";
 const infuraId = 'adc596bf88b648e2a8902bc9093930c5';
 
 export const STRIPE_LIB_URL = 'https://js.stripe.com/v3';
-export const STRIPE_PUBLISHABLE_KEY = 'pk_test_51Q60lAP7pMwOSpCLJJQliRgIVHlmPlpkrstk43VlRG2vutqIPZKhoSv8XVzK3nbxawr2ru5cWQ1SFfkayFu5m25o00RHU1gBhl';
 
 interface IExtendedNetwork extends INetwork {
   explorerName?: string;
@@ -90,6 +89,25 @@ export function getClientWallet(): IClientWallet {
 export function isClientWalletConnected() {
   const wallet = Wallet.getClientInstance();
   return wallet.isConnected;
+}
+
+export async function getStripeKey(apiUrl: string) {
+  let publishableKey: string;
+  try {
+    const response = await fetch(apiUrl);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.publishableKey) {
+        publishableKey = data.publishableKey;
+      }
+    }
+  } catch (error) {
+    console.log(error);
+  }
+  if (publishableKey) {
+    console.log('initStripePayment', 'Cannot get the publishableKey');
+  }
+  return publishableKey;
 }
 
 export const PaymentProviders = [

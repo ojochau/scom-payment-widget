@@ -1,13 +1,14 @@
 import { Module, Container, customElements, ControlElement, Styles, Label, Button, Image, Input } from '@ijstech/components';
 import { loadingImageStyle, textCenterStyle } from './index.css';
 import assets from '../assets';
-import { STRIPE_PUBLISHABLE_KEY } from '../store';
+import { getStripeKey } from '../store';
 import { loadStripe } from '../utils';
 import translations from '../translations.json';
 const Theme = Styles.Theme.ThemeVars;
 declare const window: any;
 
 interface ScomPaymentWidgetStripePaymentTrackingElement extends ControlElement {
+    baseStripeApi?: string;
 }
 
 declare global {
@@ -25,6 +26,16 @@ export class StatusPaymentTracking extends Module {
     private btnCheck: Button;
     private imgStatus: Image;
     private lbStatus: Label;
+    private publishableKey: string;
+    private _baseStripeApi: string;
+
+    get baseStripeApi() {
+        return this._baseStripeApi;
+    }
+
+    set baseStripeApi(value: string) {
+        this._baseStripeApi = value;
+    }
 
     constructor(parent?: Container, options?: ScomPaymentWidgetStripePaymentTrackingElement) {
         super(parent, options);
@@ -42,8 +53,13 @@ export class StatusPaymentTracking extends Module {
         if (!window.Stripe) {
             await loadStripe();
         }
+        const apiUrl = this.baseStripeApi ?? '/stripe';
+        if (!this.publishableKey) {
+            this.publishableKey = await getStripeKey(`${apiUrl}/key`);
+            if (!this.publishableKey) return;
+        }
         if (window.Stripe && !this.stripe) {
-            this.stripe = window.Stripe(STRIPE_PUBLISHABLE_KEY);
+            this.stripe = window.Stripe(this.publishableKey);
         }
         const clientSecret = this.inputClientSecret.value;
         this.updateURLParam('payment_intent_client_secret', clientSecret);
@@ -113,6 +129,8 @@ export class StatusPaymentTracking extends Module {
     async init() {
         this.i18n.init({ ...translations });
         super.init();
+        const baseStripeApi = this.getAttribute('baseStripeApi', true);
+        if (baseStripeApi) this.baseStripeApi = baseStripeApi;
         const params: any = this.getParamsFromUrl();
         if (params?.payment_intent_client_secret) {
             this.inputClientSecret.value = params.payment_intent_client_secret;
