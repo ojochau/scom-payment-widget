@@ -1,13 +1,12 @@
-import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, Button, StackLayout, CarouselSlider } from '@ijstech/components';
-import { halfWidthButtonStyle, carouselSliderStyle, textCenterStyle, textUpperCaseStyle, fullWidthButtonStyle } from './index.css';
-import { IPaymentInfo, ProductType } from '../interface';
+import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, StackLayout, CarouselSlider } from '@ijstech/components';
+import { carouselSliderStyle, textCenterStyle, textUpperCaseStyle, fullWidthButtonStyle } from './index.css';
+import { IPaymentInfo } from '../interface';
 import translations from '../translations.json';
 const Theme = Styles.Theme.ThemeVars;
 
 interface ScomPaymentWidgetInvoiceCreationElement extends ControlElement {
     payment?: IPaymentInfo;
     onContinue?: () => void;
-    onBack?: () => void;
 }
 
 declare global {
@@ -25,12 +24,9 @@ export class InvoiceCreation extends Module {
     private lbAmount: Label;
     private pnlPaymentId: Label;
     private lbPaymentId: Label;
-    private btnContinue: Button;
-    private btnBack: Button;
     private carouselSlider: CarouselSlider;
     private _payment: IPaymentInfo = { title: '', paymentId: '', products: [] };
     public onContinue: () => void;
-    public onBack: () => void;
 
     get payment() {
         return this._payment;
@@ -104,26 +100,16 @@ export class InvoiceCreation extends Module {
             this.pnlPaymentId.visible = !!_paymentId;
             this.lbPaymentId.caption = _paymentId;
         }
-        if (this.btnBack) {
-            const hasPhysicalProduct = products.some(v => v.productType === ProductType.Physical);
-            this.btnBack.visible = hasPhysicalProduct;
-            this.btnContinue.width = hasPhysicalProduct ? 'calc(50% - 1rem)' : '100%';
-        }
     }
 
     private handleContinue() {
         if (this.onContinue) this.onContinue();
     }
 
-    private handleBack() {
-        if (this.onBack) this.onBack();
-    }
-
     async init() {
         this.i18n.init({ ...translations });
         super.init();
         this.onContinue = this.getAttribute('onContinue', true) || this.onContinue;
-        this.onBack = this.getAttribute('onBack', true) || this.onBack;
         const payment = this.getAttribute('payment', true);
         if (payment) {
             this.payment = payment;
@@ -163,23 +149,12 @@ export class InvoiceCreation extends Module {
                     </i-stack>
                 </i-stack>
             </i-stack>
-            <i-stack direction="horizontal" width="100%" alignItems="center" justifyContent="center" margin={{ top: 'auto' }} gap="1rem" wrap="wrap-reverse">
-                <i-button
-                    id="btnBack"
-                    caption="$back"
-                    visible={false}
-                    class={halfWidthButtonStyle}
-                    background={{ color: Theme.colors.secondary.main }}
-                    onClick={this.handleBack}
-                />
-                <i-button
-                    id="btnContinue"
-                    caption="$continue"
-                    background={{ color: Theme.colors.primary.main }}
-                    class={fullWidthButtonStyle}
-                    onClick={this.handleContinue}
-                />
-            </i-stack>
+            <i-button
+                caption="$continue"
+                background={{ color: Theme.colors.primary.main }}
+                class={fullWidthButtonStyle}
+                onClick={this.handleContinue}
+            />
         </i-stack>
     }
 }

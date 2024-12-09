@@ -19,8 +19,8 @@ const Tokens_Fuji = [
 export default {
     "infuraId": "adc596bf88b648e2a8902bc9093930c5",
     "defaultData": {
-        "baseStripeApi": "https://noto.fan/stripe",
-        "urlStripeTracking": "https://noto.fan/#!/stripe-payment-status",
+        "baseStripeApi": "",
+        "urlStripeTracking": "",
         "defaultChainId": 97,
         "networks": [
             {

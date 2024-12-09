@@ -234,7 +234,6 @@ declare module "@scom/scom-payment-widget/components/invoiceCreation.tsx" {
     interface ScomPaymentWidgetInvoiceCreationElement extends ControlElement {
         payment?: IPaymentInfo;
         onContinue?: () => void;
-        onBack?: () => void;
     }
     global {
         namespace JSX {
@@ -249,12 +248,9 @@ declare module "@scom/scom-payment-widget/components/invoiceCreation.tsx" {
         private lbAmount;
         private pnlPaymentId;
         private lbPaymentId;
-        private btnContinue;
-        private btnBack;
         private carouselSlider;
         private _payment;
         onContinue: () => void;
-        onBack: () => void;
         get payment(): IPaymentInfo;
         set payment(value: IPaymentInfo);
         get totalPrice(): number;
@@ -263,7 +259,6 @@ declare module "@scom/scom-payment-widget/components/invoiceCreation.tsx" {
         private renderProducts;
         private updateInfo;
         private handleContinue;
-        private handleBack;
         init(): Promise<void>;
         render(): any;
     }
