@@ -56,7 +56,6 @@ declare module "@scom/scom-payment-widget/store.ts" {
     import { INetwork, IRpcWallet, IClientWallet } from "@ijstech/eth-wallet";
     import { PaymentProvider, PaymentType } from "@scom/scom-payment-widget/interface.ts";
     export const STRIPE_LIB_URL = "https://js.stripe.com/v3";
-    export const STRIPE_PUBLISHABLE_KEY = "pk_test_51Q60lAP7pMwOSpCLJJQliRgIVHlmPlpkrstk43VlRG2vutqIPZKhoSv8XVzK3nbxawr2ru5cWQ1SFfkayFu5m25o00RHU1gBhl";
     interface IExtendedNetwork extends INetwork {
         explorerName?: string;
         explorerTxUrl?: string;
@@ -77,6 +76,7 @@ declare module "@scom/scom-payment-widget/store.ts" {
     }
     export function getClientWallet(): IClientWallet;
     export function isClientWalletConnected(): boolean;
+    export function getStripeKey(apiUrl: string): Promise<string>;
     export const PaymentProviders: {
         provider: PaymentProvider;
         type: PaymentType;
@@ -408,6 +408,7 @@ declare module "@scom/scom-payment-widget/components/stripePayment.tsx" {
         private btnCheckout;
         private header;
         private mdAlert;
+        private publishableKey;
         onPaymentSuccess: (status: string) => void;
         onBack: () => void;
         constructor(parent?: Container, options?: ScomPaymentWidgetStripePaymentElement);
@@ -605,6 +606,7 @@ declare module "@scom/scom-payment-widget/components/paymentModule.tsx" {
 declare module "@scom/scom-payment-widget/components/stripePaymentTracking.tsx" {
     import { Module, Container, ControlElement } from '@ijstech/components';
     interface ScomPaymentWidgetStripePaymentTrackingElement extends ControlElement {
+        baseStripeApi?: string;
     }
     global {
         namespace JSX {
@@ -619,6 +621,10 @@ declare module "@scom/scom-payment-widget/components/stripePaymentTracking.tsx" 
         private btnCheck;
         private imgStatus;
         private lbStatus;
+        private publishableKey;
+        private _baseStripeApi;
+        get baseStripeApi(): string;
+        set baseStripeApi(value: string);
         constructor(parent?: Container, options?: ScomPaymentWidgetStripePaymentTrackingElement);
         private checkPaymentStatus;
         private handleInputChanged;

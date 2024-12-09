@@ -165,6 +165,7 @@ export class PaymentModule extends Module {
             this.stripePayment.visible = false;
         }
         this.stripePayment.onPaymentSuccess = (status: string) => {
+            if (this.isModal) this.closeModal();
             if (this.onPaymentSuccess) this.onPaymentSuccess(status);
         }
         this.stripePayment.baseStripeApi = this.baseStripeApi;
