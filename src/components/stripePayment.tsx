@@ -150,7 +150,6 @@ export class StripePayment extends Module {
     private async handleStripeCheckoutClick() {
         if (!this.stripe) return;
         this.showButtonIcon(true);
-        const url = this.urlStripeTracking ?? `${window.location.origin}/#!/stripe-payment-status`;
         this.stripeElements.submit().then(async (result) => {
             if (result.error) {
                 this.showButtonIcon(false);
@@ -162,11 +161,12 @@ export class StripePayment extends Module {
                 this.showAlert('error', this.i18n.get('$payment_failed'), this.i18n.get('$cannot_get_payment_info'));
                 return;
             };
-            const { userInfo } = this.payment;
+            const url = this.urlStripeTracking ?? `${window.location.origin}/#!/stripe-payment-status`;
+            const { userInfo, products } = this.payment;
             const { error } = await this.stripe.confirmPayment({
                 elements: this.stripeElements,
                 confirmParams: {
-                    return_url: url,
+                    return_url: `${url}?stallId=${products[0].stallId}`,
                     payment_method_data: {
                         billing_details: {
                             name: userInfo?.name || '',

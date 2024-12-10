@@ -148,7 +148,7 @@ export class StatusPaymentTracking extends Module {
                     minWidth={200}
                     height={40}
                     padding={{ left: '0.5rem', right: '0.5rem' }}
-                    placeholder="pi_3QHe3EP7pMwOSpCL0edx9jiF_secret_tGkZptJLmJsHp8hO2RtINuGgs"
+                    placeholder="pi_3QUKKrP7pMwOSpCL0U0P7KEt_secret_MXHCPx7kKqxdsUipvjJYL842r"
                     border={{ radius: 4 }}
                     onChanged={this.handleInputChanged}
                 />

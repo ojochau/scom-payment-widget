@@ -244,7 +244,9 @@ define("@scom/scom-payment-widget/components/index.css.ts", ["require", "exports
         textTransform: 'uppercase'
     });
     exports.loadingImageStyle = components_2.Styles.style({
-        animation: `${spinnerAnim} 2s linear infinite`
+        animation: `${spinnerAnim} 2s linear infinite`,
+        maxWidth: '4rem',
+        maxHeight: '4rem'
     });
     exports.alertStyle = components_2.Styles.style({
         $nest: {
@@ -885,7 +887,6 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
             if (!this.stripe)
                 return;
             this.showButtonIcon(true);
-            const url = this.urlStripeTracking ?? `${window.location.origin}/#!/stripe-payment-status`;
             this.stripeElements.submit().then(async (result) => {
                 if (result.error) {
                     this.showButtonIcon(false);
@@ -898,11 +899,12 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                     return;
                 }
                 ;
-                const { userInfo } = this.payment;
+                const url = this.urlStripeTracking ?? `${window.location.origin}/#!/stripe-payment-status`;
+                const { userInfo, products } = this.payment;
                 const { error } = await this.stripe.confirmPayment({
                     elements: this.stripeElements,
                     confirmParams: {
-                        return_url: url,
+                        return_url: `${url}?stallId=${products[0].stallId}`,
                         payment_method_data: {
                             billing_details: {
                                 name: userInfo?.name || '',
@@ -1707,7 +1709,7 @@ define("@scom/scom-payment-widget/components/stripePaymentTracking.tsx", ["requi
             return this.$render("i-stack", { direction: "vertical", gap: "1rem", height: "100%", width: "100%", alignItems: "center", padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' } },
                 this.$render("i-label", { caption: "$check_stripe_payment_status", font: { size: '1rem' }, class: index_css_8.textCenterStyle }),
                 this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", width: "100%", alignItems: "center", justifyContent: "center", wrap: "wrap" },
-                    this.$render("i-input", { id: "inputClientSecret", width: "calc(100% - 108px)", minWidth: 200, height: 40, padding: { left: '0.5rem', right: '0.5rem' }, placeholder: "pi_3QHe3EP7pMwOSpCL0edx9jiF_secret_tGkZptJLmJsHp8hO2RtINuGgs", border: { radius: 4 }, onChanged: this.handleInputChanged }),
+                    this.$render("i-input", { id: "inputClientSecret", width: "calc(100% - 108px)", minWidth: 200, height: 40, padding: { left: '0.5rem', right: '0.5rem' }, placeholder: "pi_3QUKKrP7pMwOSpCL0U0P7KEt_secret_MXHCPx7kKqxdsUipvjJYL842r", border: { radius: 4 }, onChanged: this.handleInputChanged }),
                     this.$render("i-button", { id: "btnCheck", enabled: false, caption: "$check", width: 100, padding: { top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }, font: { color: Theme.colors.primary.contrastText }, background: { color: Theme.colors.primary.main }, border: { radius: 12 }, onClick: this.handleSearch })),
                 this.$render("i-stack", { direction: "vertical", gap: "1rem", width: "100%", alignItems: "center", margin: { top: '2rem' } },
                     this.$render("i-image", { id: "imgStatus", width: 128, height: 128 }),
