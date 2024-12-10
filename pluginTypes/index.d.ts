@@ -15,6 +15,7 @@ declare module "@scom/scom-payment-widget/interface.ts" {
         shippingCost?: number;
         images?: string[];
         productType?: ProductType;
+        stallId?: string;
     }
     export interface IPaymentInfo {
         title: string;

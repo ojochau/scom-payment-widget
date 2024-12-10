@@ -24,7 +24,9 @@ export const textUpperCaseStyle = Styles.style({
 })
 
 export const loadingImageStyle = Styles.style({
-  animation: `${spinnerAnim} 2s linear infinite`
+  animation: `${spinnerAnim} 2s linear infinite`,
+  maxWidth: '4rem',
+  maxHeight: '4rem'
 })
 
 export const alertStyle = Styles.style({
