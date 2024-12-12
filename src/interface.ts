@@ -8,6 +8,7 @@ export enum ProductType {
 }
 
 export interface IProduct {
+  id: string;
   name: string;
   price: number | string;
   quantity: number;
@@ -15,6 +16,7 @@ export interface IProduct {
   images?: string[];
   productType?: ProductType;
   stallId?: string;
+  stallUri?: string;
 }
 
 export interface IPaymentInfo {
@@ -25,11 +27,49 @@ export interface IPaymentInfo {
   currency?: string;
   payload?: string;
   address?: string; //wallet
-  provider?: PaymentProvider;
-  userInfo?: {
-    name: string;
-    email: string;
-  }
+}
+
+interface IOrderItem {
+	productId: string;
+	quantity: number;
+}
+
+export interface IShippingInfo {
+  name?: string;
+	address?: string;
+	message?: string;
+	contact: {
+		nostr: string;
+		phone?: string;
+		email?: string;
+	};
+  shippingId?: string;
+}
+
+export interface IOrder extends IShippingInfo {
+	id: string;
+	items: IOrderItem[];
+}
+
+export interface IPlaceOrder {
+  merchantId: string;
+  stallId: string;
+  order: IOrder;
+}
+
+export interface IPaymentActivity {
+  id: string;
+  sender: string;
+  recipient: string;
+  amount: string;
+  currencyCode: string;
+  networkCode?: string;
+  stallId?: string;
+  stallName?: string;
+  orderId?: string;
+  referenceId?: string;
+  paymentMethod?: 'Stripe' | 'EVM';
+  createdAt?: number;
 }
 
 export enum PaymentType {

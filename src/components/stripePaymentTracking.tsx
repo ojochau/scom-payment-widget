@@ -62,7 +62,6 @@ export class StatusPaymentTracking extends Module {
             this.stripe = window.Stripe(this.publishableKey);
         }
         const clientSecret = this.inputClientSecret.value;
-        this.updateURLParam('payment_intent_client_secret', clientSecret);
         try {
             const data = await this.stripe.retrievePaymentIntent(clientSecret);
             let img = '';
@@ -107,6 +106,8 @@ export class StatusPaymentTracking extends Module {
     }
 
     private handleSearch() {
+        const clientSecret = this.inputClientSecret.value;
+        this.updateURLParam('payment_intent_client_secret', clientSecret);
         this.checkPaymentStatus();
     }
 

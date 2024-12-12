@@ -3,6 +3,12 @@ export default {
     "pay": "Pay",
     "amount_to_pay": "Amount to pay",
     "payment": "Payment",
+    "shipping_address": "Shipping address",
+    "name": "Name",
+    "address": "Address",
+    "phone_number": "Phone Number",
+    "email": "Email",
+    "note": "Note",
     "continue": "Continue",
     "back": "Back",
     "close": "Close",
@@ -30,12 +36,20 @@ export default {
     "something_went_wrong": "Something went wrong!",
     "invalid_payment_id": "The payment ID is invalid!",
     "check_stripe_payment_status": "Check Stripe payment status",
-    "check": "Check"
+    "check": "Check",
+    "coming_soon": "Coming Soon!",
+    "payment_coming_soon": "This payment method is coming soon!"
   },
   "zh-hant": {
     "pay": "付款",
     "amount_to_pay": "應付金額",
     "payment": "付款",
+    "shipping_address": "收貨地址",
+    "name": "名字",
+    "address": "地址",
+    "phone_number": "電話號碼",
+    "email": "電子郵件",
+    "note": "備註",
     "continue": "繼續",
     "back": "返回",
     "close": "關閉",
@@ -63,12 +77,20 @@ export default {
     "something_went_wrong": "出錯了！",
     "invalid_payment_id": "付款編號無效！",
     "check_stripe_payment_status": "查看 Stripe 付款狀態",
-    "check": "檢查"
+    "check": "檢查",
+    "coming_soon": "快來了！",
+    "payment_coming_soon": "這種付款方式即將推出！敬請期待！"
   },
   "vi": {
     "pay": "Thanh toán",
     "amount_to_pay": "Số tiền cần trả",
     "payment": "Thanh toán",
+    "shipping_address": "Địa chỉ giao hàng",
+    "name": "Tên",
+    "address": "Địa chỉ",
+    "phone_number": "Số điện thoại",
+    "email": "Email",
+    "note": "Ghi chú",
     "continue": "Tiếp tục",
     "back": "Quay lại",
     "close": "Đóng",
@@ -96,6 +118,8 @@ export default {
     "something_went_wrong": "Đã có lỗi xảy ra!",
     "invalid_payment_id": "Mã giao dịch không hợp lệ!",
     "check_stripe_payment_status": "Kiểm tra trạng thái thanh toán Stripe",
-    "check": "Kiểm tra"
+    "check": "Kiểm tra",
+    "coming_soon": "Sắp ra mắt!",
+    "payment_coming_soon": "Phương thức thanh toán này sẽ có sớm!"
   }
 }

@@ -1,11 +1,11 @@
 import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, StackLayout, CarouselSlider } from '@ijstech/components';
 import { carouselSliderStyle, textCenterStyle, textUpperCaseStyle, fullWidthButtonStyle } from './index.css';
-import { IPaymentInfo } from '../interface';
 import translations from '../translations.json';
+import { Model } from '../model';
 const Theme = Styles.Theme.ThemeVars;
 
 interface ScomPaymentWidgetInvoiceCreationElement extends ControlElement {
-    payment?: IPaymentInfo;
+    model?: Model;
     onContinue?: () => void;
 }
 
@@ -25,24 +25,16 @@ export class InvoiceCreation extends Module {
     private pnlPaymentId: Label;
     private lbPaymentId: Label;
     private carouselSlider: CarouselSlider;
-    private _payment: IPaymentInfo = { title: '', paymentId: '', products: [] };
+    private _model: Model;
     public onContinue: () => void;
 
-    get payment() {
-        return this._payment;
+    get model() {
+        return this._model;
     }
 
-    set payment(value: IPaymentInfo) {
-        this._payment = value;
+    set model(value: Model) {
+        this._model = value;
         this.updateInfo();
-    }
-
-    get totalPrice() {
-        return (this.payment.products?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0) + this.totalShippingCost;
-    }
-
-    get totalShippingCost() {
-        return this.payment.products?.reduce((sum, item) => sum + (Number(item.shippingCost || 0) * item.quantity), 0) || 0;
     }
 
     constructor(parent?: Container, options?: ScomPaymentWidgetInvoiceCreationElement) {
@@ -50,16 +42,17 @@ export class InvoiceCreation extends Module {
     }
 
     private renderProducts() {
-        if (this.payment?.products.length) {
+        if (this.model?.products.length) {
             const nodeItems: HTMLElement[] = [];
-            for (const product of this.payment.products) {
+            const { products, currency } = this.model;
+            for (const product of products) {
                 const element = (
                     <i-vstack gap="1rem" width="100%">
                         {product.images?.length ? <i-image url={product.images[0]} width="auto" maxWidth="100%" height={100} margin={{ left: 'auto', right: 'auto' }} /> : []}
                         <i-label caption={product.name} font={{ bold: true }} />
                         <i-hstack gap="0.5rem" verticalAlignment="center" horizontalAlignment="space-between" wrap="wrap">
                             <i-label caption={this.i18n.get('$price')} font={{ color: Theme.text.hint }} />
-                            <i-label caption={`${FormatUtils.formatNumber(product.price, { decimalFigures: 2 })} ${this.payment.currency || 'USD'}`} font={{ bold: true }} class={textUpperCaseStyle} />
+                            <i-label caption={`${FormatUtils.formatNumber(product.price, { decimalFigures: 2 })} ${currency}`} font={{ bold: true }} class={textUpperCaseStyle} />
                         </i-hstack>
                         <i-hstack gap="0.5rem" verticalAlignment="center" horizontalAlignment="space-between" wrap="wrap">
                             <i-label caption={this.i18n.get('$quantity')} font={{ color: Theme.text.hint }} />
@@ -83,7 +76,7 @@ export class InvoiceCreation extends Module {
     }
 
     private updateInfo() {
-        const { paymentId, currency, title, products } = this.payment;
+        const { totalAmount, currency, products, paymentId, title } = this.model;
         if (this.pnlItemInfo) {
             const hasTitle = !!title;
             const hasProduct = !!products?.length;
@@ -93,7 +86,7 @@ export class InvoiceCreation extends Module {
             this.renderProducts();
         }
         if (this.lbAmount) {
-            this.lbAmount.caption = `${FormatUtils.formatNumber(this.totalPrice, { decimalFigures: 2 })} ${currency || 'USD'}`;
+            this.lbAmount.caption = `${FormatUtils.formatNumber(totalAmount, { decimalFigures: 2 })} ${currency}`;
         }
         if (this.pnlPaymentId) {
             const _paymentId = paymentId || '';
@@ -110,15 +103,15 @@ export class InvoiceCreation extends Module {
         this.i18n.init({ ...translations });
         super.init();
         this.onContinue = this.getAttribute('onContinue', true) || this.onContinue;
-        const payment = this.getAttribute('payment', true);
-        if (payment) {
-            this.payment = payment;
+        const model = this.getAttribute('model', true);
+        if (model) {
+            this.model = model;
         }
     }
 
     render() {
         return <i-stack direction="vertical" gap="1rem" width="100%" alignItems="center" padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}>
-            <i-stack direction="vertical" height="100%">
+            <i-stack direction="vertical" height="100%" width="100%">
                 <i-stack id="pnlItemInfo" visible={false} direction="vertical" gap="1rem" alignItems="center" width="100%" margin={{ bottom: '1rem' }}>
                     <i-label id="lbItem" class={textCenterStyle} font={{ size: '1.25rem', color: Theme.colors.primary.main, bold: true, transform: 'uppercase' }} />
                     <i-carousel-slider

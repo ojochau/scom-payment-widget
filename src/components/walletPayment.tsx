@@ -1,23 +1,20 @@
 import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, StackLayout, Image, Button, application, Icon, RequireJS } from '@ijstech/components';
-import { INetworkConfig, IPaymentInfo, IPaymentStatus, PaymentProvider } from '../interface';
+import { IPaymentStatus, PaymentProvider } from '../interface';
 import assets from '../assets';
 import configData from '../defaultData';
 import { ITokenObject, assets as tokenAssets, tokenStore } from '@scom/scom-token-list';
 import { isClientWalletConnected, State, PaymentProviders } from '../store';
 import { Constants, IEventBusRegistry, IRpcWallet, Wallet } from '@ijstech/eth-wallet';
-import { IWalletPlugin } from '@scom/scom-wallet-modal';
 import ScomDappContainer, { DappContainerHeader } from '@scom/scom-dapp-container';
 import { fullWidthButtonStyle, halfWidthButtonStyle } from './index.css';
 import { PaymentHeader } from './common/index';
 import translations from '../translations.json';
+import { Model } from '../model';
 const path = application.currentModuleDir;
 const Theme = Styles.Theme.ThemeVars;
 
 interface ScomPaymentWidgetWalletPaymentElement extends ControlElement {
-    wallets?: IWalletPlugin[];
-    networks?: INetworkConfig[];
-    tokens?: ITokenObject[];
-    payment?: IPaymentInfo;
+    model?: Model;
     onBack?: () => void;
     onPaid?: (paymentStatus: IPaymentStatus) => void;
 }
@@ -56,13 +53,9 @@ export class WalletPayment extends Module {
     private imgCurrentNetwork: Image;
     private lbCurrentNetwork: Label;
     private _dappContainer: ScomDappContainer;
-    private _payment: IPaymentInfo;
-    private _wallets: IWalletPlugin[] = [];
-    private _networks: INetworkConfig[] = [];
-    private _tokens: ITokenObject[] = [];
+    private _model: Model;
     private _state: State;
     private rpcWalletEvents: IEventBusRegistry[] = [];
-    private isInitialized: boolean;
     private isWalletInitialized: boolean;
     private isToPay: boolean;
     private copyAddressTimer: any;
@@ -72,6 +65,7 @@ export class WalletPayment extends Module {
     private tonConnectUI: any;
     private tonWeb: any;
     private isTonWalletConnected: boolean;
+    private provider: PaymentProvider;
 
     public onBack: () => void;
     public onPaid: (paymentStatus: IPaymentStatus) => void;
@@ -88,21 +82,13 @@ export class WalletPayment extends Module {
         this._dappContainer = container;
     }
 
-    get payment() {
-        return this._payment;
+    get model() {
+        return this._model;
     }
 
-    set payment(value: IPaymentInfo) {
-        this._payment = value;
+    set model(value: Model) {
+        this._model = value;
         this.updateAmount();
-    }
-
-    get totalPrice() {
-        return (this.payment.products?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0) + this.totalShippingCost;
-    }
-
-    get totalShippingCost() {
-        return this.payment.products?.reduce((sum, item) => sum + (Number(item.shippingCost || 0) * item.quantity), 0) || 0;
     }
 
     get state() {
@@ -113,41 +99,28 @@ export class WalletPayment extends Module {
         this._state = value;
     }
 
-    get wallets() {
-        return this._wallets ?? configData.defaultData.wallets;
+    get tokens() {
+        return this.model.tokens;
     }
 
-    set wallets(value: IWalletPlugin[]) {
-        this._wallets = value;
+    get wallets() {
+        return this.model.wallets;
     }
 
     get networks() {
-        return this._networks ?? configData.defaultData.networks;
-    }
-
-    set networks(value: INetworkConfig[]) {
-        this._networks = value;
-    }
-
-    get tokens() {
-        return this._tokens ?? configData.defaultData.tokens;
-    }
-
-    set tokens(value: ITokenObject[]) {
-        this._tokens = value;
+        return this.model.networks;
     }
 
     get rpcWallet(): IRpcWallet {
         return this.state.getRpcWallet();
     }
 
-    async onStartPayment(payment: IPaymentInfo) {
-        this.payment = payment;
+    async onStartPayment(provider: PaymentProvider) {
         if (!this.header) return;
-        this.isInitialized = true;
-        if (this.payment.provider === PaymentProvider.Metamask) {
+        this.provider = provider;
+        if (provider === PaymentProvider.Metamask) {
             await this.initWallet();
-        } else if (this.payment.provider === PaymentProvider.TonWallet) {
+        } else if (provider === PaymentProvider.TonWallet) {
             this.initTonWallet();
         }
         this.showFirstScreen();
@@ -274,18 +247,17 @@ export class WalletPayment extends Module {
     }
 
     private updateAmount() {
-        if (this.header && this.payment) {
-            const currency = this.payment.currency || 'USD';
-            const title = this.payment.title || '';
-            this.header.setHeader(title, currency, this.totalPrice);
+        if (this.header && this.model) {
+            const { title, currency, totalAmount } = this.model;
+            this.header.setHeader(title, currency, totalAmount);
             if (this.lbPayItem.caption !== title) this.lbPayItem.caption = title;
-            const formattedAmount = `${FormatUtils.formatNumber(this.totalPrice, { decimalFigures: 2 })} ${currency || 'USD'}`;
+            const formattedAmount = `${FormatUtils.formatNumber(totalAmount, { decimalFigures: 2 })} ${currency}`;
             if (this.lbPayAmount.caption !== formattedAmount) this.lbPayAmount.caption = formattedAmount;
         }
     }
 
     private async checkWalletStatus() {
-        const paymentProvider = this.payment.provider;
+        const paymentProvider = this.provider;
         let isConnected: boolean;
         if (paymentProvider === PaymentProvider.Metamask) {
             isConnected = isClientWalletConnected();
@@ -293,7 +265,7 @@ export class WalletPayment extends Module {
             isConnected = this.isTonWalletConnected;
         }
         this.pnlWallet.visible = !isConnected;
-        const provider = PaymentProviders.find(v => v.provider === this.payment.provider);
+        const provider = PaymentProviders.find(v => v.provider === paymentProvider);
         if (isConnected) {
             if (paymentProvider === PaymentProvider.Metamask) {
                 const wallet = this.state.getRpcWallet();
@@ -433,10 +405,10 @@ export class WalletPayment extends Module {
     }
 
     private handleConnectWallet() {
-        if (this.payment.provider === PaymentProvider.Metamask) {
+        if (this.provider === PaymentProvider.Metamask) {
             const header = this.dappContainer.querySelector('dapp-container-header') as DappContainerHeader;
             header?.openConnectModal();
-        } else if (this.payment.provider === PaymentProvider.TonWallet) {
+        } else if (this.provider === PaymentProvider.TonWallet) {
             this.connectTonWallet();
         }
     }
@@ -456,10 +428,10 @@ export class WalletPayment extends Module {
         this.isToPay = true;
         const tokenImg = isTon ? assets.fullPath('img/ton.png') : tokenAssets.tokenPath(token, token.chainId);
         this.imgToken.url = tokenImg;
-        const { address, currency } = this.payment;
-        const toAddress = address || '';
+        const { totalAmount, currency, walletAddress } = this.model;
+        const toAddress = walletAddress;
         this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);
-        const formattedAmount = FormatUtils.formatNumber(this.totalPrice || 0, { decimalFigures: 2 });
+        const formattedAmount = FormatUtils.formatNumber(totalAmount, { decimalFigures: 2 });
         this.lbAmountToPay.caption = `${formattedAmount} ${token.symbol}`;
         this.lbUSD.caption = `${formattedAmount} ${currency || 'USD'}`;
         this.lbUSD.visible = !isTon;
@@ -468,7 +440,7 @@ export class WalletPayment extends Module {
 
     private async handleCopyAddress() {
         try {
-            await application.copyToClipboard(this.payment.address);
+            await application.copyToClipboard(this.model.walletAddress);
             this.iconCopyAddress.name = 'check';
             this.iconCopyAddress.fill = Theme.colors.success.main;
             if (this.copyAddressTimer) clearTimeout(this.copyAddressTimer);
@@ -481,7 +453,7 @@ export class WalletPayment extends Module {
 
     private async handleCopyAmount() {
         try {
-            await application.copyToClipboard(this.totalPrice.toString());
+            await application.copyToClipboard(this.model.totalAmount.toString());
             this.iconCopyAmount.name = 'check';
             this.iconCopyAmount.fill = Theme.colors.success.main;
             if (this.copyAmountTimer) clearTimeout(this.copyAmountTimer);
@@ -492,19 +464,26 @@ export class WalletPayment extends Module {
         } catch { }
     }
 
-    private handlePay() {
+    private async handlePay() {
         if (this.onPaid) {
             let address = '';
-            if (this.payment.provider === PaymentProvider.Metamask) {
+            if (this.provider === PaymentProvider.Metamask) {
                 const wallet = Wallet.getClientInstance();
                 address = wallet.address;
-            } else if (this.payment.provider === PaymentProvider.TonWallet) {
+                this.model.networkCode = wallet.chainId.toString();
+            } else if (this.provider === PaymentProvider.TonWallet) {
                 const account = this.tonConnectUI.account;
                 address = account.address;
+                this.model.networkCode = 'TON';
             }
-            this.onPaid({ status: 'pending', provider: this.payment.provider, receipt: '0x00000000000000000000000000000', ownerAddress: address });
-            setTimeout(() => {
-                this.onPaid({ status: 'complete', provider: this.payment.provider, receipt: '0x00000000000000000000000000000', ownerAddress: address });
+            await this.model.handlePlaceMarketplaceOrder();
+            // TODO - pay with crypto 
+            const receipt = '0x00000000000000000000000000000';
+            this.model.referenceId = receipt;
+            this.onPaid({ status: 'pending', provider: this.provider, receipt, ownerAddress: address });
+            setTimeout(async () => {
+                await this.model.handlePaymentSuccess();
+                this.onPaid({ status: 'complete', provider: this.provider, receipt, ownerAddress: address });
             }, 3000)
         }
     }
@@ -527,16 +506,9 @@ export class WalletPayment extends Module {
         if (state) {
             this.state = state;
         }
-        const payment = this.getAttribute('payment', true);
-        if (payment) {
-            this.payment = payment;
-        }
-        const tokens = this.getAttribute('tokens', true);
-        if (tokens) {
-            this.tokens = tokens;
-        }
-        if (this.payment && !this.isInitialized) {
-            this.onStartPayment(this.payment);
+        const model = this.getAttribute('model', true);
+        if (model) {
+            this.model = model;
         }
     }
 

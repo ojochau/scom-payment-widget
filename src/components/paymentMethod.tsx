@@ -1,14 +1,15 @@
-import { Module, Container, customElements, ControlElement, Styles, Label, IconName, Control, StackLayout } from '@ijstech/components';
-import { IPaymentInfo, PaymentProvider, PaymentType } from '../interface';
+import { Module, Container, customElements, ControlElement, Styles, Label, IconName, Control, StackLayout, Alert } from '@ijstech/components';
+import { PaymentProvider, PaymentType } from '../interface';
 import assets from '../assets';
 import { PaymentProviders } from '../store';
-import { fullWidthButtonStyle } from './index.css';
+import { alertStyle, fullWidthButtonStyle } from './index.css';
 import { PaymentHeader } from './common/index';
 import translations from '../translations.json';
+import { Model } from '../model';
 const Theme = Styles.Theme.ThemeVars;
 
 interface ScomPaymentWidgetPaymentMethodElement extends ControlElement {
-    payment?: IPaymentInfo;
+    model?: Model;
     onSelectedPaymentProvider?: (paymentProvider: PaymentProvider) => void;
     onBack?: () => void;
 }
@@ -46,25 +47,18 @@ export class PaymentMethod extends Module {
     private pnlPaymentType: StackLayout;
     private pnlPaymentMethod: StackLayout;
     private pnlMethodItems: StackLayout;
-    private _payment: IPaymentInfo;
-    public onSelectedPaymentProvider: (payment: IPaymentInfo, paymentProvider: PaymentProvider) => void;
+    private mdAlert: Alert;
+    private _model: Model;
+    public onSelectedPaymentProvider: (paymentProvider: PaymentProvider) => void;
     public onBack: () => void;
 
-    get payment() {
-        return this._payment;
+    get model() {
+        return this._model;
     }
 
-    set payment(value: IPaymentInfo) {
-        this._payment = value;
+    set model(value: Model) {
+        this._model = value;
         this.updateAmount();
-    }
-
-    get totalPrice() {
-        return (this.payment.products?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0) + this.totalShippingCost;
-    }
-
-    get totalShippingCost() {
-        return this.payment.products?.reduce((sum, item) => sum + (Number(item.shippingCost || 0) * item.quantity), 0) || 0;
     }
 
     constructor(parent?: Container, options?: ScomPaymentWidgetPaymentMethodElement) {
@@ -72,9 +66,9 @@ export class PaymentMethod extends Module {
     }
 
     private updateAmount() {
-        if (this.header && this.payment) {
-            const { title, currency } = this.payment;
-            this.header.setHeader(title, currency, this.totalPrice);
+        if (this.header && this.model) {
+            const { title, currency, totalAmount } = this.model;
+            this.header.setHeader(title, currency, totalAmount);
         }
     }
 
@@ -110,8 +104,16 @@ export class PaymentMethod extends Module {
     private handlePaymentType(target: Control) {
         const type = target.id as PaymentType;
         if (type === PaymentType.Fiat) {
+            this.model.paymentMethod = 'Stripe';
             this.handlePaymentProvider(PaymentProvider.Stripe);
         } else if (type) {
+            //TODO
+            this.model.paymentMethod = 'EVM';
+            this.mdAlert.title = this.i18n.get('$coming_soon');
+            this.mdAlert.content = this.i18n.get('$payment_coming_soon');
+            this.mdAlert.status = 'warning';
+            this.mdAlert.showModal();
+            return;
             this.renderMethodItems(type);
             this.pnlPaymentType.visible = false;
             this.pnlPaymentMethod.visible = true;
@@ -119,7 +121,7 @@ export class PaymentMethod extends Module {
     }
 
     private handlePaymentProvider(provider: PaymentProvider) {
-        if (this.onSelectedPaymentProvider) this.onSelectedPaymentProvider(this.payment, provider);
+        if (this.onSelectedPaymentProvider) this.onSelectedPaymentProvider(provider);
     }
 
     private handleBack() {
@@ -127,6 +129,10 @@ export class PaymentMethod extends Module {
             this.onBack();
             return;
         }
+        this.updateUI();
+    }
+
+    updateUI() {
         this.lbPayMethod.caption = this.i18n.get('$how_will_you_pay');
         this.pnlPaymentType.visible = true;
         this.pnlPaymentMethod.visible = false;
@@ -137,15 +143,15 @@ export class PaymentMethod extends Module {
         super.init();
         this.onBack = this.getAttribute('onBack', true) || this.onBack;
         this.onSelectedPaymentProvider = this.getAttribute('onSelectedPaymentProvider', true) || this.onSelectedPaymentProvider;
-        const payment = this.getAttribute('payment', true);
-        if (payment) {
-            this.payment = payment;
+        const model = this.getAttribute('model', true);
+        if (model) {
+            this.model = model;
         }
     }
 
     render() {
-        return <i-stack direction="vertical" gap="1rem" alignItems="center" width="100%">
-            <scom-payment-widget--header id="header" />
+        return <i-stack direction="vertical" alignItems="center" width="100%">
+            <scom-payment-widget--header id="header" margin={{ bottom: '1rem' }} />
             <i-stack direction="vertical" gap="1rem" width="100%" height="100%" alignItems="center" padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}>
                 <i-label id="lbPayMethod" caption="$how_will_you_pay" font={{ size: '1rem', bold: true, color: Theme.colors.primary.main }} />
                 <i-stack id="pnlPaymentType" direction="vertical" gap="1rem" width="100%" height="100%" alignItems="center">
@@ -187,6 +193,7 @@ export class PaymentMethod extends Module {
                     onClick={this.handleBack}
                 />
             </i-stack>
+            <i-alert id="mdAlert" class={alertStyle} />
         </i-stack>
     }
 }

@@ -123,8 +123,8 @@ define("@scom/scom-payment-widget/store.ts", ["require", "exports", "@ijstech/co
         catch (error) {
             console.log(error);
         }
-        if (publishableKey) {
-            console.log('initStripePayment', 'Cannot get the publishableKey');
+        if (!publishableKey) {
+            console.log('initStripePayment', 'Cannot get the publishable key');
         }
         return publishableKey;
     }
@@ -173,52 +173,6 @@ define("@scom/scom-payment-widget/store.ts", ["require", "exports", "@ijstech/co
     exports.stripeSpecialCurrencies = [
         'isk', 'huf', 'twd', 'ugx'
     ];
-});
-define("@scom/scom-payment-widget/defaultData.ts", ["require", "exports"], function (require, exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    ///<amd-module name='@scom/scom-payment-widget/defaultData.ts'/> 
-    const Tokens_BSC_Testnet = [
-        {
-            "name": "USDT",
-            "address": "0x29386B60e0A9A1a30e1488ADA47256577ca2C385",
-            "symbol": "USDT",
-            "decimals": 6,
-        }
-    ];
-    const Tokens_Fuji = [
-        {
-            "name": "Tether USD",
-            "address": "0xb9C31Ea1D475c25E58a1bE1a46221db55E5A7C6e",
-            "symbol": "USDT.e",
-            "decimals": 6
-        }
-    ];
-    exports.default = {
-        "infuraId": "adc596bf88b648e2a8902bc9093930c5",
-        "defaultData": {
-            "baseStripeApi": "",
-            "urlStripeTracking": "",
-            "defaultChainId": 97,
-            "networks": [
-                {
-                    "chainId": 97
-                },
-                {
-                    "chainId": 43113
-                }
-            ],
-            "tokens": [
-                ...Tokens_BSC_Testnet.map(v => { return { ...v, chainId: 97 }; }),
-                ...Tokens_Fuji.map(v => { return { ...v, chainId: 43113 }; })
-            ],
-            "wallets": [
-                {
-                    "name": "metamask"
-                }
-            ]
-        }
-    };
 });
 define("@scom/scom-payment-widget/components/index.css.ts", ["require", "exports", "@ijstech/components"], function (require, exports, components_2) {
     "use strict";
@@ -306,6 +260,12 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "pay": "Pay",
             "amount_to_pay": "Amount to pay",
             "payment": "Payment",
+            "shipping_address": "Shipping address",
+            "name": "Name",
+            "address": "Address",
+            "phone_number": "Phone Number",
+            "email": "Email",
+            "note": "Note",
             "continue": "Continue",
             "back": "Back",
             "close": "Close",
@@ -333,12 +293,20 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "something_went_wrong": "Something went wrong!",
             "invalid_payment_id": "The payment ID is invalid!",
             "check_stripe_payment_status": "Check Stripe payment status",
-            "check": "Check"
+            "check": "Check",
+            "coming_soon": "Coming Soon!",
+            "payment_coming_soon": "This payment method is coming soon!"
         },
         "zh-hant": {
             "pay": "付款",
             "amount_to_pay": "應付金額",
             "payment": "付款",
+            "shipping_address": "收貨地址",
+            "name": "名字",
+            "address": "地址",
+            "phone_number": "電話號碼",
+            "email": "電子郵件",
+            "note": "備註",
             "continue": "繼續",
             "back": "返回",
             "close": "關閉",
@@ -366,12 +334,20 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "something_went_wrong": "出錯了！",
             "invalid_payment_id": "付款編號無效！",
             "check_stripe_payment_status": "查看 Stripe 付款狀態",
-            "check": "檢查"
+            "check": "檢查",
+            "coming_soon": "快來了！",
+            "payment_coming_soon": "這種付款方式即將推出！敬請期待！"
         },
         "vi": {
             "pay": "Thanh toán",
             "amount_to_pay": "Số tiền cần trả",
             "payment": "Thanh toán",
+            "shipping_address": "Địa chỉ giao hàng",
+            "name": "Tên",
+            "address": "Địa chỉ",
+            "phone_number": "Số điện thoại",
+            "email": "Email",
+            "note": "Ghi chú",
             "continue": "Tiếp tục",
             "back": "Quay lại",
             "close": "Đóng",
@@ -399,46 +375,278 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "something_went_wrong": "Đã có lỗi xảy ra!",
             "invalid_payment_id": "Mã giao dịch không hợp lệ!",
             "check_stripe_payment_status": "Kiểm tra trạng thái thanh toán Stripe",
-            "check": "Kiểm tra"
+            "check": "Kiểm tra",
+            "coming_soon": "Sắp ra mắt!",
+            "payment_coming_soon": "Phương thức thanh toán này sẽ có sớm!"
         }
     };
 });
-define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_3, index_css_1, translations_json_1) {
+define("@scom/scom-payment-widget/defaultData.ts", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.InvoiceCreation = void 0;
-    const Theme = components_3.Styles.Theme.ThemeVars;
-    let InvoiceCreation = class InvoiceCreation extends components_3.Module {
+    ///<amd-module name='@scom/scom-payment-widget/defaultData.ts'/> 
+    const Tokens_BSC_Testnet = [
+        {
+            "name": "USDT",
+            "address": "0x29386B60e0A9A1a30e1488ADA47256577ca2C385",
+            "symbol": "USDT",
+            "decimals": 6,
+        }
+    ];
+    const Tokens_Fuji = [
+        {
+            "name": "Tether USD",
+            "address": "0xb9C31Ea1D475c25E58a1bE1a46221db55E5A7C6e",
+            "symbol": "USDT.e",
+            "decimals": 6
+        }
+    ];
+    exports.default = {
+        "infuraId": "adc596bf88b648e2a8902bc9093930c5",
+        "defaultData": {
+            "baseStripeApi": "",
+            "urlStripeTracking": "",
+            "defaultChainId": 97,
+            "networks": [
+                {
+                    "chainId": 97
+                },
+                {
+                    "chainId": 43113
+                }
+            ],
+            "tokens": [
+                ...Tokens_BSC_Testnet.map(v => { return { ...v, chainId: 97 }; }),
+                ...Tokens_Fuji.map(v => { return { ...v, chainId: 43113 }; })
+            ],
+            "wallets": [
+                {
+                    "name": "metamask"
+                }
+            ]
+        }
+    };
+});
+define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/defaultData.ts", "@scom/scom-payment-widget/store.ts", "@ijstech/components"], function (require, exports, interface_2, defaultData_1, store_1, components_3) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Model = void 0;
+    class Model {
+        constructor() {
+            this._payment = { title: '', products: [] };
+            this._wallets = [];
+            this._networks = [];
+            this._tokens = [];
+            this.shippingInfo = {
+                contact: {
+                    nostr: ''
+                }
+            };
+        }
+        get title() {
+            return this.payment.title || '';
+        }
+        get paymentId() {
+            return this.payment.paymentId || '';
+        }
         get payment() {
             return this._payment;
         }
         set payment(value) {
             this._payment = value;
-            this.updateInfo();
+        }
+        get products() {
+            return this.payment.products || [];
+        }
+        get currency() {
+            return this.payment.currency || 'USD';
+        }
+        get stripeCurrency() {
+            const currency = this.payment.currency?.toLowerCase();
+            const stripeCurrency = store_1.stripeCurrencies.find(v => v === currency) || 'usd';
+            return stripeCurrency;
         }
         get totalPrice() {
-            return (this.payment.products?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0) + this.totalShippingCost;
+            return this.products?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0;
         }
         get totalShippingCost() {
-            return this.payment.products?.reduce((sum, item) => sum + (Number(item.shippingCost || 0) * item.quantity), 0) || 0;
+            return this.products?.reduce((sum, item) => sum + (Number(item.shippingCost || 0) * item.quantity), 0) || 0;
+        }
+        get totalAmount() {
+            return this.totalPrice + this.totalShippingCost;
+        }
+        get stripeAmount() {
+            const currency = this.stripeCurrency.toLowerCase();
+            const amount = this.totalAmount;
+            if (store_1.stripeZeroDecimalCurrencies.includes(currency))
+                return Math.round(amount);
+            if (store_1.stripeSpecialCurrencies.includes(currency))
+                return Math.round(amount) * 100;
+            return Math.round(amount * 100);
+        }
+        get totalQuantity() {
+            return this.products?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+        }
+        get hasPhysicalProduct() {
+            return this.products.some(v => v.productType === interface_2.ProductType.Physical);
+        }
+        get walletAddress() {
+            return this.payment?.address || '';
+        }
+        get baseStripeApi() {
+            return this._baseStripeApi ?? '/stripe';
+        }
+        set baseStripeApi(value) {
+            this._baseStripeApi = value;
+        }
+        get urlStripeTracking() {
+            return this._urlStripeTracking ?? `${window.location.origin}/#!/stripe-payment-status`;
+        }
+        set urlStripeTracking(value) {
+            this._urlStripeTracking = value;
+        }
+        get wallets() {
+            return this._wallets ?? defaultData_1.default.defaultData.wallets;
+        }
+        set wallets(value) {
+            this._wallets = value;
+        }
+        get networks() {
+            return this._networks ?? defaultData_1.default.defaultData.networks;
+        }
+        set networks(value) {
+            this._networks = value;
+        }
+        get tokens() {
+            return this._tokens ?? defaultData_1.default.defaultData.tokens;
+        }
+        set tokens(value) {
+            this._tokens = value;
+        }
+        get referenceId() {
+            return this._referenceId;
+        }
+        set referenceId(value) {
+            this._referenceId = value;
+        }
+        get networkCode() {
+            return this._networkCode || '';
+        }
+        set networkCode(value) {
+            this._networkCode = value;
+        }
+        get paymentMethod() {
+            return this._paymentMethod;
+        }
+        set paymentMethod(value) {
+            this._paymentMethod = value;
+        }
+        get placeOrder() {
+            const { stallId, stallUri } = this.products[0];
+            const merchantId = stallUri?.split(':')[1] || '';
+            const order = {
+                id: this.orderId,
+                ...this.shippingInfo,
+                items: this.products.map(v => {
+                    return {
+                        productId: v.id,
+                        quantity: v.quantity
+                    };
+                })
+            };
+            return {
+                merchantId,
+                stallId,
+                order
+            };
+        }
+        get paymentActivity() {
+            const { merchantId, stallId } = this.placeOrder;
+            return {
+                id: components_3.IdUtils.generateUUID(),
+                sender: '',
+                recipient: merchantId,
+                amount: this.totalAmount.toString(),
+                currencyCode: this.currency,
+                networkCode: this.networkCode,
+                stallId: stallId,
+                orderId: this.orderId,
+                referenceId: this.referenceId,
+                paymentMethod: this.paymentMethod
+            };
+        }
+        async handlePlaceMarketplaceOrder() {
+            if (this.placeMarketplaceOrder) {
+                this.orderId = components_3.IdUtils.generateUUID();
+                await this.placeMarketplaceOrder(this.placeOrder);
+            }
+        }
+        async handlePaymentSuccess() {
+            if (this.onPaymentSuccess) {
+                await this.onPaymentSuccess(this.paymentActivity);
+            }
+        }
+        updateShippingInfo(value) {
+            this.shippingInfo = value;
+        }
+        async createPaymentIntent() {
+            try {
+                const response = await fetch(`${this.baseStripeApi}/payment-intent`, {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        currency: this.stripeCurrency,
+                        amount: this.stripeAmount
+                    })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.clientSecret) {
+                        const clientSecret = data.clientSecret;
+                        return clientSecret;
+                    }
+                    return null;
+                }
+            }
+            catch { }
+            return null;
+        }
+    }
+    exports.Model = Model;
+});
+define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_4, index_css_1, translations_json_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.InvoiceCreation = void 0;
+    const Theme = components_4.Styles.Theme.ThemeVars;
+    let InvoiceCreation = class InvoiceCreation extends components_4.Module {
+        get model() {
+            return this._model;
+        }
+        set model(value) {
+            this._model = value;
+            this.updateInfo();
         }
         constructor(parent, options) {
             super(parent, options);
-            this._payment = { title: '', paymentId: '', products: [] };
         }
         renderProducts() {
-            if (this.payment?.products.length) {
+            if (this.model?.products.length) {
                 const nodeItems = [];
-                for (const product of this.payment.products) {
+                const { products, currency } = this.model;
+                for (const product of products) {
                     const element = (this.$render("i-vstack", { gap: "1rem", width: "100%" },
                         product.images?.length ? this.$render("i-image", { url: product.images[0], width: "auto", maxWidth: "100%", height: 100, margin: { left: 'auto', right: 'auto' } }) : [],
                         this.$render("i-label", { caption: product.name, font: { bold: true } }),
                         this.$render("i-hstack", { gap: "0.5rem", verticalAlignment: "center", horizontalAlignment: "space-between", wrap: "wrap" },
                             this.$render("i-label", { caption: this.i18n.get('$price'), font: { color: Theme.text.hint } }),
-                            this.$render("i-label", { caption: `${components_3.FormatUtils.formatNumber(product.price, { decimalFigures: 2 })} ${this.payment.currency || 'USD'}`, font: { bold: true }, class: index_css_1.textUpperCaseStyle })),
+                            this.$render("i-label", { caption: `${components_4.FormatUtils.formatNumber(product.price, { decimalFigures: 2 })} ${currency}`, font: { bold: true }, class: index_css_1.textUpperCaseStyle })),
                         this.$render("i-hstack", { gap: "0.5rem", verticalAlignment: "center", horizontalAlignment: "space-between", wrap: "wrap" },
                             this.$render("i-label", { caption: this.i18n.get('$quantity'), font: { color: Theme.text.hint } }),
-                            this.$render("i-label", { caption: components_3.FormatUtils.formatNumber(product.quantity, { hasTrailingZero: false }), font: { bold: true } }))));
+                            this.$render("i-label", { caption: components_4.FormatUtils.formatNumber(product.quantity, { hasTrailingZero: false }), font: { bold: true } }))));
                     nodeItems.push(element);
                 }
                 this.carouselSlider.items = nodeItems.map((item, idx) => {
@@ -455,7 +663,7 @@ define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "
             }
         }
         updateInfo() {
-            const { paymentId, currency, title, products } = this.payment;
+            const { totalAmount, currency, products, paymentId, title } = this.model;
             if (this.pnlItemInfo) {
                 const hasTitle = !!title;
                 const hasProduct = !!products?.length;
@@ -465,7 +673,7 @@ define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "
                 this.renderProducts();
             }
             if (this.lbAmount) {
-                this.lbAmount.caption = `${components_3.FormatUtils.formatNumber(this.totalPrice, { decimalFigures: 2 })} ${currency || 'USD'}`;
+                this.lbAmount.caption = `${components_4.FormatUtils.formatNumber(totalAmount, { decimalFigures: 2 })} ${currency}`;
             }
             if (this.pnlPaymentId) {
                 const _paymentId = paymentId || '';
@@ -481,14 +689,14 @@ define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "
             this.i18n.init({ ...translations_json_1.default });
             super.init();
             this.onContinue = this.getAttribute('onContinue', true) || this.onContinue;
-            const payment = this.getAttribute('payment', true);
-            if (payment) {
-                this.payment = payment;
+            const model = this.getAttribute('model', true);
+            if (model) {
+                this.model = model;
             }
         }
         render() {
             return this.$render("i-stack", { direction: "vertical", gap: "1rem", width: "100%", alignItems: "center", padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' } },
-                this.$render("i-stack", { direction: "vertical", height: "100%" },
+                this.$render("i-stack", { direction: "vertical", height: "100%", width: "100%" },
                     this.$render("i-stack", { id: "pnlItemInfo", visible: false, direction: "vertical", gap: "1rem", alignItems: "center", width: "100%", margin: { bottom: '1rem' } },
                         this.$render("i-label", { id: "lbItem", class: index_css_1.textCenterStyle, font: { size: '1.25rem', color: Theme.colors.primary.main, bold: true, transform: 'uppercase' } }),
                         this.$render("i-carousel-slider", { id: "carouselSlider", width: "calc(100% - 60px)", maxWidth: 280, height: "100%", overflow: "inherit", minHeight: 80, slidesToShow: 1, transitionSpeed: 300, autoplay: true, autoplaySpeed: 6000, items: [], type: "arrow", class: index_css_1.carouselSliderStyle }),
@@ -504,21 +712,9 @@ define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "
         }
     };
     InvoiceCreation = __decorate([
-        (0, components_3.customElements)('scom-payment-widget--invoice-creation')
+        (0, components_4.customElements)('scom-payment-widget--invoice-creation')
     ], InvoiceCreation);
     exports.InvoiceCreation = InvoiceCreation;
-});
-define("@scom/scom-payment-widget/assets.ts", ["require", "exports", "@ijstech/components"], function (require, exports, components_4) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    const moduleDir = components_4.application.currentModuleDir;
-    function fullPath(path) {
-        return `${moduleDir}/${path}`;
-    }
-    ;
-    exports.default = {
-        fullPath
-    };
 });
 define("@scom/scom-payment-widget/components/common/header.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_5, index_css_2, translations_json_2) {
     "use strict";
@@ -552,59 +748,260 @@ define("@scom/scom-payment-widget/components/common/header.tsx", ["require", "ex
     ], PaymentHeader);
     exports.PaymentHeader = PaymentHeader;
 });
-define("@scom/scom-payment-widget/components/common/index.ts", ["require", "exports", "@scom/scom-payment-widget/components/common/header.tsx"], function (require, exports, header_1) {
+define("@scom/scom-payment-widget/components/common/styledInput.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_6, translations_json_3) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.PaymentHeader = void 0;
-    Object.defineProperty(exports, "PaymentHeader", { enumerable: true, get: function () { return header_1.PaymentHeader; } });
+    exports.StyledInput = void 0;
+    const Theme = components_6.Styles.Theme.ThemeVars;
+    let StyledInput = class StyledInput extends components_6.Module {
+        get value() {
+            return this.styledInput.value;
+        }
+        set value(value) {
+            this.styledInput.value = value;
+        }
+        get enabled() {
+            return this.styledInput.enabled;
+        }
+        set enabled(value) {
+            this.styledInput.enabled = value;
+        }
+        set inputBorder(value) {
+            this.styledInput.border = value;
+        }
+        init() {
+            this.i18n.init({ ...translations_json_3.default });
+            super.init();
+            this.lbCaption.caption = this.getAttribute('caption', true);
+            this.lbRequired.visible = this.getAttribute('required', true, false);
+            this.onChanged = this.getAttribute('onChanged', true);
+        }
+        render() {
+            return (this.$render("i-hstack", { gap: "0.5rem", width: "100%", verticalAlignment: "center", wrap: "wrap", horizontalAlignment: "space-between" },
+                this.$render("i-hstack", { gap: "0.15rem" },
+                    this.$render("i-label", { id: "lbCaption" }),
+                    this.$render("i-label", { id: "lbRequired", visible: false, caption: "*", font: { color: Theme.colors.error.main } })),
+                this.$render("i-input", { id: "styledInput", width: "calc(100% - 116px)", minWidth: 150, height: 36, padding: { left: '0.5rem', right: '0.5rem' }, border: { radius: 5, width: 1, style: 'solid', color: 'transparent' }, onChanged: this.onChanged })));
+        }
+    };
+    StyledInput = __decorate([
+        (0, components_6.customElements)('scom-payment-widget--styled-input')
+    ], StyledInput);
+    exports.StyledInput = StyledInput;
 });
-define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_6, interface_2, assets_1, store_1, index_css_3, translations_json_3) {
+define("@scom/scom-payment-widget/components/common/styledComboBox.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_7, translations_json_4) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.StyledComboBox = void 0;
+    const Theme = components_7.Styles.Theme.ThemeVars;
+    let StyledComboBox = class StyledComboBox extends components_7.Module {
+        get items() {
+            return this.styledComboBox.items;
+        }
+        set items(value) {
+            this.styledComboBox.items = value;
+        }
+        get selectedItem() {
+            return this.styledComboBox.selectedItem;
+        }
+        set selectedItem(value) {
+            this.styledComboBox.selectedItem = value;
+        }
+        get enabled() {
+            return this.styledComboBox.enabled;
+        }
+        set enabled(value) {
+            this.styledComboBox.enabled = value;
+        }
+        init() {
+            this.i18n.init({ ...translations_json_4.default });
+            super.init();
+            this.lbCaption.caption = this.getAttribute('caption', true);
+            this.lbRequired.visible = this.getAttribute('required', true, false);
+            const items = this.getAttribute('items', true);
+            if (items) {
+                this.styledComboBox.items = this.getAttribute('items', true);
+            }
+            this.onChanged = this.getAttribute('onChanged', true);
+        }
+        clear() {
+            this.styledComboBox.clear();
+        }
+        render() {
+            return (this.$render("i-hstack", { gap: "0.5rem", width: "100%", verticalAlignment: "center", wrap: "wrap", horizontalAlignment: "space-between" },
+                this.$render("i-hstack", { gap: "0.15rem" },
+                    this.$render("i-label", { id: "lbCaption" }),
+                    this.$render("i-label", { id: "lbRequired", visible: false, caption: "*", font: { color: Theme.colors.error.main } })),
+                this.$render("i-combo-box", { id: "styledComboBox", width: "calc(100% - 116px)", minWidth: 150, height: 36, icon: { width: 14, height: 14, name: 'angle-down', fill: Theme.divider }, border: { width: 1, style: 'solid', color: Theme.divider, radius: 5 }, onChanged: this.onChanged })));
+        }
+    };
+    StyledComboBox = __decorate([
+        (0, components_7.customElements)('scom-payment-widget--styled-combo-box')
+    ], StyledComboBox);
+    exports.StyledComboBox = StyledComboBox;
+});
+define("@scom/scom-payment-widget/components/common/index.ts", ["require", "exports", "@scom/scom-payment-widget/components/common/header.tsx", "@scom/scom-payment-widget/components/common/styledInput.tsx", "@scom/scom-payment-widget/components/common/styledComboBox.tsx"], function (require, exports, header_1, styledInput_1, styledComboBox_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.StyledComboBox = exports.StyledInput = exports.PaymentHeader = void 0;
+    Object.defineProperty(exports, "PaymentHeader", { enumerable: true, get: function () { return header_1.PaymentHeader; } });
+    Object.defineProperty(exports, "StyledInput", { enumerable: true, get: function () { return styledInput_1.StyledInput; } });
+    Object.defineProperty(exports, "StyledComboBox", { enumerable: true, get: function () { return styledComboBox_1.StyledComboBox; } });
+});
+define("@scom/scom-payment-widget/components/shippingInfo.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_8, index_css_3, translations_json_5) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.ShippingInfo = void 0;
+    const Theme = components_8.Styles.Theme.ThemeVars;
+    let ShippingInfo = class ShippingInfo extends components_8.Module {
+        get model() {
+            return this._model;
+        }
+        set model(value) {
+            this._model = value;
+            this.updateHeader();
+        }
+        constructor(parent, options) {
+            super(parent, options);
+        }
+        clear() {
+            this.inputName.value = '';
+            this.inputPhoneNumber.value = '';
+            this.inputEmail.value = '';
+            this.inputAddress.value = '';
+            this.inputNote.value = '';
+            this.btnContinue.enabled = false;
+        }
+        updateHeader() {
+            if (this.model && this.header) {
+                const { title, currency, totalAmount } = this.model;
+                this.header.setHeader(title, currency, totalAmount);
+            }
+        }
+        handleCheckInfo() {
+            const isValid = !!(this.inputName.value && this.inputAddress.value && this.validateEmail(this.inputEmail.value));
+            this.btnContinue.enabled = isValid;
+        }
+        handlePhoneNumber() {
+            const value = this.inputPhoneNumber.value;
+            this.inputPhoneNumber.value = value.replace(/[^0-9]/g, '');
+            this.handleCheckInfo();
+        }
+        validateEmail(email) {
+            if (!email)
+                return true;
+            const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+            return emailPattern.test(email);
+        }
+        handleEmail() {
+            this.inputEmail.inputBorder = { radius: 5, width: 1, style: 'solid', color: this.validateEmail(this.inputEmail.value) ? 'transparent' : Theme.colors.error.dark };
+            this.handleCheckInfo();
+        }
+        handleContinue() {
+            this.model.updateShippingInfo({
+                name: this.inputName.value || '',
+                address: this.inputAddress.value || '',
+                message: this.inputNote.value || '',
+                contact: {
+                    nostr: '',
+                    phone: this.inputPhoneNumber.value || '',
+                    email: this.inputEmail.value || ''
+                },
+                // shippingId: ''
+            });
+            if (this.onContinue)
+                this.onContinue();
+        }
+        handleBack() {
+            if (this.onBack)
+                this.onBack();
+        }
+        async init() {
+            this.i18n.init({ ...translations_json_5.default });
+            super.init();
+            this.onContinue = this.getAttribute('onContinue', true) || this.onContinue;
+            this.onBack = this.getAttribute('onBack', true) || this.onBack;
+            const model = this.getAttribute('model', true);
+            if (model) {
+                this.model = model;
+            }
+            this.updateHeader();
+        }
+        render() {
+            return this.$render("i-stack", { direction: "vertical", gap: "1rem", width: "100%", alignItems: "center", padding: { bottom: '1rem' } },
+                this.$render("scom-payment-widget--header", { id: "header" }),
+                this.$render("i-stack", { gap: "1rem", direction: "vertical", height: "100%", width: "100%", padding: { left: '1rem', right: '1rem' } },
+                    this.$render("i-label", { caption: "$shipping_address", class: index_css_3.textCenterStyle, font: { size: '1.25rem', color: Theme.colors.primary.main, bold: true } }),
+                    this.$render("scom-payment-widget--styled-input", { id: "inputName", caption: "$name", required: true, onChanged: this.handleCheckInfo }),
+                    this.$render("scom-payment-widget--styled-input", { id: "inputAddress", caption: "$address", required: true, onChanged: this.handleCheckInfo }),
+                    this.$render("scom-payment-widget--styled-input", { id: "inputPhoneNumber", caption: "$phone_number", onChanged: this.handlePhoneNumber }),
+                    this.$render("scom-payment-widget--styled-input", { id: "inputEmail", caption: "$email", onChanged: this.handleEmail }),
+                    this.$render("i-hstack", { gap: "0.5rem", width: "100%", verticalAlignment: "center", wrap: "wrap", horizontalAlignment: "space-between" },
+                        this.$render("i-label", { caption: "$note" }),
+                        this.$render("i-input", { id: "inputNote", inputType: "textarea", width: "calc(100% - 116px)", minWidth: 150, height: "unset", rows: 3, padding: { left: '0.5rem', right: '0.5rem' }, border: { radius: 5 }, maxLength: 4000 }))),
+                this.$render("i-stack", { direction: "horizontal", width: "100%", alignItems: "center", justifyContent: "center", margin: { top: 'auto' }, gap: "1rem", wrap: "wrap-reverse" },
+                    this.$render("i-button", { caption: "$back", class: index_css_3.halfWidthButtonStyle, background: { color: Theme.colors.secondary.main }, onClick: this.handleBack }),
+                    this.$render("i-button", { id: "btnContinue", enabled: false, caption: "$continue", background: { color: Theme.colors.primary.main }, class: index_css_3.halfWidthButtonStyle, onClick: this.handleContinue })));
+        }
+    };
+    ShippingInfo = __decorate([
+        (0, components_8.customElements)('scom-payment-widget--shipping-info')
+    ], ShippingInfo);
+    exports.ShippingInfo = ShippingInfo;
+});
+define("@scom/scom-payment-widget/assets.ts", ["require", "exports", "@ijstech/components"], function (require, exports, components_9) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    const moduleDir = components_9.application.currentModuleDir;
+    function fullPath(path) {
+        return `${moduleDir}/${path}`;
+    }
+    ;
+    exports.default = {
+        fullPath
+    };
+});
+define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_10, interface_3, assets_1, store_2, index_css_4, translations_json_6) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PaymentMethod = void 0;
-    const Theme = components_6.Styles.Theme.ThemeVars;
+    const Theme = components_10.Styles.Theme.ThemeVars;
     const paymentTypes = [
         {
-            type: interface_2.PaymentType.Fiat,
+            type: interface_3.PaymentType.Fiat,
             title: '$fiat_currency',
             // description: 'Stripe, Paypal, Payme,...etc',
             iconName: 'exchange-alt',
             // providerImages: ['stripe.png', 'paypal.png']
         },
         {
-            type: interface_2.PaymentType.Crypto,
+            type: interface_3.PaymentType.Crypto,
             title: '$crypto_currency',
             description: 'Metamask, Ton Wallet,...etc',
             iconName: 'wallet',
             providerImages: ['metamask.png', 'ton.png']
         }
     ];
-    let PaymentMethod = class PaymentMethod extends components_6.Module {
-        get payment() {
-            return this._payment;
+    let PaymentMethod = class PaymentMethod extends components_10.Module {
+        get model() {
+            return this._model;
         }
-        set payment(value) {
-            this._payment = value;
+        set model(value) {
+            this._model = value;
             this.updateAmount();
-        }
-        get totalPrice() {
-            return (this.payment.products?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0) + this.totalShippingCost;
-        }
-        get totalShippingCost() {
-            return this.payment.products?.reduce((sum, item) => sum + (Number(item.shippingCost || 0) * item.quantity), 0) || 0;
         }
         constructor(parent, options) {
             super(parent, options);
         }
         updateAmount() {
-            if (this.header && this.payment) {
-                const { title, currency } = this.payment;
-                this.header.setHeader(title, currency, this.totalPrice);
+            if (this.header && this.model) {
+                const { title, currency, totalAmount } = this.model;
+                this.header.setHeader(title, currency, totalAmount);
             }
         }
         renderMethodItems(type) {
-            this.lbPayMethod.caption = this.i18n.get(type === interface_2.PaymentType.Fiat ? '$select_payment_gateway' : '$select_your_wallet');
-            const providers = store_1.PaymentProviders.filter(v => v.type === type);
+            this.lbPayMethod.caption = this.i18n.get(type === interface_3.PaymentType.Fiat ? '$select_payment_gateway' : '$select_your_wallet');
+            const providers = store_2.PaymentProviders.filter(v => v.type === type);
             const nodeItems = [];
             for (const item of providers) {
                 nodeItems.push(this.$render("i-stack", { direction: "horizontal", justifyContent: "center", gap: "0.5rem", width: "100%", minHeight: 40, border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, cursor: "pointer", onClick: () => this.handlePaymentProvider(item.provider) },
@@ -618,10 +1015,18 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
         }
         handlePaymentType(target) {
             const type = target.id;
-            if (type === interface_2.PaymentType.Fiat) {
-                this.handlePaymentProvider(interface_2.PaymentProvider.Stripe);
+            if (type === interface_3.PaymentType.Fiat) {
+                this.model.paymentMethod = 'Stripe';
+                this.handlePaymentProvider(interface_3.PaymentProvider.Stripe);
             }
             else if (type) {
+                //TODO
+                this.model.paymentMethod = 'EVM';
+                this.mdAlert.title = this.i18n.get('$coming_soon');
+                this.mdAlert.content = this.i18n.get('$payment_coming_soon');
+                this.mdAlert.status = 'warning';
+                this.mdAlert.showModal();
+                return;
                 this.renderMethodItems(type);
                 this.pnlPaymentType.visible = false;
                 this.pnlPaymentMethod.visible = true;
@@ -629,30 +1034,33 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
         }
         handlePaymentProvider(provider) {
             if (this.onSelectedPaymentProvider)
-                this.onSelectedPaymentProvider(this.payment, provider);
+                this.onSelectedPaymentProvider(provider);
         }
         handleBack() {
             if (this.pnlPaymentType.visible && this.onBack) {
                 this.onBack();
                 return;
             }
+            this.updateUI();
+        }
+        updateUI() {
             this.lbPayMethod.caption = this.i18n.get('$how_will_you_pay');
             this.pnlPaymentType.visible = true;
             this.pnlPaymentMethod.visible = false;
         }
         async init() {
-            this.i18n.init({ ...translations_json_3.default });
+            this.i18n.init({ ...translations_json_6.default });
             super.init();
             this.onBack = this.getAttribute('onBack', true) || this.onBack;
             this.onSelectedPaymentProvider = this.getAttribute('onSelectedPaymentProvider', true) || this.onSelectedPaymentProvider;
-            const payment = this.getAttribute('payment', true);
-            if (payment) {
-                this.payment = payment;
+            const model = this.getAttribute('model', true);
+            if (model) {
+                this.model = model;
             }
         }
         render() {
-            return this.$render("i-stack", { direction: "vertical", gap: "1rem", alignItems: "center", width: "100%" },
-                this.$render("scom-payment-widget--header", { id: "header" }),
+            return this.$render("i-stack", { direction: "vertical", alignItems: "center", width: "100%" },
+                this.$render("scom-payment-widget--header", { id: "header", margin: { bottom: '1rem' } }),
                 this.$render("i-stack", { direction: "vertical", gap: "1rem", width: "100%", height: "100%", alignItems: "center", padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' } },
                     this.$render("i-label", { id: "lbPayMethod", caption: "$how_will_you_pay", font: { size: '1rem', bold: true, color: Theme.colors.primary.main } }),
                     this.$render("i-stack", { id: "pnlPaymentType", direction: "vertical", gap: "1rem", width: "100%", height: "100%", alignItems: "center" }, paymentTypes.map(v => this.$render("i-stack", { id: v.type, direction: "horizontal", alignItems: "center", gap: "1rem", width: "100%", border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, cursor: "pointer", onClick: this.handlePaymentType },
@@ -665,20 +1073,21 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
                         this.$render("i-icon", { name: "arrow-right", width: 20, height: 20, fill: Theme.text.primary, margin: { left: 'auto', right: 'auto' } })))),
                     this.$render("i-stack", { id: "pnlPaymentMethod", visible: false, direction: "vertical", gap: "2rem", justifyContent: "center", alignItems: "center", height: "100%", width: "100%" },
                         this.$render("i-stack", { id: "pnlMethodItems", direction: "vertical", gap: "1rem", width: "100%", height: "100%" })),
-                    this.$render("i-button", { caption: "$back", class: index_css_3.fullWidthButtonStyle, background: { color: Theme.colors.secondary.main }, onClick: this.handleBack })));
+                    this.$render("i-button", { caption: "$back", class: index_css_4.fullWidthButtonStyle, background: { color: Theme.colors.secondary.main }, onClick: this.handleBack })),
+                this.$render("i-alert", { id: "mdAlert", class: index_css_4.alertStyle }));
         }
     };
     PaymentMethod = __decorate([
-        (0, components_6.customElements)('scom-payment-widget--payment-method')
+        (0, components_10.customElements)('scom-payment-widget--payment-method')
     ], PaymentMethod);
     exports.PaymentMethod = PaymentMethod;
 });
-define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_7, index_css_4, assets_2, store_2, interface_3, translations_json_4) {
+define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_11, index_css_5, assets_2, store_3, interface_4, translations_json_7) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.StatusPayment = void 0;
-    const Theme = components_7.Styles.Theme.ThemeVars;
-    let StatusPayment = class StatusPayment extends components_7.Module {
+    const Theme = components_11.Styles.Theme.ThemeVars;
+    let StatusPayment = class StatusPayment extends components_11.Module {
         constructor(parent, options) {
             super(parent, options);
         }
@@ -705,26 +1114,26 @@ define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "ex
             this.imgHeaderStatus.visible = isPending;
             this.lbStatus.caption = this.getStatusText(status);
             if (isPending) {
-                this.imgStatus.classList.add(index_css_4.loadingImageStyle);
+                this.imgStatus.classList.add(index_css_5.loadingImageStyle);
             }
             else {
-                this.imgStatus.classList.remove(index_css_4.loadingImageStyle);
+                this.imgStatus.classList.remove(index_css_5.loadingImageStyle);
             }
             this.imgStatus.url = assets_2.default.fullPath(`img/${isPending ? 'loading.svg' : isCompleted ? 'success.svg' : 'error.png'}`);
-            const currentProvider = store_2.PaymentProviders.find(v => v.provider === provider);
+            const currentProvider = store_3.PaymentProviders.find(v => v.provider === provider);
             this.imgWallet.url = assets_2.default.fullPath(`img/${currentProvider.image}`);
             this.lbAddress.caption = ownerAddress.substr(0, 6) + '...' + ownerAddress.substr(-4);
             this.btnClose.visible = !isPending;
         }
         handleViewTransaction() {
-            if (this.provider === interface_3.PaymentProvider.Metamask) {
+            if (this.provider === interface_4.PaymentProvider.Metamask) {
                 const network = this.state.getNetworkInfo(this.state.getChainId());
                 if (network && network.explorerTxUrl) {
                     const url = `${network.explorerTxUrl}${this.receipt}`;
                     window.open(url);
                 }
             }
-            else if (this.provider === interface_3.PaymentProvider.TonWallet) {
+            else if (this.provider === interface_4.PaymentProvider.TonWallet) {
                 window.open(`https://tonscan.org/transaction/${this.receipt}`);
             }
         }
@@ -733,7 +1142,7 @@ define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "ex
                 this.onClose(this.status);
         }
         async init() {
-            this.i18n.init({ ...translations_json_4.default });
+            this.i18n.init({ ...translations_json_7.default });
             super.init();
             this.onClose = this.getAttribute('onClose', true) || this.onClose;
         }
@@ -742,7 +1151,7 @@ define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "ex
                 this.$render("i-stack", { direction: "vertical", gap: "1rem", height: "100%", width: "100%" },
                     this.$render("i-stack", { direction: "horizontal", gap: "1rem", justifyContent: "space-between", alignItems: "center", width: "100%", minHeight: 40, padding: { left: '1rem', right: '1rem', bottom: '1rem' }, border: { bottom: { style: 'solid', width: 1, color: Theme.divider } } },
                         this.$render("i-label", { id: "lbHeaderStatus", font: { size: '0.875rem', color: Theme.colors.primary.main, transform: 'uppercase', bold: true } }),
-                        this.$render("i-image", { id: "imgHeaderStatus", class: index_css_4.loadingImageStyle, url: assets_2.default.fullPath('img/loading.svg'), width: 20, height: 20, minWidth: 20 })),
+                        this.$render("i-image", { id: "imgHeaderStatus", class: index_css_5.loadingImageStyle, url: assets_2.default.fullPath('img/loading.svg'), width: 20, height: 20, minWidth: 20 })),
                     this.$render("i-stack", { direction: "vertical", gap: "1rem", width: "100%", height: "100%", alignItems: "center", padding: { left: '1rem', right: '1rem' } },
                         this.$render("i-stack", { direction: "horizontal", justifyContent: "space-between", alignItems: "center", gap: "1rem", width: "100%", wrap: "wrap", margin: { bottom: '0.5rem' } },
                             this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", alignItems: "center", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }, border: { style: 'solid', width: 1, color: Theme.divider, radius: 8 } },
@@ -752,23 +1161,23 @@ define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "ex
                                 this.$render("i-label", { caption: "$view_transaction" }))),
                         this.$render("i-stack", { direction: "vertical", alignItems: "center", justifyContent: "center", gap: "1rem", width: "100%", height: "100%" },
                             this.$render("i-image", { id: "imgStatus", width: 64, height: 64 }),
-                            this.$render("i-label", { id: "lbStatus", class: index_css_4.textCenterStyle, font: { size: '1rem', color: Theme.text.primary, bold: true } })))),
-                this.$render("i-button", { id: "btnClose", visible: false, caption: "$close", background: { color: Theme.colors.primary.main }, class: index_css_4.fullWidthButtonStyle, onClick: this.handleClose }));
+                            this.$render("i-label", { id: "lbStatus", class: index_css_5.textCenterStyle, font: { size: '1rem', color: Theme.text.primary, bold: true } })))),
+                this.$render("i-button", { id: "btnClose", visible: false, caption: "$close", background: { color: Theme.colors.primary.main }, class: index_css_5.fullWidthButtonStyle, onClick: this.handleClose }));
         }
     };
     StatusPayment = __decorate([
-        (0, components_7.customElements)('scom-payment-widget--status-payment')
+        (0, components_11.customElements)('scom-payment-widget--status-payment')
     ], StatusPayment);
     exports.StatusPayment = StatusPayment;
 });
-define("@scom/scom-payment-widget/utils.ts", ["require", "exports", "@scom/scom-payment-widget/store.ts"], function (require, exports, store_3) {
+define("@scom/scom-payment-widget/utils.ts", ["require", "exports", "@scom/scom-payment-widget/store.ts"], function (require, exports, store_4) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.loadStripe = void 0;
     async function loadStripe() {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = store_3.STRIPE_LIB_URL;
+            script.src = store_4.STRIPE_LIB_URL;
             script.async = true;
             script.onload = () => {
                 resolve(true);
@@ -778,110 +1187,56 @@ define("@scom/scom-payment-widget/utils.ts", ["require", "exports", "@scom/scom-
     }
     exports.loadStripe = loadStripe;
 });
-define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/utils.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_8, store_4, index_css_5, utils_1, translations_json_5) {
+define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/utils.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_12, store_5, index_css_6, utils_1, translations_json_8) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.StripePayment = void 0;
-    const Theme = components_8.Styles.Theme.ThemeVars;
-    let StripePayment = class StripePayment extends components_8.Module {
+    const Theme = components_12.Styles.Theme.ThemeVars;
+    let StripePayment = class StripePayment extends components_12.Module {
         constructor(parent, options) {
             super(parent, options);
         }
-        set payment(data) {
-            this._payment = data;
+        set model(data) {
+            this._model = data;
             this.updateAmount();
         }
-        get payment() {
-            return this._payment;
-        }
-        get totalPrice() {
-            return (this.payment.products?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0) + this.totalShippingCost;
-        }
-        get totalShippingCost() {
-            return this.payment.products?.reduce((sum, item) => sum + (Number(item.shippingCost || 0) * item.quantity), 0) || 0;
-        }
-        get baseStripeApi() {
-            return this._baseStripeApi;
-        }
-        set baseStripeApi(value) {
-            this._baseStripeApi = value;
-        }
-        get urlStripeTracking() {
-            return this._urlStripeTracking;
-        }
-        set urlStripeTracking(value) {
-            this._urlStripeTracking = value;
-        }
-        get stripeCurrency() {
-            const currency = this.payment.currency?.toLowerCase();
-            const stripeCurrency = store_4.stripeCurrencies.find(v => v === currency) || 'usd';
-            return stripeCurrency;
+        get model() {
+            return this._model;
         }
         updateAmount() {
-            if (this.payment && this.header) {
-                const { title, currency } = this.payment;
-                this.header.setHeader(title, currency, this.totalPrice);
+            if (this.model && this.header) {
+                const { title, currency, totalPrice, totalShippingCost } = this.model;
+                this.header.setHeader(title, currency, totalPrice + totalShippingCost);
                 this.initStripePayment();
             }
-        }
-        convertToSmallestUnit(amount) {
-            const currency = this.stripeCurrency.toLowerCase();
-            if (store_4.stripeZeroDecimalCurrencies.includes(currency))
-                return Math.round(amount);
-            if (store_4.stripeSpecialCurrencies.includes(currency))
-                return Math.round(amount) * 100;
-            return Math.round(amount * 100);
         }
         async initStripePayment() {
             if (!window.Stripe) {
                 await (0, utils_1.loadStripe)();
             }
             if (window.Stripe) {
+                const { stripeAmount, stripeCurrency, baseStripeApi } = this.model;
                 if (this.stripeElements) {
                     this.stripeElements.update({
-                        currency: this.stripeCurrency,
-                        amount: this.convertToSmallestUnit(this.totalPrice)
+                        currency: stripeCurrency,
+                        amount: stripeAmount
                     });
                     return;
                 }
-                const apiUrl = this.baseStripeApi ?? '/stripe';
                 if (!this.publishableKey) {
-                    this.publishableKey = await (0, store_4.getStripeKey)(`${apiUrl}/key`);
+                    this.publishableKey = await (0, store_5.getStripeKey)(`${baseStripeApi}/key`);
                     if (!this.publishableKey)
                         return;
                 }
                 this.stripe = window.Stripe(this.publishableKey);
                 this.stripeElements = this.stripe.elements({
                     mode: 'payment',
-                    currency: this.stripeCurrency,
-                    amount: this.convertToSmallestUnit(this.totalPrice)
+                    currency: stripeCurrency,
+                    amount: stripeAmount
                 });
                 const paymentElement = this.stripeElements.create('payment');
                 paymentElement.mount('#pnlStripePaymentForm');
             }
-        }
-        async createPaymentIntent(currency, amount) {
-            const apiUrl = this.baseStripeApi ?? '/stripe';
-            try {
-                const response = await fetch(`${apiUrl}/payment-intent`, {
-                    method: 'POST',
-                    headers: {
-                        Accept: 'application/json',
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ currency, amount })
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.clientSecret) {
-                        const clientSecret = data.clientSecret;
-                        return clientSecret;
-                    }
-                    return null;
-                }
-            }
-            catch { }
-            return null;
         }
         async handleStripeCheckoutClick() {
             if (!this.stripe)
@@ -892,23 +1247,28 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                     this.showButtonIcon(false);
                     return;
                 }
-                const clientSecret = await this.createPaymentIntent(this.stripeCurrency, this.convertToSmallestUnit(this.totalPrice));
+                const clientSecret = await this.model.createPaymentIntent();
                 if (!clientSecret) {
                     this.showButtonIcon(false);
                     this.showAlert('error', this.i18n.get('$payment_failed'), this.i18n.get('$cannot_get_payment_info'));
                     return;
                 }
                 ;
-                const url = this.urlStripeTracking ?? `${window.location.origin}/#!/stripe-payment-status`;
-                const { userInfo, products } = this.payment;
+                const { urlStripeTracking } = this.model;
+                await this.model.handlePlaceMarketplaceOrder();
+                this.model.referenceId = clientSecret;
+                this.model.networkCode = '';
+                const data = this.model.paymentActivity;
+                const jsonString = JSON.stringify(data);
+                const encodedData = btoa(jsonString);
                 const { error } = await this.stripe.confirmPayment({
                     elements: this.stripeElements,
                     confirmParams: {
-                        return_url: `${url}?stallId=${products[0].stallId}`,
+                        return_url: `${urlStripeTracking}?data=${encodedData}`,
                         payment_method_data: {
                             billing_details: {
-                                name: userInfo?.name || '',
-                                email: userInfo?.email || ''
+                                name: '',
+                                email: ''
                             }
                         }
                     },
@@ -918,7 +1278,8 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                     this.showAlert('error', this.i18n.get('$payment_failed'), error.message);
                 }
                 else {
-                    this.showAlert('success', this.i18n.get('$payment_completed'), `${this.i18n.get('$check_payment_status')} <a href='${url}?payment_intent_client_secret=${clientSecret}' target='_blank'>${clientSecret}</a>`);
+                    await this.model.handlePaymentSuccess();
+                    this.showAlert('success', this.i18n.get('$payment_completed'), `${this.i18n.get('$check_payment_status')} <a href='${urlStripeTracking}?payment_intent_client_secret=${clientSecret}' target='_blank'>${clientSecret}</a>`);
                 }
                 this.showButtonIcon(false);
             });
@@ -927,11 +1288,11 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
             this.btnCheckout.rightIcon.spin = value;
             this.btnCheckout.rightIcon.visible = value;
         }
-        async showAlert(status, title, msg) {
+        showAlert(status, title, msg) {
             if (status === 'success') {
                 this.mdAlert.onClose = () => {
-                    if (this.onPaymentSuccess) {
-                        this.onPaymentSuccess('success');
+                    if (this.onClose) {
+                        this.onClose();
                     }
                 };
             }
@@ -948,19 +1309,13 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                 this.onBack();
         }
         async init() {
-            this.i18n.init({ ...translations_json_5.default });
+            this.i18n.init({ ...translations_json_8.default });
             super.init();
-            this.onPaymentSuccess = this.getAttribute('onPaymentSuccess', true) || this.onPaymentSuccess;
+            this.onClose = this.getAttribute('onClose', true) || this.onClose;
             this.onBack = this.getAttribute('onBack', true) || this.onBack;
-            const payment = this.getAttribute('payment', true);
-            if (payment)
-                this.payment = payment;
-            const baseStripeApi = this.getAttribute('baseStripeApi', true);
-            if (baseStripeApi)
-                this.baseStripeApi = baseStripeApi;
-            const urlStripeTracking = this.getAttribute('urlStripeTracking', true);
-            if (urlStripeTracking)
-                this.urlStripeTracking = urlStripeTracking;
+            const model = this.getAttribute('model', true);
+            if (model)
+                this.model = model;
         }
         render() {
             return this.$render("i-stack", { direction: "vertical", alignItems: "center", width: "100%" },
@@ -968,28 +1323,25 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                 this.$render("i-stack", { direction: "vertical", gap: "1rem", width: "100%", height: "100%", alignItems: "center", padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' } },
                     this.$render("i-stack", { direction: "vertical", id: "pnlStripePaymentForm", background: { color: '#fff' }, border: { radius: 12 }, padding: { top: '1rem', left: '1rem', bottom: '2rem', right: '1rem' } }),
                     this.$render("i-stack", { direction: "horizontal", width: "100%", alignItems: "center", justifyContent: "center", margin: { top: 'auto' }, gap: "1rem", wrap: "wrap-reverse" },
-                        this.$render("i-button", { caption: "$back", background: { color: Theme.colors.secondary.main }, class: index_css_5.halfWidthButtonStyle, onClick: this.handleBack }),
-                        this.$render("i-button", { id: "btnCheckout", caption: "$checkout", background: { color: Theme.colors.primary.main }, class: index_css_5.halfWidthButtonStyle, onClick: this.handleStripeCheckoutClick }))),
-                this.$render("i-alert", { id: "mdAlert", class: index_css_5.alertStyle }));
+                        this.$render("i-button", { caption: "$back", background: { color: Theme.colors.secondary.main }, class: index_css_6.halfWidthButtonStyle, onClick: this.handleBack }),
+                        this.$render("i-button", { id: "btnCheckout", caption: "$checkout", background: { color: Theme.colors.primary.main }, class: index_css_6.halfWidthButtonStyle, onClick: this.handleStripeCheckoutClick }))),
+                this.$render("i-alert", { id: "mdAlert", class: index_css_6.alertStyle }));
         }
     };
     StripePayment = __decorate([
-        (0, components_8.customElements)('scom-payment-widget--stripe-payment')
+        (0, components_12.customElements)('scom-payment-widget--stripe-payment')
     ], StripePayment);
     exports.StripePayment = StripePayment;
 });
-define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/defaultData.ts", "@scom/scom-token-list", "@scom/scom-payment-widget/store.ts", "@ijstech/eth-wallet", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_9, interface_4, assets_3, defaultData_1, scom_token_list_1, store_5, eth_wallet_2, index_css_6, translations_json_6) {
+define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/defaultData.ts", "@scom/scom-token-list", "@scom/scom-payment-widget/store.ts", "@ijstech/eth-wallet", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_13, interface_5, assets_3, defaultData_2, scom_token_list_1, store_6, eth_wallet_2, index_css_7, translations_json_9) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.WalletPayment = void 0;
-    const path = components_9.application.currentModuleDir;
-    const Theme = components_9.Styles.Theme.ThemeVars;
-    let WalletPayment = class WalletPayment extends components_9.Module {
+    const path = components_13.application.currentModuleDir;
+    const Theme = components_13.Styles.Theme.ThemeVars;
+    let WalletPayment = class WalletPayment extends components_13.Module {
         constructor(parent, options) {
             super(parent, options);
-            this._wallets = [];
-            this._networks = [];
-            this._tokens = [];
             this.rpcWalletEvents = [];
         }
         get dappContainer() {
@@ -998,18 +1350,12 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         set dappContainer(container) {
             this._dappContainer = container;
         }
-        get payment() {
-            return this._payment;
+        get model() {
+            return this._model;
         }
-        set payment(value) {
-            this._payment = value;
+        set model(value) {
+            this._model = value;
             this.updateAmount();
-        }
-        get totalPrice() {
-            return (this.payment.products?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0) + this.totalShippingCost;
-        }
-        get totalShippingCost() {
-            return this.payment.products?.reduce((sum, item) => sum + (Number(item.shippingCost || 0) * item.quantity), 0) || 0;
         }
         get state() {
             return this._state;
@@ -1017,36 +1363,26 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         set state(value) {
             this._state = value;
         }
-        get wallets() {
-            return this._wallets ?? defaultData_1.default.defaultData.wallets;
+        get tokens() {
+            return this.model.tokens;
         }
-        set wallets(value) {
-            this._wallets = value;
+        get wallets() {
+            return this.model.wallets;
         }
         get networks() {
-            return this._networks ?? defaultData_1.default.defaultData.networks;
-        }
-        set networks(value) {
-            this._networks = value;
-        }
-        get tokens() {
-            return this._tokens ?? defaultData_1.default.defaultData.tokens;
-        }
-        set tokens(value) {
-            this._tokens = value;
+            return this.model.networks;
         }
         get rpcWallet() {
             return this.state.getRpcWallet();
         }
-        async onStartPayment(payment) {
-            this.payment = payment;
+        async onStartPayment(provider) {
             if (!this.header)
                 return;
-            this.isInitialized = true;
-            if (this.payment.provider === interface_4.PaymentProvider.Metamask) {
+            this.provider = provider;
+            if (provider === interface_5.PaymentProvider.Metamask) {
                 await this.initWallet();
             }
-            else if (this.payment.provider === interface_4.PaymentProvider.TonWallet) {
+            else if (provider === interface_5.PaymentProvider.TonWallet) {
                 this.initTonWallet();
             }
             this.showFirstScreen();
@@ -1071,7 +1407,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         }
         async resetRpcWallet() {
             this.removeRpcWalletEvents();
-            await this.state.initRpcWallet(defaultData_1.default.defaultData.defaultChainId);
+            await this.state.initRpcWallet(defaultData_2.default.defaultData.defaultChainId);
             const rpcWallet = this.rpcWallet;
             const chainChangedEvent = rpcWallet.registerWalletEvent(this, eth_wallet_2.Constants.RpcWalletEvent.ChainChanged, async (chainId) => {
                 this.showFirstScreen();
@@ -1132,13 +1468,13 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             const self = this;
             const moduleDir = this['currentModuleDir'] || path;
             return new Promise((resolve, reject) => {
-                components_9.RequireJS.config({
+                components_13.RequireJS.config({
                     baseUrl: `${moduleDir}/lib`,
                     paths: {
                         'tonweb': 'tonweb'
                     }
                 });
-                components_9.RequireJS.require(['tonweb'], function (TonWeb) {
+                components_13.RequireJS.require(['tonweb'], function (TonWeb) {
                     // self.tonWeb = new TonWeb(new TonWeb.HttpProvider('https://testnet.toncenter.com/api/v2/jsonRPC'));
                     self.tonWeb = new TonWeb();
                     resolve();
@@ -1150,13 +1486,13 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                 return;
             const moduleDir = this['currentModuleDir'] || path;
             return new Promise((resolve, reject) => {
-                components_9.RequireJS.config({
+                components_13.RequireJS.config({
                     baseUrl: `${moduleDir}/lib`,
                     paths: {
                         'tonconnect-ui': 'tonconnect-ui'
                     }
                 });
-                components_9.RequireJS.require(['tonconnect-ui'], function (TonConnectUI) {
+                components_13.RequireJS.require(['tonconnect-ui'], function (TonConnectUI) {
                     window['TON_CONNECT_UI'] = TonConnectUI;
                     resolve();
                 });
@@ -1169,30 +1505,29 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             await Promise.all(promises);
         }
         updateAmount() {
-            if (this.header && this.payment) {
-                const currency = this.payment.currency || 'USD';
-                const title = this.payment.title || '';
-                this.header.setHeader(title, currency, this.totalPrice);
+            if (this.header && this.model) {
+                const { title, currency, totalAmount } = this.model;
+                this.header.setHeader(title, currency, totalAmount);
                 if (this.lbPayItem.caption !== title)
                     this.lbPayItem.caption = title;
-                const formattedAmount = `${components_9.FormatUtils.formatNumber(this.totalPrice, { decimalFigures: 2 })} ${currency || 'USD'}`;
+                const formattedAmount = `${components_13.FormatUtils.formatNumber(totalAmount, { decimalFigures: 2 })} ${currency}`;
                 if (this.lbPayAmount.caption !== formattedAmount)
                     this.lbPayAmount.caption = formattedAmount;
             }
         }
         async checkWalletStatus() {
-            const paymentProvider = this.payment.provider;
+            const paymentProvider = this.provider;
             let isConnected;
-            if (paymentProvider === interface_4.PaymentProvider.Metamask) {
-                isConnected = (0, store_5.isClientWalletConnected)();
+            if (paymentProvider === interface_5.PaymentProvider.Metamask) {
+                isConnected = (0, store_6.isClientWalletConnected)();
             }
-            else if (paymentProvider === interface_4.PaymentProvider.TonWallet) {
+            else if (paymentProvider === interface_5.PaymentProvider.TonWallet) {
                 isConnected = this.isTonWalletConnected;
             }
             this.pnlWallet.visible = !isConnected;
-            const provider = store_5.PaymentProviders.find(v => v.provider === this.payment.provider);
+            const provider = store_6.PaymentProviders.find(v => v.provider === paymentProvider);
             if (isConnected) {
-                if (paymentProvider === interface_4.PaymentProvider.Metamask) {
+                if (paymentProvider === interface_5.PaymentProvider.Metamask) {
                     const wallet = this.state.getRpcWallet();
                     const address = wallet.address;
                     const chainId = wallet.chainId;
@@ -1206,7 +1541,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                     }
                     await this.renderErcTokens(chainId);
                 }
-                else if (paymentProvider === interface_4.PaymentProvider.TonWallet) {
+                else if (paymentProvider === interface_5.PaymentProvider.TonWallet) {
                     const account = this.tonConnectUI.account;
                     const address = account.address;
                     this.pnlNetwork.visible = false;
@@ -1247,7 +1582,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             for (const token of tokens) {
                 const balances = scom_token_list_1.tokenStore.getTokenBalancesByChainId(chainId) || {};
                 const tokenBalance = balances[token.address?.toLowerCase() || token.symbol] || 0;
-                const formattedBalance = components_9.FormatUtils.formatNumber(tokenBalance, { decimalFigures: 2 });
+                const formattedBalance = components_13.FormatUtils.formatNumber(tokenBalance, { decimalFigures: 2 });
                 nodeItems.push(this.$render("i-stack", { direction: "horizontal", justifyContent: "space-between", alignItems: "center", wrap: "wrap", gap: "0.5rem", width: "100%", border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, cursor: "pointer", onClick: () => this.handleSelectToken(token) },
                     this.$render("i-stack", { direction: "horizontal", alignItems: "center", gap: "0.75rem" },
                         this.$render("i-image", { width: 20, height: 20, minWidth: 20, url: scom_token_list_1.assets.tokenPath(token, chainId) }),
@@ -1273,7 +1608,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                 decimals: 18
             };
             const balance = await this.getTonBalance();
-            const formattedBalance = components_9.FormatUtils.formatNumber(balance, { decimalFigures: 2 });
+            const formattedBalance = components_13.FormatUtils.formatNumber(balance, { decimalFigures: 2 });
             this.pnlTokenItems.clearInnerHTML();
             this.pnlTokenItems.appendChild(this.$render("i-stack", { direction: "horizontal", justifyContent: "space-between", alignItems: "center", wrap: "wrap", gap: "0.5rem", width: "100%", border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, cursor: "pointer", onClick: () => this.handleSelectToken(tonToken, true) },
                 this.$render("i-stack", { direction: "horizontal", alignItems: "center", gap: "0.75rem" },
@@ -1294,11 +1629,11 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             this.dappContainer.setData(containerData);
         }
         handleConnectWallet() {
-            if (this.payment.provider === interface_4.PaymentProvider.Metamask) {
+            if (this.provider === interface_5.PaymentProvider.Metamask) {
                 const header = this.dappContainer.querySelector('dapp-container-header');
                 header?.openConnectModal();
             }
-            else if (this.payment.provider === interface_4.PaymentProvider.TonWallet) {
+            else if (this.provider === interface_5.PaymentProvider.TonWallet) {
                 this.connectTonWallet();
             }
         }
@@ -1316,10 +1651,10 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             this.isToPay = true;
             const tokenImg = isTon ? assets_3.default.fullPath('img/ton.png') : scom_token_list_1.assets.tokenPath(token, token.chainId);
             this.imgToken.url = tokenImg;
-            const { address, currency } = this.payment;
-            const toAddress = address || '';
+            const { totalAmount, currency, walletAddress } = this.model;
+            const toAddress = walletAddress;
             this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);
-            const formattedAmount = components_9.FormatUtils.formatNumber(this.totalPrice || 0, { decimalFigures: 2 });
+            const formattedAmount = components_13.FormatUtils.formatNumber(totalAmount, { decimalFigures: 2 });
             this.lbAmountToPay.caption = `${formattedAmount} ${token.symbol}`;
             this.lbUSD.caption = `${formattedAmount} ${currency || 'USD'}`;
             this.lbUSD.visible = !isTon;
@@ -1327,7 +1662,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         }
         async handleCopyAddress() {
             try {
-                await components_9.application.copyToClipboard(this.payment.address);
+                await components_13.application.copyToClipboard(this.model.walletAddress);
                 this.iconCopyAddress.name = 'check';
                 this.iconCopyAddress.fill = Theme.colors.success.main;
                 if (this.copyAddressTimer)
@@ -1341,7 +1676,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         }
         async handleCopyAmount() {
             try {
-                await components_9.application.copyToClipboard(this.totalPrice.toString());
+                await components_13.application.copyToClipboard(this.model.totalAmount.toString());
                 this.iconCopyAmount.name = 'check';
                 this.iconCopyAmount.fill = Theme.colors.success.main;
                 if (this.copyAmountTimer)
@@ -1353,20 +1688,27 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             }
             catch { }
         }
-        handlePay() {
+        async handlePay() {
             if (this.onPaid) {
                 let address = '';
-                if (this.payment.provider === interface_4.PaymentProvider.Metamask) {
+                if (this.provider === interface_5.PaymentProvider.Metamask) {
                     const wallet = eth_wallet_2.Wallet.getClientInstance();
                     address = wallet.address;
+                    this.model.networkCode = wallet.chainId.toString();
                 }
-                else if (this.payment.provider === interface_4.PaymentProvider.TonWallet) {
+                else if (this.provider === interface_5.PaymentProvider.TonWallet) {
                     const account = this.tonConnectUI.account;
                     address = account.address;
+                    this.model.networkCode = 'TON';
                 }
-                this.onPaid({ status: 'pending', provider: this.payment.provider, receipt: '0x00000000000000000000000000000', ownerAddress: address });
-                setTimeout(() => {
-                    this.onPaid({ status: 'complete', provider: this.payment.provider, receipt: '0x00000000000000000000000000000', ownerAddress: address });
+                await this.model.handlePlaceMarketplaceOrder();
+                // TODO - pay with crypto 
+                const receipt = '0x00000000000000000000000000000';
+                this.model.referenceId = receipt;
+                this.onPaid({ status: 'pending', provider: this.provider, receipt, ownerAddress: address });
+                setTimeout(async () => {
+                    await this.model.handlePaymentSuccess();
+                    this.onPaid({ status: 'complete', provider: this.provider, receipt, ownerAddress: address });
                 }, 3000);
             }
         }
@@ -1379,7 +1721,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                 this.onBack();
         }
         async init() {
-            this.i18n.init({ ...translations_json_6.default });
+            this.i18n.init({ ...translations_json_9.default });
             super.init();
             this.loadLib();
             this.onBack = this.getAttribute('onBack', true) || this.onBack;
@@ -1388,16 +1730,9 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             if (state) {
                 this.state = state;
             }
-            const payment = this.getAttribute('payment', true);
-            if (payment) {
-                this.payment = payment;
-            }
-            const tokens = this.getAttribute('tokens', true);
-            if (tokens) {
-                this.tokens = tokens;
-            }
-            if (this.payment && !this.isInitialized) {
-                this.onStartPayment(this.payment);
+            const model = this.getAttribute('model', true);
+            if (model) {
+                this.model = model;
             }
         }
         render() {
@@ -1413,8 +1748,8 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                     this.$render("i-stack", { id: "pnlWallet", visible: false, direction: "vertical", gap: "2rem", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", padding: { left: '1rem', right: '1rem' } },
                         this.$render("i-image", { id: "imgWallet", width: 64, height: 64 }),
                         this.$render("i-label", { id: "lbWallet", font: { size: '0.825rem', bold: true } }),
-                        this.$render("i-button", { caption: "$connect_wallet", background: { color: Theme.colors.primary.main }, class: index_css_6.fullWidthButtonStyle, onClick: this.handleConnectWallet }),
-                        this.$render("i-button", { caption: "$back", background: { color: Theme.colors.secondary.main }, class: index_css_6.fullWidthButtonStyle, onClick: this.handleBack })),
+                        this.$render("i-button", { caption: "$connect_wallet", background: { color: Theme.colors.primary.main }, class: index_css_7.fullWidthButtonStyle, onClick: this.handleConnectWallet }),
+                        this.$render("i-button", { caption: "$back", background: { color: Theme.colors.secondary.main }, class: index_css_7.fullWidthButtonStyle, onClick: this.handleBack })),
                     this.$render("i-stack", { id: "pnlTokens", visible: false, direction: "vertical", gap: "1rem", justifyContent: "center", alignItems: "center", height: "100%", width: "100%" },
                         this.$render("i-stack", { direction: "horizontal", justifyContent: "space-between", alignItems: "center", gap: "1rem", width: "100%", wrap: "wrap", margin: { bottom: '0.5rem' }, padding: { left: '1rem', right: '1rem' } },
                             this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", alignItems: "center", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }, border: { style: 'solid', width: 1, color: Theme.divider, radius: 8 } },
@@ -1440,26 +1775,26 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                                 this.$render("i-stack", { direction: "horizontal", width: 32, minWidth: 32, height: "100%", alignItems: "center", justifyContent: "center", cursor: "pointer", margin: { left: 'auto' }, background: { color: Theme.colors.primary.main }, onClick: this.handleCopyAmount },
                                     this.$render("i-icon", { id: "iconCopyAmount", name: "copy", width: 16, height: 16, fill: Theme.text.primary })))),
                         this.$render("i-stack", { direction: "horizontal", width: "100%", alignItems: "center", justifyContent: "center", gap: "1rem", wrap: "wrap-reverse", padding: { left: '1rem', right: '1rem' } },
-                            this.$render("i-button", { id: "btnBack", caption: "$back", minWidth: 90, background: { color: Theme.colors.secondary.main }, class: index_css_6.fullWidthButtonStyle, onClick: this.handleBack }),
-                            this.$render("i-button", { id: "btnPay", visible: false, caption: "$pay", background: { color: Theme.colors.primary.main }, class: index_css_6.halfWidthButtonStyle, onClick: this.handlePay })))),
+                            this.$render("i-button", { id: "btnBack", caption: "$back", minWidth: 90, background: { color: Theme.colors.secondary.main }, class: index_css_7.fullWidthButtonStyle, onClick: this.handleBack }),
+                            this.$render("i-button", { id: "btnPay", visible: false, caption: "$pay", background: { color: Theme.colors.primary.main }, class: index_css_7.halfWidthButtonStyle, onClick: this.handlePay })))),
                 this.$render("i-button", { id: "btnTonWallet", visible: false }));
         }
     };
     WalletPayment = __decorate([
-        (0, components_9.customElements)('scom-payment-widget--wallet-payment')
+        (0, components_13.customElements)('scom-payment-widget--wallet-payment')
     ], WalletPayment);
     exports.WalletPayment = WalletPayment;
 });
-define("@scom/scom-payment-widget/components/paymentModule.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/defaultData.ts", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/components/index.css.ts"], function (require, exports, components_10, defaultData_2, interface_5, index_css_7) {
+define("@scom/scom-payment-widget/components/paymentModule.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/components/index.css.ts"], function (require, exports, components_14, interface_6, index_css_8) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PaymentModule = void 0;
-    let PaymentModule = class PaymentModule extends components_10.Module {
-        constructor() {
-            super(...arguments);
-            this._wallets = [];
-            this._networks = [];
-            this._tokens = [];
+    let PaymentModule = class PaymentModule extends components_14.Module {
+        get model() {
+            return this._model;
+        }
+        set model(value) {
+            this._model = value;
         }
         get dappContainer() {
             return this._dappContainer;
@@ -1473,49 +1808,18 @@ define("@scom/scom-payment-widget/components/paymentModule.tsx", ["require", "ex
         set state(value) {
             this._state = value;
         }
-        get baseStripeApi() {
-            return this._baseStripeApi;
-        }
-        set baseStripeApi(value) {
-            this._baseStripeApi = value;
-            if (this.stripePayment)
-                this.stripePayment.baseStripeApi = value;
-        }
-        get urlStripeTracking() {
-            return this._urlStripeTracking;
-        }
-        set urlStripeTracking(value) {
-            this._urlStripeTracking = value;
-            if (this.stripePayment)
-                this.stripePayment.urlStripeTracking = value;
-        }
-        get wallets() {
-            return this._wallets ?? defaultData_2.default.defaultData.wallets;
-        }
-        set wallets(value) {
-            this._wallets = value;
-        }
-        get networks() {
-            return this._networks ?? defaultData_2.default.defaultData.networks;
-        }
-        set networks(value) {
-            this._networks = value;
-        }
-        get tokens() {
-            return this._tokens ?? defaultData_2.default.defaultData.tokens;
-        }
-        set tokens(value) {
-            this._tokens = value;
-        }
-        show(payment, isModal = true) {
-            this.invoiceCreation.payment = payment;
+        show(isModal = true) {
+            this.invoiceCreation.model = this.model;
             this.invoiceCreation.visible = true;
-            this.paymentMethod.payment = payment;
+            this.shippingInfo.model = this.model;
+            this.shippingInfo.visible = false;
+            this.paymentMethod.model = this.model;
             this.paymentMethod.visible = false;
             this.walletPayment.visible = false;
+            this.walletPayment.model = this.model;
             this.walletPayment.state = this.state;
             this.walletPayment.dappContainer = this.dappContainer;
-            this.stripePayment.payment = payment;
+            this.stripePayment.model = this.model;
             this.stripePayment.visible = false;
             this.statusPayment.visible = false;
             this.isModal = isModal;
@@ -1523,29 +1827,31 @@ define("@scom/scom-payment-widget/components/paymentModule.tsx", ["require", "ex
         async init() {
             await super.init();
             const state = this.getAttribute('state', true);
+            const model = this.getAttribute('model', true);
             if (state)
                 this.state = state;
-            const baseStripeApi = this.getAttribute('baseStripeApi', true);
-            if (baseStripeApi)
-                this.baseStripeApi = baseStripeApi;
-            const urlStripeTracking = this.getAttribute('urlStripeTracking', true);
-            if (urlStripeTracking)
-                this.urlStripeTracking = urlStripeTracking;
+            if (model)
+                this.model = model;
             this.invoiceCreation.onContinue = () => {
                 this.invoiceCreation.visible = false;
-                this.paymentMethod.visible = true;
+                this.shippingInfo.visible = this.model.hasPhysicalProduct;
+                this.paymentMethod.visible = !this.model.hasPhysicalProduct;
+                this.paymentMethod.updateUI();
             };
-            this.paymentMethod.onSelectedPaymentProvider = (payment, paymentProvider) => {
+            this.shippingInfo.onContinue = () => {
+                this.shippingInfo.visible = false;
+                this.paymentMethod.visible = true;
+                this.paymentMethod.updateUI();
+            };
+            this.shippingInfo.onBack = () => {
+                this.invoiceCreation.visible = true;
+                this.shippingInfo.visible = false;
+            };
+            this.paymentMethod.onSelectedPaymentProvider = (paymentProvider) => {
                 this.paymentMethod.visible = false;
-                if (paymentProvider === interface_5.PaymentProvider.Metamask || paymentProvider === interface_5.PaymentProvider.TonWallet) {
+                if (paymentProvider === interface_6.PaymentProvider.Metamask || paymentProvider === interface_6.PaymentProvider.TonWallet) {
                     this.paymentMethod.visible = false;
-                    this.walletPayment.wallets = this.wallets;
-                    this.walletPayment.networks = this.networks;
-                    this.walletPayment.tokens = this.tokens;
-                    this.walletPayment.onStartPayment({
-                        ...payment,
-                        provider: paymentProvider
-                    });
+                    this.walletPayment.onStartPayment(paymentProvider);
                     this.walletPayment.visible = true;
                 }
                 else {
@@ -1554,7 +1860,8 @@ define("@scom/scom-payment-widget/components/paymentModule.tsx", ["require", "ex
             };
             this.paymentMethod.onBack = () => {
                 this.paymentMethod.visible = false;
-                this.invoiceCreation.visible = true;
+                this.invoiceCreation.visible = !this.model.hasPhysicalProduct;
+                this.shippingInfo.visible = this.model.hasPhysicalProduct;
             };
             this.walletPayment.onPaid = (paymentStatus) => {
                 this.walletPayment.visible = false;
@@ -1569,41 +1876,36 @@ define("@scom/scom-payment-widget/components/paymentModule.tsx", ["require", "ex
                 this.paymentMethod.visible = true;
                 this.stripePayment.visible = false;
             };
-            this.stripePayment.onPaymentSuccess = (status) => {
+            this.stripePayment.onClose = () => {
                 if (this.isModal)
                     this.closeModal();
-                if (this.onPaymentSuccess)
-                    this.onPaymentSuccess(status);
             };
-            this.stripePayment.baseStripeApi = this.baseStripeApi;
-            this.stripePayment.urlStripeTracking = this.urlStripeTracking;
-            this.statusPayment.onClose = (status) => {
+            this.statusPayment.onClose = () => {
                 if (this.isModal)
                     this.closeModal();
-                if (this.onPaymentSuccess)
-                    this.onPaymentSuccess(status);
             };
         }
         render() {
             return (this.$render("i-stack", { margin: { top: '1rem' }, direction: "vertical", width: "100%", minHeight: 480, border: { radius: 12, style: 'solid', width: 1, color: '#ffffff4d' }, overflow: "hidden" },
-                this.$render("scom-payment-widget--invoice-creation", { id: "invoiceCreation", visible: false, class: index_css_7.elementStyle }),
-                this.$render("scom-payment-widget--payment-method", { id: "paymentMethod", visible: false, class: index_css_7.elementStyle }),
-                this.$render("scom-payment-widget--wallet-payment", { id: "walletPayment", visible: false, class: index_css_7.elementStyle }),
-                this.$render("scom-payment-widget--stripe-payment", { id: "stripePayment", visible: false, class: index_css_7.elementStyle }),
-                this.$render("scom-payment-widget--status-payment", { id: "statusPayment", visible: false, class: index_css_7.elementStyle })));
+                this.$render("scom-payment-widget--invoice-creation", { id: "invoiceCreation", visible: false, class: index_css_8.elementStyle }),
+                this.$render("scom-payment-widget--shipping-info", { id: "shippingInfo", visible: false, class: index_css_8.elementStyle }),
+                this.$render("scom-payment-widget--payment-method", { id: "paymentMethod", visible: false, class: index_css_8.elementStyle }),
+                this.$render("scom-payment-widget--wallet-payment", { id: "walletPayment", visible: false, class: index_css_8.elementStyle }),
+                this.$render("scom-payment-widget--stripe-payment", { id: "stripePayment", visible: false, class: index_css_8.elementStyle }),
+                this.$render("scom-payment-widget--status-payment", { id: "statusPayment", visible: false, class: index_css_8.elementStyle })));
         }
     };
     PaymentModule = __decorate([
-        (0, components_10.customElements)('scom-payment-widget--payment-module')
+        (0, components_14.customElements)('scom-payment-widget--payment-module')
     ], PaymentModule);
     exports.PaymentModule = PaymentModule;
 });
-define("@scom/scom-payment-widget/components/stripePaymentTracking.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/utils.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_11, index_css_8, assets_4, store_6, utils_2, translations_json_7) {
+define("@scom/scom-payment-widget/components/stripePaymentTracking.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/utils.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_15, index_css_9, assets_4, store_7, utils_2, translations_json_10) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.StatusPaymentTracking = void 0;
-    const Theme = components_11.Styles.Theme.ThemeVars;
-    let StatusPaymentTracking = class StatusPaymentTracking extends components_11.Module {
+    const Theme = components_15.Styles.Theme.ThemeVars;
+    let StatusPaymentTracking = class StatusPaymentTracking extends components_15.Module {
         get baseStripeApi() {
             return this._baseStripeApi;
         }
@@ -1620,14 +1922,14 @@ define("@scom/scom-payment-widget/components/stripePaymentTracking.tsx", ["requi
             this.inputClientSecret.enabled = false;
             this.imgStatus.visible = true;
             this.imgStatus.url = assets_4.default.fullPath('/img/loading.svg');
-            this.imgStatus.classList.add(index_css_8.loadingImageStyle);
+            this.imgStatus.classList.add(index_css_9.loadingImageStyle);
             this.lbStatus.caption = '';
             if (!window.Stripe) {
                 await (0, utils_2.loadStripe)();
             }
             const apiUrl = this.baseStripeApi ?? '/stripe';
             if (!this.publishableKey) {
-                this.publishableKey = await (0, store_6.getStripeKey)(`${apiUrl}/key`);
+                this.publishableKey = await (0, store_7.getStripeKey)(`${apiUrl}/key`);
                 if (!this.publishableKey)
                     return;
             }
@@ -1635,7 +1937,6 @@ define("@scom/scom-payment-widget/components/stripePaymentTracking.tsx", ["requi
                 this.stripe = window.Stripe(this.publishableKey);
             }
             const clientSecret = this.inputClientSecret.value;
-            this.updateURLParam('payment_intent_client_secret', clientSecret);
             try {
                 const data = await this.stripe.retrievePaymentIntent(clientSecret);
                 let img = '';
@@ -1657,7 +1958,7 @@ define("@scom/scom-payment-widget/components/stripePaymentTracking.tsx", ["requi
                         img = assets_4.default.fullPath('img/error.png');
                         break;
                 }
-                this.imgStatus.classList.remove(index_css_8.loadingImageStyle);
+                this.imgStatus.classList.remove(index_css_9.loadingImageStyle);
                 if (img) {
                     this.imgStatus.url = img;
                 }
@@ -1668,7 +1969,7 @@ define("@scom/scom-payment-widget/components/stripePaymentTracking.tsx", ["requi
             }
             catch {
                 this.lbStatus.caption = this.i18n.get('$invalid_payment_id');
-                this.imgStatus.classList.remove(index_css_8.loadingImageStyle);
+                this.imgStatus.classList.remove(index_css_9.loadingImageStyle);
                 this.imgStatus.url = assets_4.default.fullPath('img/error.png');
             }
             this.btnCheck.rightIcon.spin = false;
@@ -1680,6 +1981,8 @@ define("@scom/scom-payment-widget/components/stripePaymentTracking.tsx", ["requi
             this.btnCheck.enabled = !!this.inputClientSecret.value;
         }
         handleSearch() {
+            const clientSecret = this.inputClientSecret.value;
+            this.updateURLParam('payment_intent_client_secret', clientSecret);
             this.checkPaymentStatus();
         }
         getParamsFromUrl() {
@@ -1694,7 +1997,7 @@ define("@scom/scom-payment-widget/components/stripePaymentTracking.tsx", ["requi
             window.history.replaceState({}, '', window.location.origin + window.location.pathname + newHash);
         }
         async init() {
-            this.i18n.init({ ...translations_json_7.default });
+            this.i18n.init({ ...translations_json_10.default });
             super.init();
             const baseStripeApi = this.getAttribute('baseStripeApi', true);
             if (baseStripeApi)
@@ -1707,25 +2010,26 @@ define("@scom/scom-payment-widget/components/stripePaymentTracking.tsx", ["requi
         }
         render() {
             return this.$render("i-stack", { direction: "vertical", gap: "1rem", height: "100%", width: "100%", alignItems: "center", padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' } },
-                this.$render("i-label", { caption: "$check_stripe_payment_status", font: { size: '1rem' }, class: index_css_8.textCenterStyle }),
+                this.$render("i-label", { caption: "$check_stripe_payment_status", font: { size: '1rem' }, class: index_css_9.textCenterStyle }),
                 this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", width: "100%", alignItems: "center", justifyContent: "center", wrap: "wrap" },
                     this.$render("i-input", { id: "inputClientSecret", width: "calc(100% - 108px)", minWidth: 200, height: 40, padding: { left: '0.5rem', right: '0.5rem' }, placeholder: "pi_3QUKKrP7pMwOSpCL0U0P7KEt_secret_MXHCPx7kKqxdsUipvjJYL842r", border: { radius: 4 }, onChanged: this.handleInputChanged }),
                     this.$render("i-button", { id: "btnCheck", enabled: false, caption: "$check", width: 100, padding: { top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }, font: { color: Theme.colors.primary.contrastText }, background: { color: Theme.colors.primary.main }, border: { radius: 12 }, onClick: this.handleSearch })),
                 this.$render("i-stack", { direction: "vertical", gap: "1rem", width: "100%", alignItems: "center", margin: { top: '2rem' } },
                     this.$render("i-image", { id: "imgStatus", width: 128, height: 128 }),
-                    this.$render("i-label", { id: "lbStatus", class: index_css_8.textCenterStyle, font: { size: '1rem', color: Theme.text.primary, bold: true } })));
+                    this.$render("i-label", { id: "lbStatus", class: index_css_9.textCenterStyle, font: { size: '1rem', color: Theme.text.primary, bold: true } })));
         }
     };
     StatusPaymentTracking = __decorate([
-        (0, components_11.customElements)('scom-payment-widget--stripe-payment-tracking')
+        (0, components_15.customElements)('scom-payment-widget--stripe-payment-tracking')
     ], StatusPaymentTracking);
     exports.StatusPaymentTracking = StatusPaymentTracking;
 });
-define("@scom/scom-payment-widget/components/index.ts", ["require", "exports", "@scom/scom-payment-widget/components/paymentModule.tsx", "@scom/scom-payment-widget/components/invoiceCreation.tsx", "@scom/scom-payment-widget/components/paymentMethod.tsx", "@scom/scom-payment-widget/components/walletPayment.tsx", "@scom/scom-payment-widget/components/statusPayment.tsx", "@scom/scom-payment-widget/components/stripePayment.tsx", "@scom/scom-payment-widget/components/stripePaymentTracking.tsx"], function (require, exports, paymentModule_1, invoiceCreation_1, paymentMethod_1, walletPayment_1, statusPayment_1, stripePayment_1, stripePaymentTracking_1) {
+define("@scom/scom-payment-widget/components/index.ts", ["require", "exports", "@scom/scom-payment-widget/components/paymentModule.tsx", "@scom/scom-payment-widget/components/shippingInfo.tsx", "@scom/scom-payment-widget/components/invoiceCreation.tsx", "@scom/scom-payment-widget/components/paymentMethod.tsx", "@scom/scom-payment-widget/components/walletPayment.tsx", "@scom/scom-payment-widget/components/statusPayment.tsx", "@scom/scom-payment-widget/components/stripePayment.tsx", "@scom/scom-payment-widget/components/stripePaymentTracking.tsx"], function (require, exports, paymentModule_1, shippingInfo_1, invoiceCreation_1, paymentMethod_1, walletPayment_1, statusPayment_1, stripePayment_1, stripePaymentTracking_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.StatusPayment = exports.StatusPaymentTracking = exports.StripePayment = exports.WalletPayment = exports.PaymentMethod = exports.InvoiceCreation = exports.PaymentModule = void 0;
+    exports.StatusPayment = exports.StatusPaymentTracking = exports.StripePayment = exports.WalletPayment = exports.PaymentMethod = exports.InvoiceCreation = exports.ShippingInfo = exports.PaymentModule = void 0;
     Object.defineProperty(exports, "PaymentModule", { enumerable: true, get: function () { return paymentModule_1.PaymentModule; } });
+    Object.defineProperty(exports, "ShippingInfo", { enumerable: true, get: function () { return shippingInfo_1.ShippingInfo; } });
     Object.defineProperty(exports, "InvoiceCreation", { enumerable: true, get: function () { return invoiceCreation_1.InvoiceCreation; } });
     Object.defineProperty(exports, "PaymentMethod", { enumerable: true, get: function () { return paymentMethod_1.PaymentMethod; } });
     Object.defineProperty(exports, "WalletPayment", { enumerable: true, get: function () { return walletPayment_1.WalletPayment; } });
@@ -1733,11 +2037,11 @@ define("@scom/scom-payment-widget/components/index.ts", ["require", "exports", "
     Object.defineProperty(exports, "StripePayment", { enumerable: true, get: function () { return stripePayment_1.StripePayment; } });
     Object.defineProperty(exports, "StatusPaymentTracking", { enumerable: true, get: function () { return stripePaymentTracking_1.StatusPaymentTracking; } });
 });
-define("@scom/scom-payment-widget/index.css.ts", ["require", "exports", "@ijstech/components"], function (require, exports, components_12) {
+define("@scom/scom-payment-widget/index.css.ts", ["require", "exports", "@ijstech/components"], function (require, exports, components_16) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.dappContainerStyle = void 0;
-    exports.dappContainerStyle = components_12.Styles.style({
+    exports.dappContainerStyle = components_16.Styles.style({
         $nest: {
             '&>:first-child': {
                 borderRadius: 12,
@@ -1765,24 +2069,22 @@ define("@scom/scom-payment-widget/index.css.ts", ["require", "exports", "@ijstec
         }
     });
 });
-define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.ts", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/defaultData.ts", "@scom/scom-payment-widget/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_13, components_14, interface_6, store_7, defaultData_3, index_css_9, translations_json_8) {
+define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.ts", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/defaultData.ts", "@scom/scom-payment-widget/index.css.ts", "@scom/scom-payment-widget/translations.json.ts", "@scom/scom-payment-widget/model.ts"], function (require, exports, components_17, components_18, interface_7, store_8, defaultData_3, index_css_10, translations_json_11, model_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ScomPaymentWidget = exports.ProductType = void 0;
-    Object.defineProperty(exports, "ProductType", { enumerable: true, get: function () { return interface_6.ProductType; } });
-    const Theme = components_13.Styles.Theme.ThemeVars;
-    let ScomPaymentWidget = class ScomPaymentWidget extends components_13.Module {
+    Object.defineProperty(exports, "ProductType", { enumerable: true, get: function () { return interface_7.ProductType; } });
+    const Theme = components_17.Styles.Theme.ThemeVars;
+    let ScomPaymentWidget = class ScomPaymentWidget extends components_17.Module {
         constructor(parent, options) {
             super(parent, options);
-            this._wallets = [];
-            this._networks = [];
-            this._tokens = [];
+            this.initModel();
         }
         get payment() {
-            return this._payment;
+            return this.model.payment;
         }
         set payment(value) {
-            this._payment = value;
+            this.model.payment = value;
             if (this.btnPay)
                 this.btnPay.enabled = !!value;
         }
@@ -1810,36 +2112,36 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
                 this.btnPay.caption = value;
         }
         get baseStripeApi() {
-            return this._baseStripeApi;
+            return this.model.baseStripeApi;
         }
         set baseStripeApi(value) {
-            this._baseStripeApi = value;
+            this.model.baseStripeApi = value;
             if (this.statusPaymentTracking)
                 this.statusPaymentTracking.baseStripeApi = value;
         }
         get urlStripeTracking() {
-            return this._urlStripeTracking;
+            return this.model.urlStripeTracking;
         }
         set urlStripeTracking(value) {
-            this._urlStripeTracking = value;
+            this.model.urlStripeTracking = value;
         }
         get wallets() {
-            return this._wallets ?? defaultData_3.default.defaultData.wallets;
+            return this.model.wallets;
         }
         set wallets(value) {
-            this._wallets = value;
+            this.model.wallets = value;
         }
         get networks() {
-            return this._networks ?? defaultData_3.default.defaultData.networks;
+            return this.model.networks;
         }
         set networks(value) {
-            this._networks = value;
+            this.model.networks = value;
         }
         get tokens() {
-            return this._tokens ?? defaultData_3.default.defaultData.tokens;
+            return this.model.tokens;
         }
         set tokens(value) {
-            this._tokens = value;
+            this.model.tokens = value;
         }
         get rpcWallet() {
             return this.state.getRpcWallet();
@@ -1866,13 +2168,15 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             }
         }
         onStartPayment(payment) {
+            this.initModel();
             if (payment)
-                this._payment = payment;
+                this.payment = payment;
             this.openPaymentModal();
         }
         async openPaymentModal() {
             if (!this.paymentModule) {
-                this.paymentModule = new components_14.PaymentModule();
+                this.paymentModule = new components_18.PaymentModule();
+                this.paymentModule.model = this.model;
                 this.paymentModule.state = this.state;
                 this.paymentModule.dappContainer = this.containerDapp;
                 if (this.isUrl) {
@@ -1881,19 +2185,14 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
                     this.pnlWrapper.appendChild(this.paymentModule);
                 }
             }
-            this.paymentModule.wallets = this.wallets;
-            this.paymentModule.networks = this.networks;
-            this.paymentModule.tokens = this.tokens;
-            this.paymentModule.baseStripeApi = this.baseStripeApi;
-            this.paymentModule.urlStripeTracking = this.urlStripeTracking;
-            this.paymentModule.onPaymentSuccess = this.onPaymentSuccess;
             if (this.isUrl) {
                 await this.paymentModule.ready();
-                this.paymentModule.show(this._payment, false);
+                this.paymentModule.show(false);
                 return;
             }
             const modal = this.paymentModule.openModal({
                 title: this.i18n.get('$payment'),
+                closeOnBackdropClick: false,
                 closeIcon: { name: 'times', fill: Theme.colors.primary.main },
                 width: 480,
                 maxWidth: '100%',
@@ -1901,7 +2200,7 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
                 border: { radius: '1rem' }
             });
             await this.paymentModule.ready();
-            this.paymentModule.show(this._payment);
+            this.paymentModule.show();
             modal.refresh();
         }
         handlePay() {
@@ -1934,15 +2233,28 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             }
             catch { }
         }
+        initModel() {
+            if (!this.model) {
+                this.model = new model_1.Model();
+            }
+            if (this.placeMarketplaceOrder) {
+                this.model.placeMarketplaceOrder = this.placeMarketplaceOrder.bind(this);
+            }
+            if (this.onPaymentSuccess) {
+                this.model.onPaymentSuccess = this.onPaymentSuccess.bind(this);
+            }
+        }
         async init() {
             if (!this.state) {
-                this.state = new store_7.State(defaultData_3.default);
+                this.state = new store_8.State(defaultData_3.default);
             }
-            this.i18n.init({ ...translations_json_8.default });
+            this.i18n.init({ ...translations_json_11.default });
             super.init();
             this.updateTheme();
             this.openPaymentModal = this.openPaymentModal.bind(this);
+            this.placeMarketplaceOrder = this.getAttribute('placeMarketplaceOrder', true) || this.placeMarketplaceOrder;
             this.onPaymentSuccess = this.getAttribute('onPaymentSuccess', true) || this.onPaymentSuccess;
+            this.initModel();
             this.handleWidgetUrl();
             const lazyLoad = this.getAttribute('lazyLoad', true, false);
             if (!lazyLoad) {
@@ -1965,14 +2277,14 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             this.executeReadyCallback();
         }
         render() {
-            return this.$render("i-scom-dapp-container", { id: "containerDapp", showHeader: true, showFooter: false, class: index_css_9.dappContainerStyle },
+            return this.$render("i-scom-dapp-container", { id: "containerDapp", showHeader: true, showFooter: false, class: index_css_10.dappContainerStyle },
                 this.$render("i-stack", { id: "pnlWrapper", direction: "vertical", alignItems: "center", width: "100%", height: "100%" },
                     this.$render("i-button", { id: "btnPay", visible: false, enabled: false, caption: "$pay", width: "100%", minWidth: 60, maxWidth: 180, padding: { top: '0.5rem', bottom: '0.5rem', left: '0.75rem', right: '0.75rem' }, font: { size: '1rem', color: Theme.colors.primary.contrastText, bold: true }, background: { color: Theme.colors.primary.main }, border: { radius: 12 }, onClick: this.handlePay }),
                     this.$render("scom-payment-widget--stripe-payment-tracking", { id: "statusPaymentTracking", visible: false, width: "100%", height: "100%" })));
         }
     };
     ScomPaymentWidget = __decorate([
-        (0, components_13.customElements)('i-scom-payment-widget')
+        (0, components_17.customElements)('i-scom-payment-widget')
     ], ScomPaymentWidget);
     exports.ScomPaymentWidget = ScomPaymentWidget;
 });

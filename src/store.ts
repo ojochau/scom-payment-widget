@@ -104,8 +104,8 @@ export async function getStripeKey(apiUrl: string) {
   } catch (error) {
     console.log(error);
   }
-  if (publishableKey) {
-    console.log('initStripePayment', 'Cannot get the publishableKey');
+  if (!publishableKey) {
+    console.log('initStripePayment', 'Cannot get the publishable key');
   }
   return publishableKey;
 }

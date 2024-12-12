@@ -1,8 +1,7 @@
 import { Module, Container, customElements, ControlElement, Styles, Button, StackLayout } from '@ijstech/components';
 import { PaymentModule } from './components';
-import { INetworkConfig, IPaymentInfo, ProductType } from './interface';
+import { INetworkConfig, IPaymentActivity, IPaymentInfo, IPlaceOrder, ProductType } from './interface';
 import { State } from './store';
-import { IWalletPlugin } from '@scom/scom-wallet-modal';
 import { ITokenObject } from "@scom/scom-token-list";
 import configData from './defaultData';
 import { dappContainerStyle } from './index.css';
@@ -10,9 +9,11 @@ import { IRpcWallet } from '@ijstech/eth-wallet';
 import ScomDappContainer from '@scom/scom-dapp-container';
 import { StatusPaymentTracking } from './components/index';
 import translations from './translations.json';
+import { Model } from './model';
+import { IWalletPlugin } from '@scom/scom-wallet-modal';
 const Theme = Styles.Theme.ThemeVars;
 
-export { ProductType };
+export { ProductType, IPlaceOrder, IPaymentActivity };
 type Mode = 'payment' | 'status';
 interface ScomPaymentWidgetElement extends ControlElement {
 	lazyLoad?: boolean;
@@ -25,7 +26,8 @@ interface ScomPaymentWidgetElement extends ControlElement {
 	baseStripeApi?: string;
 	urlStripeTracking?: string;
 	mode?: Mode;
-	onPaymentSuccess?: (status: string) => Promise<void>;
+	placeMarketplaceOrder?: (data: IPlaceOrder) => Promise<void>;
+	onPaymentSuccess?: (data: IPaymentActivity) => Promise<void>;
 }
 
 declare global {
@@ -38,35 +40,31 @@ declare global {
 
 @customElements('i-scom-payment-widget')
 export class ScomPaymentWidget extends Module {
+	private model: Model;
 	private containerDapp: ScomDappContainer;
 	private pnlWrapper: StackLayout;
 	private btnPay: Button;
 	private statusPaymentTracking: StatusPaymentTracking;
 	private state: State;
 	private paymentModule: PaymentModule;
-	private _payment: IPaymentInfo;
 	private _mode: Mode;
-	private _baseStripeApi: string;
-	private _urlStripeTracking: string;
 	private _showButtonPay: boolean;
 	private _payButtonCaption: string;
 	private isUrl: boolean;
-
-	private _wallets: IWalletPlugin[] = [];
-	private _networks: INetworkConfig[] = [];
-	private _tokens: ITokenObject[] = [];
-	public onPaymentSuccess: (status: string) => Promise<void>;
+	placeMarketplaceOrder: (data: IPlaceOrder) => Promise<void>;
+	onPaymentSuccess: (data: IPaymentActivity) => Promise<void>;
 
 	constructor(parent?: Container, options?: ScomPaymentWidgetElement) {
 		super(parent, options);
+		this.initModel();
 	}
 
 	get payment() {
-		return this._payment;
+		return this.model.payment;
 	}
 
 	set payment(value: IPaymentInfo) {
-		this._payment = value;
+		this.model.payment = value;
 		if (this.btnPay) this.btnPay.enabled = !!value;
 	}
 
@@ -98,44 +96,44 @@ export class ScomPaymentWidget extends Module {
 	}
 
 	get baseStripeApi() {
-		return this._baseStripeApi;
+		return this.model.baseStripeApi;
 	}
 
 	set baseStripeApi(value: string) {
-		this._baseStripeApi = value;
+		this.model.baseStripeApi = value;
 		if (this.statusPaymentTracking) this.statusPaymentTracking.baseStripeApi = value;
 	}
 
 	get urlStripeTracking() {
-		return this._urlStripeTracking;
+		return this.model.urlStripeTracking;
 	}
 
 	set urlStripeTracking(value: string) {
-		this._urlStripeTracking = value;
+		this.model.urlStripeTracking = value;
 	}
 
 	get wallets() {
-		return this._wallets ?? configData.defaultData.wallets;
+		return this.model.wallets;
 	}
 
 	set wallets(value: IWalletPlugin[]) {
-		this._wallets = value;
+		this.model.wallets = value;
 	}
 
 	get networks() {
-		return this._networks ?? configData.defaultData.networks;
+		return this.model.networks
 	}
 
 	set networks(value: INetworkConfig[]) {
-		this._networks = value;
+		this.model.networks = value;
 	}
 
 	get tokens() {
-		return this._tokens ?? configData.defaultData.tokens;
+		return this.model.tokens;
 	}
 
 	set tokens(value: ITokenObject[]) {
-		this._tokens = value;
+		this.model.tokens = value;
 	}
 
 	get rpcWallet(): IRpcWallet {
@@ -165,13 +163,15 @@ export class ScomPaymentWidget extends Module {
 	}
 
 	onStartPayment(payment?: IPaymentInfo) {
-		if (payment) this._payment = payment;
+		this.initModel();
+		if (payment) this.payment = payment;
 		this.openPaymentModal();
 	}
 
 	private async openPaymentModal() {
 		if (!this.paymentModule) {
 			this.paymentModule = new PaymentModule();
+			this.paymentModule.model = this.model;
 			this.paymentModule.state = this.state;
 			this.paymentModule.dappContainer = this.containerDapp;
 			if (this.isUrl) {
@@ -180,19 +180,14 @@ export class ScomPaymentWidget extends Module {
 				this.pnlWrapper.appendChild(this.paymentModule);
 			}
 		}
-		this.paymentModule.wallets = this.wallets;
-		this.paymentModule.networks = this.networks;
-		this.paymentModule.tokens = this.tokens;
-		this.paymentModule.baseStripeApi = this.baseStripeApi;
-		this.paymentModule.urlStripeTracking = this.urlStripeTracking;
-		this.paymentModule.onPaymentSuccess = this.onPaymentSuccess;
 		if (this.isUrl) {
 			await this.paymentModule.ready();
-			this.paymentModule.show(this._payment, false);
+			this.paymentModule.show(false);
 			return;
 		}
 		const modal = this.paymentModule.openModal({
 			title: this.i18n.get('$payment'),
+			closeOnBackdropClick: false,
 			closeIcon: { name: 'times', fill: Theme.colors.primary.main },
 			width: 480,
 			maxWidth: '100%',
@@ -200,7 +195,7 @@ export class ScomPaymentWidget extends Module {
 			border: { radius: '1rem' }
 		});
 		await this.paymentModule.ready();
-		this.paymentModule.show(this._payment);
+		this.paymentModule.show();
 		modal.refresh();
 	}
 
@@ -234,6 +229,18 @@ export class ScomPaymentWidget extends Module {
 		} catch { }
 	}
 
+	private initModel() {
+		if (!this.model) {
+			this.model = new Model();
+		}
+		if (this.placeMarketplaceOrder) {
+			this.model.placeMarketplaceOrder = this.placeMarketplaceOrder.bind(this);
+		}
+		if (this.onPaymentSuccess) {
+			this.model.onPaymentSuccess = this.onPaymentSuccess.bind(this);
+		}
+	}
+
 	async init() {
 		if (!this.state) {
 			this.state = new State(configData);
@@ -242,7 +249,9 @@ export class ScomPaymentWidget extends Module {
 		super.init();
 		this.updateTheme();
 		this.openPaymentModal = this.openPaymentModal.bind(this);
+		this.placeMarketplaceOrder = this.getAttribute('placeMarketplaceOrder', true) || this.placeMarketplaceOrder;
 		this.onPaymentSuccess = this.getAttribute('onPaymentSuccess', true) || this.onPaymentSuccess;
+		this.initModel();
 		this.handleWidgetUrl();
 		const lazyLoad = this.getAttribute('lazyLoad', true, false);
 		if (!lazyLoad) {
