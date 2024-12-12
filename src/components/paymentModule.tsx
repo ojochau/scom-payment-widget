@@ -1,25 +1,19 @@
 import { Module, customElements, ControlElement } from '@ijstech/components';
 import { State } from '../store';
-import configData from '../defaultData';
-import { INetworkConfig, IPaymentInfo, IPaymentStatus, PaymentProvider } from '../interface';
+import { IPaymentStatus, PaymentProvider } from '../interface';
 import { InvoiceCreation } from './invoiceCreation';
+import { ShippingInfo } from './shippingInfo';
 import { PaymentMethod } from './paymentMethod';
 import { StatusPayment } from './statusPayment';
 import { StripePayment } from './stripePayment';
 import { WalletPayment } from './walletPayment';
-import { IWalletPlugin } from '@scom/scom-wallet-modal';
-import { ITokenObject } from '@scom/scom-token-list';
 import ScomDappContainer from '@scom/scom-dapp-container';
 import { elementStyle } from './index.css';
+import { Model } from '../model';
 
 interface ScomPaymentWidgetPaymentElement extends ControlElement {
+    model?: Model;
     state?: State;
-    wallets?: IWalletPlugin[];
-    networks?: INetworkConfig[];
-    tokens?: ITokenObject[];
-    baseStripeApi?: string;
-    urlStripeTracking?: string;
-    onPaymentSuccess?: (status: string) => Promise<void>;
 }
 
 declare global {
@@ -33,19 +27,23 @@ declare global {
 @customElements('scom-payment-widget--payment-module')
 export class PaymentModule extends Module {
     private invoiceCreation: InvoiceCreation;
+    private shippingInfo: ShippingInfo;
     private paymentMethod: PaymentMethod;
     private walletPayment: WalletPayment;
     private stripePayment: StripePayment;
     private statusPayment: StatusPayment;
     private _dappContainer: ScomDappContainer;
     private _state: State;
-    private _baseStripeApi: string;
-    private _urlStripeTracking: string;
-    private _wallets: IWalletPlugin[] = [];
-    private _networks: INetworkConfig[] = [];
-    private _tokens: ITokenObject[] = [];
+    private _model: Model;
     private isModal: boolean;
-    public onPaymentSuccess: (status: string) => Promise<void>;
+
+    get model() {
+        return this._model;
+    }
+
+    set model(value: Model) {
+        this._model = value;
+    }
 
     get dappContainer() {
         return this._dappContainer;
@@ -63,57 +61,18 @@ export class PaymentModule extends Module {
         this._state = value;
     }
 
-    get baseStripeApi() {
-        return this._baseStripeApi;
-    }
-
-    set baseStripeApi(value: string) {
-        this._baseStripeApi = value;
-        if (this.stripePayment) this.stripePayment.baseStripeApi = value;
-    }
-
-    get urlStripeTracking() {
-        return this._urlStripeTracking;
-    }
-
-    set urlStripeTracking(value: string) {
-        this._urlStripeTracking = value;
-        if (this.stripePayment) this.stripePayment.urlStripeTracking = value;
-    }
-
-    get wallets() {
-        return this._wallets ?? configData.defaultData.wallets;
-    }
-
-    set wallets(value: IWalletPlugin[]) {
-        this._wallets = value;
-    }
-
-    get networks() {
-        return this._networks ?? configData.defaultData.networks;
-    }
-
-    set networks(value: INetworkConfig[]) {
-        this._networks = value;
-    }
-
-    get tokens() {
-        return this._tokens ?? configData.defaultData.tokens;
-    }
-
-    set tokens(value: ITokenObject[]) {
-        this._tokens = value;
-    }
-
-    show(payment: IPaymentInfo, isModal: boolean = true) {
-        this.invoiceCreation.payment = payment;
+    show(isModal: boolean = true) {
+        this.invoiceCreation.model = this.model;
         this.invoiceCreation.visible = true;
-        this.paymentMethod.payment = payment;
+        this.shippingInfo.model = this.model;
+        this.shippingInfo.visible = false;
+        this.paymentMethod.model = this.model;
         this.paymentMethod.visible = false;
         this.walletPayment.visible = false;
+        this.walletPayment.model = this.model;
         this.walletPayment.state = this.state;
         this.walletPayment.dappContainer = this.dappContainer;
-        this.stripePayment.payment = payment;
+        this.stripePayment.model = this.model;
         this.stripePayment.visible = false;
         this.statusPayment.visible = false;
         this.isModal = isModal;
@@ -122,26 +81,29 @@ export class PaymentModule extends Module {
     async init() {
         await super.init();
         const state = this.getAttribute('state', true);
+        const model = this.getAttribute('model', true);
         if (state) this.state = state;
-        const baseStripeApi = this.getAttribute('baseStripeApi', true);
-        if (baseStripeApi) this.baseStripeApi = baseStripeApi;
-        const urlStripeTracking = this.getAttribute('urlStripeTracking', true);
-        if (urlStripeTracking) this.urlStripeTracking = urlStripeTracking;
+        if (model) this.model = model;
         this.invoiceCreation.onContinue = () => {
             this.invoiceCreation.visible = false;
-            this.paymentMethod.visible = true;
+            this.shippingInfo.visible = this.model.hasPhysicalProduct;
+            this.paymentMethod.visible = !this.model.hasPhysicalProduct;
+            this.paymentMethod.updateUI();
         };
-        this.paymentMethod.onSelectedPaymentProvider = (payment: IPaymentInfo, paymentProvider: PaymentProvider) => {
+        this.shippingInfo.onContinue = () => {
+            this.shippingInfo.visible = false;
+            this.paymentMethod.visible = true;
+            this.paymentMethod.updateUI();
+        };
+        this.shippingInfo.onBack = () => {
+            this.invoiceCreation.visible = true;
+            this.shippingInfo.visible = false;
+        };
+        this.paymentMethod.onSelectedPaymentProvider = (paymentProvider: PaymentProvider) => {
             this.paymentMethod.visible = false;
             if (paymentProvider === PaymentProvider.Metamask || paymentProvider === PaymentProvider.TonWallet) {
                 this.paymentMethod.visible = false;
-                this.walletPayment.wallets = this.wallets;
-                this.walletPayment.networks = this.networks;
-                this.walletPayment.tokens = this.tokens;
-                this.walletPayment.onStartPayment({
-                    ...payment,
-                    provider: paymentProvider
-                })
+                this.walletPayment.onStartPayment(paymentProvider);
                 this.walletPayment.visible = true;
             } else {
                 this.stripePayment.visible = true;
@@ -149,7 +111,8 @@ export class PaymentModule extends Module {
         };
         this.paymentMethod.onBack = () => {
             this.paymentMethod.visible = false;
-            this.invoiceCreation.visible = true;
+            this.invoiceCreation.visible = !this.model.hasPhysicalProduct;
+            this.shippingInfo.visible = this.model.hasPhysicalProduct;
         };
         this.walletPayment.onPaid = (paymentStatus: IPaymentStatus) => {
             this.walletPayment.visible = false;
@@ -164,15 +127,11 @@ export class PaymentModule extends Module {
             this.paymentMethod.visible = true;
             this.stripePayment.visible = false;
         }
-        this.stripePayment.onPaymentSuccess = (status: string) => {
+        this.stripePayment.onClose = () => {
             if (this.isModal) this.closeModal();
-            if (this.onPaymentSuccess) this.onPaymentSuccess(status);
         }
-        this.stripePayment.baseStripeApi = this.baseStripeApi;
-        this.stripePayment.urlStripeTracking = this.urlStripeTracking;
-        this.statusPayment.onClose = (status: string) => {
+        this.statusPayment.onClose = () => {
             if (this.isModal) this.closeModal();
-            if (this.onPaymentSuccess) this.onPaymentSuccess(status);
         }
     }
 
@@ -187,6 +146,7 @@ export class PaymentModule extends Module {
                 overflow="hidden"
             >
                 <scom-payment-widget--invoice-creation id="invoiceCreation" visible={false} class={elementStyle} />
+                <scom-payment-widget--shipping-info id="shippingInfo" visible={false} class={elementStyle} />
                 <scom-payment-widget--payment-method id="paymentMethod" visible={false} class={elementStyle} />
                 <scom-payment-widget--wallet-payment id="walletPayment" visible={false} class={elementStyle} />
                 <scom-payment-widget--stripe-payment id="stripePayment" visible={false} class={elementStyle} />

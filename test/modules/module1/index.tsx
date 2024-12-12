@@ -2,7 +2,7 @@ import { Module, customModule, Container, application, Styles } from '@ijstech/c
 import { INetwork } from '@ijstech/eth-wallet';
 import { getMulticallInfoList } from '@scom/scom-multicall';
 import getNetworkList from '@scom/scom-network-list';
-import { ProductType, ScomPaymentWidget } from '@scom/scom-payment-widget';
+import { IPaymentActivity, IPlaceOrder, ProductType, ScomPaymentWidget } from '@scom/scom-payment-widget';
 const Theme = Styles.Theme.ThemeVars;
 
 @customModule
@@ -53,8 +53,12 @@ export default class Module1 extends Module {
     this.scomPaymentWidget.onStartPayment();
   }
 
-  private async handlePaymentSuccess(status: string) {
-    console.log('handlePaymentSuccess', status);
+  private async handlePlaceMarketplaceOrder(data: IPlaceOrder) {
+    console.log('handlePlaceMarketplaceOrder', data);
+  }
+
+  private async handlePaymentSuccess(data: IPaymentActivity) {
+    console.log('handlePaymentSuccess', data);
   }
 
   render() {
@@ -66,13 +70,17 @@ export default class Module1 extends Module {
             title: 'Product Mix',
             products: [
               {
+                id: "cb772b0e-c288-a2b1-8f19-ca9ade20045d",
                 productType: ProductType.Physical,
-                name: 'Canon minimal',
-                images: ['https://images.pexels.com/photos/90946/pexels-photo-90946.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'],
-                price: 200,
+                name: "Denzel's Dog Treats x 6",
+                images: ['https://images.unsplash.com/photo-1592468275155-ea8bf1f84360?q=80&w=2669&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'],
+                price: 55.99,
                 quantity: 1,
+                stallId: 'b36768bc-b479-6692-94ba-d421eefbe8df',
+                stallUri: '30018:dd2ea973537231c4c04b366acb37993a522b478c7f5705eeabef038e185605c3:b36768bc-b479-6692-94ba-d421eefbe8df'
               },
               {
+                id: "2",
                 productType: ProductType.Physical,
                 name: 'Lens',
                 images: ['https://images.pexels.com/photos/279906/pexels-photo-279906.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'],
@@ -80,6 +88,7 @@ export default class Module1 extends Module {
                 quantity: 2,
               },
               {
+                id: "3",
                 productType: ProductType.Physical,
                 name: 'Venus mascara',
                 images: ['https://images.pexels.com/photos/2697787/pexels-photo-2697787.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'],
@@ -89,13 +98,10 @@ export default class Module1 extends Module {
             ],
             paymentId: '262951AA-D913-40A5-9468-7EB8B92706E3',
             address: '0xA81961100920df22CF98703155029822f2F7f033',
-            currency: 'USD',
-            userInfo: {
-              name: 'Test',
-              email: 'test@example.com'
-            }
+            currency: 'USD'
           }}
           onPaymentSuccess={this.handlePaymentSuccess}
+          placeMarketplaceOrder={this.handlePlaceMarketplaceOrder}
           showButtonPay={true}
           baseStripeApi="http://127.0.0.1:8100/stripe"
           urlStripeTracking="http://127.0.0.1:8100/#!/stripe-payment-status"
