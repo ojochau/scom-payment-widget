@@ -1,10 +1,10 @@
 export enum ProductType {
-	Physical = "Physical",
-	Digital = "Digital",
-	Course = "Course",
-	Ebook = "Ebook",
-	Membership = "Membership",
-	Bundle = "Bundle"
+  Physical = "Physical",
+  Digital = "Digital",
+  Course = "Course",
+  Ebook = "Ebook",
+  Membership = "Membership",
+  Bundle = "Bundle"
 }
 
 export interface IProduct {
@@ -30,25 +30,30 @@ export interface IPaymentInfo {
 }
 
 interface IOrderItem {
-	productId: string;
-	quantity: number;
+  productId: string;
+  productName?: string;
+  quantity: number;
+  price?: number;
 }
 
 export interface IShippingInfo {
   name?: string;
-	address?: string;
-	message?: string;
-	contact: {
-		nostr: string;
-		phone?: string;
-		email?: string;
-	};
+  address?: string;
+  message?: string;
+  contact: {
+    nostr: string;
+    phone?: string;
+    email?: string;
+  };
   shippingId?: string;
+  shippingCost?: number;
 }
 
 export interface IOrder extends IShippingInfo {
-	id: string;
-	items: IOrderItem[];
+  id: string;
+  currency?: string;
+  totalAmount?: number;
+  items: IOrderItem[];
 }
 
 export interface IPlaceOrder {

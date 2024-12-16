@@ -30,7 +30,9 @@ declare module "@scom/scom-payment-widget/interface.ts" {
     }
     interface IOrderItem {
         productId: string;
+        productName?: string;
         quantity: number;
+        price?: number;
     }
     export interface IShippingInfo {
         name?: string;
@@ -42,9 +44,12 @@ declare module "@scom/scom-payment-widget/interface.ts" {
             email?: string;
         };
         shippingId?: string;
+        shippingCost?: number;
     }
     export interface IOrder extends IShippingInfo {
         id: string;
+        currency?: string;
+        totalAmount?: number;
         items: IOrderItem[];
     }
     export interface IPlaceOrder {
