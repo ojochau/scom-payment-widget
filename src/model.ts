@@ -1,4 +1,4 @@
-import { INetworkConfig, IOrder, IPaymentActivity, IPaymentInfo, IPlaceOrder, IShippingInfo, PaymentProvider, ProductType } from './interface';
+import { INetworkConfig, IOrder, IPaymentActivity, IPaymentInfo, IPlaceOrder, IShippingInfo, ProductType } from './interface';
 import { ITokenObject } from '@scom/scom-token-list';
 import configData from './defaultData';
 import { stripeCurrencies, stripeSpecialCurrencies, stripeZeroDecimalCurrencies } from './store';
@@ -158,9 +158,13 @@ export class Model {
 		const order: IOrder = {
 			id: this.orderId,
 			...this.shippingInfo,
+			currency: this.currency,
+			totalAmount: this.totalAmount,
 			items: this.products.map(v => {
 				return {
+					productName: v.name,
 					productId: v.id,
+					price: v.price as number,
 					quantity: v.quantity
 				}
 			})

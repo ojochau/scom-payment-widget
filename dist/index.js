@@ -547,9 +547,13 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
             const order = {
                 id: this.orderId,
                 ...this.shippingInfo,
+                currency: this.currency,
+                totalAmount: this.totalAmount,
                 items: this.products.map(v => {
                     return {
+                        productName: v.name,
                         productId: v.id,
+                        price: v.price,
                         quantity: v.quantity
                     };
                 })
