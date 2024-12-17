@@ -405,7 +405,7 @@ define("@scom/scom-payment-widget/defaultData.ts", ["require", "exports"], funct
         "infuraId": "adc596bf88b648e2a8902bc9093930c5",
         "defaultData": {
             "baseStripeApi": "",
-            "urlStripeTracking": "",
+            "returnUrl": "",
             "defaultChainId": 97,
             "networks": [
                 {
@@ -470,7 +470,7 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
             return this.products?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0;
         }
         get totalShippingCost() {
-            return this.products?.reduce((sum, item) => sum + (Number(item.shippingCost || 0) * item.quantity), 0) || 0;
+            return 0; //TODO shipping cost
         }
         get totalAmount() {
             return this.totalPrice + this.totalShippingCost;
@@ -499,11 +499,11 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
         set baseStripeApi(value) {
             this._baseStripeApi = value;
         }
-        get urlStripeTracking() {
-            return this._urlStripeTracking ?? `${window.location.origin}/#!/stripe-payment-status`;
+        get returnUrl() {
+            return this._returnUrl ?? `${window.location.origin}/#!/invoice-detail`;
         }
-        set urlStripeTracking(value) {
-            this._urlStripeTracking = value;
+        set returnUrl(value) {
+            this._returnUrl = value;
         }
         get wallets() {
             return this._wallets ?? defaultData_1.default.defaultData.wallets;
@@ -1209,8 +1209,8 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
         }
         updateAmount() {
             if (this.model && this.header) {
-                const { title, currency, totalPrice, totalShippingCost } = this.model;
-                this.header.setHeader(title, currency, totalPrice + totalShippingCost);
+                const { title, currency, totalAmount } = this.model;
+                this.header.setHeader(title, currency, totalAmount);
                 this.initStripePayment();
             }
         }
@@ -1258,23 +1258,18 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                     return;
                 }
                 ;
-                const { urlStripeTracking } = this.model;
                 await this.model.handlePlaceMarketplaceOrder();
                 this.model.referenceId = clientSecret;
                 this.model.networkCode = '';
-                const data = this.model.paymentActivity;
-                const jsonString = JSON.stringify(data);
+                const { returnUrl, paymentActivity } = this.model;
+                const orderId = paymentActivity.orderId;
+                const url = `${returnUrl}/${orderId}`;
+                const jsonString = JSON.stringify(paymentActivity);
                 const encodedData = btoa(jsonString);
                 const { error } = await this.stripe.confirmPayment({
                     elements: this.stripeElements,
                     confirmParams: {
-                        return_url: `${urlStripeTracking}?data=${encodedData}`,
-                        payment_method_data: {
-                            billing_details: {
-                                name: '',
-                                email: ''
-                            }
-                        }
+                        return_url: `${url}?data=${encodedData}`
                     },
                     clientSecret
                 });
@@ -1283,7 +1278,7 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                 }
                 else {
                     await this.model.handlePaymentSuccess();
-                    this.showAlert('success', this.i18n.get('$payment_completed'), `${this.i18n.get('$check_payment_status')} <a href='${urlStripeTracking}?payment_intent_client_secret=${clientSecret}' target='_blank'>${clientSecret}</a>`);
+                    this.showAlert('success', this.i18n.get('$payment_completed'), `${this.i18n.get('$check_payment_status')} <a href='${url}' target='_blank'>${orderId}</a>`);
                 }
                 this.showButtonIcon(false);
             });
@@ -1291,6 +1286,7 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
         showButtonIcon(value) {
             this.btnCheckout.rightIcon.spin = value;
             this.btnCheckout.rightIcon.visible = value;
+            this.btnBack.enabled = !value;
         }
         showAlert(status, title, msg) {
             if (status === 'success') {
@@ -1327,7 +1323,7 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                 this.$render("i-stack", { direction: "vertical", gap: "1rem", width: "100%", height: "100%", alignItems: "center", padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' } },
                     this.$render("i-stack", { direction: "vertical", id: "pnlStripePaymentForm", background: { color: '#fff' }, border: { radius: 12 }, padding: { top: '1rem', left: '1rem', bottom: '2rem', right: '1rem' } }),
                     this.$render("i-stack", { direction: "horizontal", width: "100%", alignItems: "center", justifyContent: "center", margin: { top: 'auto' }, gap: "1rem", wrap: "wrap-reverse" },
-                        this.$render("i-button", { caption: "$back", background: { color: Theme.colors.secondary.main }, class: index_css_6.halfWidthButtonStyle, onClick: this.handleBack }),
+                        this.$render("i-button", { id: "btnBack", caption: "$back", background: { color: Theme.colors.secondary.main }, class: index_css_6.halfWidthButtonStyle, onClick: this.handleBack }),
                         this.$render("i-button", { id: "btnCheckout", caption: "$checkout", background: { color: Theme.colors.primary.main }, class: index_css_6.halfWidthButtonStyle, onClick: this.handleStripeCheckoutClick }))),
                 this.$render("i-alert", { id: "mdAlert", class: index_css_6.alertStyle }));
         }
@@ -1883,10 +1879,12 @@ define("@scom/scom-payment-widget/components/paymentModule.tsx", ["require", "ex
             this.stripePayment.onClose = () => {
                 if (this.isModal)
                     this.closeModal();
+                window.location.assign(`${this.model.returnUrl}/${this.model.paymentActivity.orderId || ''}`);
             };
             this.statusPayment.onClose = () => {
                 if (this.isModal)
                     this.closeModal();
+                window.location.assign(`${this.model.returnUrl}/${this.model.paymentActivity.orderId || ''}`);
             };
         }
         render() {
@@ -2123,11 +2121,11 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             if (this.statusPaymentTracking)
                 this.statusPaymentTracking.baseStripeApi = value;
         }
-        get urlStripeTracking() {
-            return this.model.urlStripeTracking;
+        get returnUrl() {
+            return this.model.returnUrl;
         }
-        set urlStripeTracking(value) {
-            this.model.urlStripeTracking = value;
+        set returnUrl(value) {
+            this.model.returnUrl = value;
         }
         get wallets() {
             return this.model.wallets;
@@ -2264,8 +2262,8 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             if (!lazyLoad) {
                 const payment = this.getAttribute('payment', true);
                 this.mode = this.getAttribute('mode', true, 'payment');
-                this.baseStripeApi = this.getAttribute('baseStripeApi', true);
-                this.urlStripeTracking = this.getAttribute('urlStripeTracking', true);
+                this.baseStripeApi = this.getAttribute('baseStripeApi', true, this.baseStripeApi);
+                this.returnUrl = this.getAttribute('returnUrl', true, this.returnUrl);
                 this.showButtonPay = this.getAttribute('showButtonPay', true, false);
                 this.payButtonCaption = this.getAttribute('payButtonCaption', true, this.i18n.get('$pay'));
                 this.networks = this.getAttribute('networks', true, defaultData_3.default.defaultData.networks);

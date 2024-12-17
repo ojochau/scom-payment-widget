@@ -129,9 +129,11 @@ export class PaymentModule extends Module {
         }
         this.stripePayment.onClose = () => {
             if (this.isModal) this.closeModal();
+            window.location.assign(`${this.model.returnUrl}/${this.model.paymentActivity.orderId || ''}`)
         }
         this.statusPayment.onClose = () => {
             if (this.isModal) this.closeModal();
+            window.location.assign(`${this.model.returnUrl}/${this.model.paymentActivity.orderId || ''}`);
         }
     }
 

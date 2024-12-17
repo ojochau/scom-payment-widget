@@ -1,6 +1,6 @@
 import { Module, Container, customElements, ControlElement, Styles, Button, StackLayout } from '@ijstech/components';
 import { PaymentModule } from './components';
-import { INetworkConfig, IPaymentActivity, IPaymentInfo, IPlaceOrder, ProductType } from './interface';
+import { INetworkConfig, IPaymentActivity, IPaymentInfo, IPlaceOrder, ProductType, IProduct } from './interface';
 import { State } from './store';
 import { ITokenObject } from "@scom/scom-token-list";
 import configData from './defaultData';
@@ -13,7 +13,7 @@ import { Model } from './model';
 import { IWalletPlugin } from '@scom/scom-wallet-modal';
 const Theme = Styles.Theme.ThemeVars;
 
-export { ProductType, IPlaceOrder, IPaymentActivity };
+export { IProduct, ProductType, IPlaceOrder, IPaymentActivity };
 type Mode = 'payment' | 'status';
 interface ScomPaymentWidgetElement extends ControlElement {
 	lazyLoad?: boolean;
@@ -24,7 +24,7 @@ interface ScomPaymentWidgetElement extends ControlElement {
 	showButtonPay?: boolean;
 	payButtonCaption?: string;
 	baseStripeApi?: string;
-	urlStripeTracking?: string;
+	returnUrl?: string;
 	mode?: Mode;
 	placeMarketplaceOrder?: (data: IPlaceOrder) => Promise<void>;
 	onPaymentSuccess?: (data: IPaymentActivity) => Promise<void>;
@@ -104,12 +104,12 @@ export class ScomPaymentWidget extends Module {
 		if (this.statusPaymentTracking) this.statusPaymentTracking.baseStripeApi = value;
 	}
 
-	get urlStripeTracking() {
-		return this.model.urlStripeTracking;
+	get returnUrl() {
+		return this.model.returnUrl;
 	}
 
-	set urlStripeTracking(value: string) {
-		this.model.urlStripeTracking = value;
+	set returnUrl(value: string) {
+		this.model.returnUrl = value;
 	}
 
 	get wallets() {
@@ -257,8 +257,8 @@ export class ScomPaymentWidget extends Module {
 		if (!lazyLoad) {
 			const payment = this.getAttribute('payment', true);
 			this.mode = this.getAttribute('mode', true, 'payment');
-			this.baseStripeApi = this.getAttribute('baseStripeApi', true);
-			this.urlStripeTracking = this.getAttribute('urlStripeTracking', true);
+			this.baseStripeApi = this.getAttribute('baseStripeApi', true, this.baseStripeApi);
+			this.returnUrl = this.getAttribute('returnUrl', true, this.returnUrl);
 			this.showButtonPay = this.getAttribute('showButtonPay', true, false);
 			this.payButtonCaption = this.getAttribute('payButtonCaption', true, this.i18n.get('$pay'));
 			this.networks = this.getAttribute('networks', true, configData.defaultData.networks);

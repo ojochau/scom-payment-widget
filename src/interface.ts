@@ -10,13 +10,24 @@ export enum ProductType {
 export interface IProduct {
   id: string;
   name: string;
+  description?: string;
   price: number | string;
   quantity: number;
-  shippingCost?: number;
+  currency?: string;
   images?: string[];
   productType?: ProductType;
   stallId?: string;
   stallUri?: string;
+  shipping?: IStallShipping[];
+  communityUri?: string;
+}
+
+interface IStallShipping {
+  id: string;
+  name?: string;
+  cost: number;
+  regions?: string[];
+  amountWithOthers?: number;
 }
 
 export interface IPaymentInfo {

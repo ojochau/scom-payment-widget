@@ -28,6 +28,7 @@ export class StripePayment extends Module {
     private stripe: any;
     private stripeElements: any;
     private btnCheckout: Button;
+    private btnBack: Button;
     private header: PaymentHeader;
     private mdAlert: Alert;
     private publishableKey: string;
@@ -49,8 +50,8 @@ export class StripePayment extends Module {
 
     private updateAmount() {
         if (this.model && this.header) {
-            const { title, currency, totalPrice, totalShippingCost } = this.model;
-            this.header.setHeader(title, currency, totalPrice + totalShippingCost);
+            const { title, currency, totalAmount } = this.model;
+            this.header.setHeader(title, currency, totalAmount);
             this.initStripePayment();
         }
     }
@@ -97,23 +98,18 @@ export class StripePayment extends Module {
                 this.showAlert('error', this.i18n.get('$payment_failed'), this.i18n.get('$cannot_get_payment_info'));
                 return;
             };
-            const { urlStripeTracking } = this.model;
             await this.model.handlePlaceMarketplaceOrder();
             this.model.referenceId = clientSecret;
             this.model.networkCode = '';
-            const data = this.model.paymentActivity;
-            const jsonString = JSON.stringify(data);
+            const { returnUrl, paymentActivity } = this.model;
+            const orderId = paymentActivity.orderId;
+            const url = `${returnUrl}/${orderId}`;
+            const jsonString = JSON.stringify(paymentActivity);
             const encodedData = btoa(jsonString);
             const { error } = await this.stripe.confirmPayment({
                 elements: this.stripeElements,
                 confirmParams: {
-                    return_url: `${urlStripeTracking}?data=${encodedData}`,
-                    payment_method_data: {
-                        billing_details: {
-                            name: '',
-                            email: ''
-                        }
-                    }
+                    return_url: `${url}?data=${encodedData}`
                 },
                 clientSecret
             })
@@ -121,7 +117,7 @@ export class StripePayment extends Module {
                 this.showAlert('error', this.i18n.get('$payment_failed'), error.message);
             } else {
                 await this.model.handlePaymentSuccess();
-                this.showAlert('success', this.i18n.get('$payment_completed'), `${this.i18n.get('$check_payment_status')} <a href='${urlStripeTracking}?payment_intent_client_secret=${clientSecret}' target='_blank'>${clientSecret}</a>`);
+                this.showAlert('success', this.i18n.get('$payment_completed'), `${this.i18n.get('$check_payment_status')} <a href='${url}' target='_blank'>${orderId}</a>`);
             }
             this.showButtonIcon(false);
         })
@@ -130,6 +126,7 @@ export class StripePayment extends Module {
     private showButtonIcon(value: boolean) {
         this.btnCheckout.rightIcon.spin = value;
         this.btnCheckout.rightIcon.visible = value;
+        this.btnBack.enabled = !value;
     }
 
     private showAlert(status: string, title: string, msg: string) {
@@ -168,6 +165,7 @@ export class StripePayment extends Module {
                 <i-stack direction="vertical" id="pnlStripePaymentForm" background={{ color: '#fff' }} border={{ radius: 12 }} padding={{ top: '1rem', left: '1rem', bottom: '2rem', right: '1rem' }} />
                 <i-stack direction="horizontal" width="100%" alignItems="center" justifyContent="center" margin={{ top: 'auto' }} gap="1rem" wrap="wrap-reverse">
                     <i-button
+                        id="btnBack"
                         caption="$back"
                         background={{ color: Theme.colors.secondary.main }}
                         class={halfWidthButtonStyle}
