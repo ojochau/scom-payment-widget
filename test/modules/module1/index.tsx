@@ -3,7 +3,6 @@ import { INetwork } from '@ijstech/eth-wallet';
 import { getMulticallInfoList } from '@scom/scom-multicall';
 import getNetworkList from '@scom/scom-network-list';
 import { IPaymentActivity, IPlaceOrder, ProductType, ScomPaymentWidget } from '@scom/scom-payment-widget';
-const Theme = Styles.Theme.ThemeVars;
 
 @customModule
 export default class Module1 extends Module {
@@ -104,7 +103,7 @@ export default class Module1 extends Module {
           placeMarketplaceOrder={this.handlePlaceMarketplaceOrder}
           showButtonPay={true}
           baseStripeApi="http://127.0.0.1:8100/stripe"
-          urlStripeTracking="http://127.0.0.1:8100/#!/stripe-payment-status"
+          returnUrl="http://127.0.0.1:8100/#!/invoice-detail"
         />
         {/* <i-button
           caption="Pay"

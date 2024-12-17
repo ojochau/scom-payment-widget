@@ -8,7 +8,7 @@ declare const window: any;
 export class Model {
 	private _payment: IPaymentInfo = { title: '', products: [] };
 	private _baseStripeApi: string;
-	private _urlStripeTracking: string;
+	private _returnUrl: string;
 	private _wallets: any[] = [];
 	private _networks: INetworkConfig[] = [];
 	private _tokens: ITokenObject[] = [];
@@ -61,7 +61,7 @@ export class Model {
 	}
 
 	get totalShippingCost() {
-		return this.products?.reduce((sum, item) => sum + (Number(item.shippingCost || 0) * item.quantity), 0) || 0;
+		return 0; //TODO shipping cost
 	}
 
 	get totalAmount() {
@@ -96,12 +96,12 @@ export class Model {
 		this._baseStripeApi = value;
 	}
 
-	get urlStripeTracking() {
-		return this._urlStripeTracking ?? `${window.location.origin}/#!/stripe-payment-status`;
+	get returnUrl() {
+		return this._returnUrl ?? `${window.location.origin}/#!/invoice-detail`;
 	}
 
-	set urlStripeTracking(value: string) {
-		this._urlStripeTracking = value;
+	set returnUrl(value: string) {
+		this._returnUrl = value;
 	}
 
 	get wallets() {
