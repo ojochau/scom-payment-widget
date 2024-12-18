@@ -4,7 +4,7 @@ import assets from '../assets';
 import configData from '../defaultData';
 import { ITokenObject, assets as tokenAssets, tokenStore } from '@scom/scom-token-list';
 import { isClientWalletConnected, State, PaymentProviders } from '../store';
-import { Constants, IEventBusRegistry, IRpcWallet, Wallet } from '@ijstech/eth-wallet';
+import { Constants, IEventBusRegistry, IRpcWallet, Utils, Wallet } from '@ijstech/eth-wallet';
 import ScomDappContainer, { DappContainerHeader } from '@scom/scom-dapp-container';
 import { fullWidthButtonStyle, halfWidthButtonStyle } from './index.css';
 import { PaymentHeader } from './common/index';
@@ -428,6 +428,11 @@ export class WalletPayment extends Module {
         this.isToPay = true;
         const tokenImg = isTon ? assets.fullPath('img/ton.png') : tokenAssets.tokenPath(token, token.chainId);
         this.imgToken.url = tokenImg;
+        const tokenAddress = token.address === Utils.nullAddress ? undefined : token.address;
+        this.model.payment.address = this.model.payment.cryptoPayoutOptions.find(option => {
+            if (isTon) return option.cryptoCode === "TON";
+            return option.tokenAddress === tokenAddress
+        })?.walletAddress || "";
         const { totalAmount, currency, walletAddress } = this.model;
         const toAddress = walletAddress;
         this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);

@@ -30,6 +30,14 @@ interface IStallShipping {
   amountWithOthers?: number;
 }
 
+export interface ICryptoPayoutOption {
+  chainId?: string;
+	cryptoCode: string; 
+	networkCode: string; 
+	tokenAddress?: string;
+	walletAddress: string; 
+}
+
 export interface IPaymentInfo {
   title: string;
   products: IProduct[];
@@ -38,6 +46,7 @@ export interface IPaymentInfo {
   currency?: string;
   payload?: string;
   address?: string; //wallet
+  cryptoPayoutOptions?: ICryptoPayoutOption[];
 }
 
 interface IOrderItem {
