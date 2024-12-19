@@ -29,6 +29,13 @@ declare module "@scom/scom-payment-widget/interface.ts" {
         regions?: string[];
         amountWithOthers?: number;
     }
+    export interface ICryptoPayoutOption {
+        chainId?: string;
+        cryptoCode: string;
+        networkCode: string;
+        tokenAddress?: string;
+        walletAddress: string;
+    }
     export interface IPaymentInfo {
         title: string;
         products: IProduct[];
@@ -37,6 +44,7 @@ declare module "@scom/scom-payment-widget/interface.ts" {
         currency?: string;
         payload?: string;
         address?: string;
+        cryptoPayoutOptions?: ICryptoPayoutOption[];
     }
     interface IOrderItem {
         productId: string;
@@ -533,18 +541,26 @@ declare module "@scom/scom-payment-widget/assets.ts" {
 }
 /// <amd-module name="@scom/scom-payment-widget/components/paymentMethod.tsx" />
 declare module "@scom/scom-payment-widget/components/paymentMethod.tsx" {
-    import { Module, Container, ControlElement } from '@ijstech/components';
-    import { PaymentProvider } from "@scom/scom-payment-widget/interface.ts";
+    import { Module, Container, ControlElement, IconName } from '@ijstech/components';
+    import { PaymentProvider, PaymentType } from "@scom/scom-payment-widget/interface.ts";
     import { Model } from "@scom/scom-payment-widget/model.ts";
     interface ScomPaymentWidgetPaymentMethodElement extends ControlElement {
         model?: Model;
         onSelectedPaymentProvider?: (paymentProvider: PaymentProvider) => void;
         onBack?: () => void;
     }
+    interface ScomPaymentWidgetPaymentTypeElement extends ControlElement {
+        type: PaymentType;
+        title: string;
+        description?: string;
+        iconName: IconName;
+        onSelectPaymentType?: (type: PaymentType) => void;
+    }
     global {
         namespace JSX {
             interface IntrinsicElements {
                 ['scom-payment-widget--payment-method']: ScomPaymentWidgetPaymentMethodElement;
+                ['scom-payment-widget--payment-type']: ScomPaymentWidgetPaymentTypeElement;
             }
         }
     }
@@ -552,6 +568,8 @@ declare module "@scom/scom-payment-widget/components/paymentMethod.tsx" {
         private header;
         private lbPayMethod;
         private pnlPaymentType;
+        private pnlFiatPayment;
+        private pnlCryptoPayment;
         private pnlPaymentMethod;
         private pnlMethodItems;
         private mdAlert;
@@ -562,6 +580,7 @@ declare module "@scom/scom-payment-widget/components/paymentMethod.tsx" {
         set model(value: Model);
         constructor(parent?: Container, options?: ScomPaymentWidgetPaymentMethodElement);
         private updateAmount;
+        private getPaymentProviders;
         private renderMethodItems;
         private handlePaymentType;
         private handlePaymentProvider;

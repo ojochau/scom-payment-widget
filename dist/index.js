@@ -970,22 +970,6 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PaymentMethod = void 0;
     const Theme = components_10.Styles.Theme.ThemeVars;
-    const paymentTypes = [
-        {
-            type: interface_3.PaymentType.Fiat,
-            title: '$fiat_currency',
-            // description: 'Stripe, Paypal, Payme,...etc',
-            iconName: 'exchange-alt',
-            // providerImages: ['stripe.png', 'paypal.png']
-        },
-        {
-            type: interface_3.PaymentType.Crypto,
-            title: '$crypto_currency',
-            description: 'Metamask, Ton Wallet,...etc',
-            iconName: 'wallet',
-            providerImages: ['metamask.png', 'ton.png']
-        }
-    ];
     let PaymentMethod = class PaymentMethod extends components_10.Module {
         get model() {
             return this._model;
@@ -1003,9 +987,24 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
                 this.header.setHeader(title, currency, totalAmount);
             }
         }
+        getPaymentProviders(type) {
+            if (type === interface_3.PaymentType.Crypto) {
+                const cryptoOptions = this.model.payment?.cryptoPayoutOptions || [];
+                if (!cryptoOptions.length)
+                    return [];
+                const hasTonWallet = cryptoOptions.find(opt => opt.cryptoCode === "TON") != null;
+                if (!hasTonWallet) {
+                    return store_2.PaymentProviders.filter(v => v.type === type && v.provider !== interface_3.PaymentProvider.TonWallet);
+                }
+                else if (cryptoOptions.length === 1) {
+                    return store_2.PaymentProviders.filter(v => v.provider === interface_3.PaymentProvider.TonWallet);
+                }
+            }
+            return store_2.PaymentProviders.filter(v => v.type === type);
+        }
         renderMethodItems(type) {
             this.lbPayMethod.caption = this.i18n.get(type === interface_3.PaymentType.Fiat ? '$select_payment_gateway' : '$select_your_wallet');
-            const providers = store_2.PaymentProviders.filter(v => v.type === type);
+            const providers = this.getPaymentProviders(type);
             const nodeItems = [];
             for (const item of providers) {
                 nodeItems.push(this.$render("i-stack", { direction: "horizontal", justifyContent: "center", gap: "0.5rem", width: "100%", minHeight: 40, border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, cursor: "pointer", onClick: () => this.handlePaymentProvider(item.provider) },
@@ -1017,20 +1016,13 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
             this.pnlMethodItems.clearInnerHTML();
             this.pnlMethodItems.append(...nodeItems);
         }
-        handlePaymentType(target) {
-            const type = target.id;
+        handlePaymentType(type) {
             if (type === interface_3.PaymentType.Fiat) {
                 this.model.paymentMethod = 'Stripe';
                 this.handlePaymentProvider(interface_3.PaymentProvider.Stripe);
             }
             else if (type) {
-                //TODO
                 this.model.paymentMethod = 'EVM';
-                this.mdAlert.title = this.i18n.get('$coming_soon');
-                this.mdAlert.content = this.i18n.get('$payment_coming_soon');
-                this.mdAlert.status = 'warning';
-                this.mdAlert.showModal();
-                return;
                 this.renderMethodItems(type);
                 this.pnlPaymentType.visible = false;
                 this.pnlPaymentMethod.visible = true;
@@ -1051,10 +1043,13 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
             this.lbPayMethod.caption = this.i18n.get('$how_will_you_pay');
             this.pnlPaymentType.visible = true;
             this.pnlPaymentMethod.visible = false;
+            this.pnlCryptoPayment.visible = this.model.payment?.cryptoPayoutOptions?.length > 0;
         }
         async init() {
             this.i18n.init({ ...translations_json_6.default });
             super.init();
+            this.getPaymentProviders = this.getPaymentProviders.bind(this);
+            this.renderMethodItems = this.renderMethodItems.bind(this);
             this.onBack = this.getAttribute('onBack', true) || this.onBack;
             this.onSelectedPaymentProvider = this.getAttribute('onSelectedPaymentProvider', true) || this.onSelectedPaymentProvider;
             const model = this.getAttribute('model', true);
@@ -1067,14 +1062,9 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
                 this.$render("scom-payment-widget--header", { id: "header", margin: { bottom: '1rem' } }),
                 this.$render("i-stack", { direction: "vertical", gap: "1rem", width: "100%", height: "100%", alignItems: "center", padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' } },
                     this.$render("i-label", { id: "lbPayMethod", caption: "$how_will_you_pay", font: { size: '1rem', bold: true, color: Theme.colors.primary.main } }),
-                    this.$render("i-stack", { id: "pnlPaymentType", direction: "vertical", gap: "1rem", width: "100%", height: "100%", alignItems: "center" }, paymentTypes.map(v => this.$render("i-stack", { id: v.type, direction: "horizontal", alignItems: "center", gap: "1rem", width: "100%", border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, cursor: "pointer", onClick: this.handlePaymentType },
-                        this.$render("i-stack", { direction: "vertical", gap: "0.75rem", width: "calc(100% - 30px)" },
-                            this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", alignItems: "center" },
-                                this.$render("i-icon", { name: v.iconName, width: 20, height: 20, fill: Theme.colors.primary.main }),
-                                this.$render("i-label", { caption: v.title, font: { size: '1rem', bold: true, color: Theme.text.primary } })),
-                            v.description ? this.$render("i-label", { caption: v.description, font: { color: Theme.text.secondary } }) : [],
-                            v.providerImages?.length ? this.$render("i-stack", { direction: "horizontal", gap: "0.25rem" }, v.providerImages.map(image => this.$render("i-image", { width: 20, height: 20, url: assets_1.default.fullPath(`img/${image}`) }))) : []),
-                        this.$render("i-icon", { name: "arrow-right", width: 20, height: 20, fill: Theme.text.primary, margin: { left: 'auto', right: 'auto' } })))),
+                    this.$render("i-stack", { id: "pnlPaymentType", direction: "vertical", gap: "1rem", width: "100%", height: "100%", alignItems: "center" },
+                        this.$render("scom-payment-widget--payment-type", { id: "pnlFiatPayment", width: "100%", type: interface_3.PaymentType.Fiat, title: "$fiat_currency", iconName: "exchange-alt", onSelectPaymentType: this.handlePaymentType }),
+                        this.$render("scom-payment-widget--payment-type", { id: "pnlCryptoPayment", width: "100%", type: interface_3.PaymentType.Crypto, title: "$crypto_currency", iconName: "wallet", visible: false, onSelectPaymentType: this.handlePaymentType })),
                     this.$render("i-stack", { id: "pnlPaymentMethod", visible: false, direction: "vertical", gap: "2rem", justifyContent: "center", alignItems: "center", height: "100%", width: "100%" },
                         this.$render("i-stack", { id: "pnlMethodItems", direction: "vertical", gap: "1rem", width: "100%", height: "100%" })),
                     this.$render("i-button", { caption: "$back", class: index_css_4.fullWidthButtonStyle, background: { color: Theme.colors.secondary.main }, onClick: this.handleBack })),
@@ -1085,6 +1075,42 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
         (0, components_10.customElements)('scom-payment-widget--payment-method')
     ], PaymentMethod);
     exports.PaymentMethod = PaymentMethod;
+    let PaymentTypeModule = class PaymentTypeModule extends components_10.Module {
+        get model() {
+            return this._model;
+        }
+        set model(value) {
+            this._model = value;
+        }
+        handlePaymentType() {
+            if (this.onSelectPaymentType)
+                this.onSelectPaymentType(this.type);
+        }
+        async init() {
+            this.i18n.init({ ...translations_json_6.default });
+            super.init();
+            this.type = this.getAttribute('type', true);
+            this.lblPaymentType.caption = this.getAttribute('title', true, "");
+            this.iconPaymentType.name = this.getAttribute('iconName', true);
+            const description = this.getAttribute('description', true);
+            if (description) {
+                this.lblDescription.caption = description;
+                this.lblDescription.visible = true;
+            }
+        }
+        render() {
+            return (this.$render("i-stack", { direction: "horizontal", alignItems: "center", gap: "1rem", width: "100%", border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, cursor: "pointer", onClick: this.handlePaymentType },
+                this.$render("i-stack", { direction: "vertical", gap: "0.75rem", width: "calc(100% - 30px)" },
+                    this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", alignItems: "center" },
+                        this.$render("i-icon", { id: "iconPaymentType", width: 20, height: 20, fill: Theme.colors.primary.main }),
+                        this.$render("i-label", { id: "lblPaymentType", font: { size: '1rem', bold: true, color: Theme.text.primary } })),
+                    this.$render("i-label", { id: "lblDescription", font: { color: Theme.text.secondary }, visible: false })),
+                this.$render("i-icon", { name: "arrow-right", width: 20, height: 20, fill: Theme.text.primary, margin: { left: 'auto', right: 'auto' } })));
+        }
+    };
+    PaymentTypeModule = __decorate([
+        (0, components_10.customElements)('scom-payment-widget--payment-type')
+    ], PaymentTypeModule);
 });
 define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_11, index_css_5, assets_2, store_3, interface_4, translations_json_7) {
     "use strict";
@@ -1651,6 +1677,12 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             this.isToPay = true;
             const tokenImg = isTon ? assets_3.default.fullPath('img/ton.png') : scom_token_list_1.assets.tokenPath(token, token.chainId);
             this.imgToken.url = tokenImg;
+            const tokenAddress = token.address === eth_wallet_2.Utils.nullAddress ? undefined : token.address;
+            this.model.payment.address = this.model.payment.cryptoPayoutOptions.find(option => {
+                if (isTon)
+                    return option.cryptoCode === "TON";
+                return option.tokenAddress === tokenAddress;
+            })?.walletAddress || "";
             const { totalAmount, currency, walletAddress } = this.model;
             const toAddress = walletAddress;
             this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);
