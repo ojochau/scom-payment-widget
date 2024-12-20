@@ -2,8 +2,17 @@ import { INetworkConfig, IOrder, IPaymentActivity, IPaymentInfo, IPlaceOrder, IS
 import { ITokenObject } from '@scom/scom-token-list';
 import configData from './defaultData';
 import { stripeCurrencies, stripeSpecialCurrencies, stripeZeroDecimalCurrencies } from './store';
-import { IdUtils } from '@ijstech/components';
+import { Component, IdUtils } from '@ijstech/components';
+
 declare const window: any;
+
+export interface IWalletModel {
+	initWallet(): Promise<void>;
+	isWalletConnected(): boolean;
+	connectWallet(modalContainer?: Component): Promise<void>;
+	getWalletAddress(): string;
+	transferToken(to: string, token: ITokenObject, amount: number): Promise<any>;
+}
 
 export class Model {
 	private _payment: IPaymentInfo = { title: '', products: [] };
@@ -23,8 +32,16 @@ export class Model {
 	};
 	public onPaymentSuccess: (data: IPaymentActivity) => Promise<void>;
 	public placeMarketplaceOrder: (data: IPlaceOrder) => Promise<void>;
-
+	private _walletModel: IWalletModel;
 	constructor() { }
+
+	get walletModel() {
+		return this._walletModel;
+	}
+
+	set walletModel(value: IWalletModel) {
+		this._walletModel = value;
+	}
 
 	get title() {
 		return this.payment.title || '';

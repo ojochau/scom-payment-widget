@@ -170,7 +170,7 @@ export class PaymentMethod extends Module {
                         id="pnlCryptoPayment"
                         width="100%"
                         type={PaymentType.Crypto}
-                        title="$crypto_currency"
+                        title="$cryptocurrency"
                         iconName="wallet"
                         visible={false}
                         onSelectPaymentType={this.handlePaymentType}
