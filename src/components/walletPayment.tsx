@@ -1,15 +1,17 @@
-import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, StackLayout, Image, Button, application, Icon, RequireJS } from '@ijstech/components';
+import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, StackLayout, Image, Button, application, Icon, Panel } from '@ijstech/components';
 import { IPaymentStatus, PaymentProvider } from '../interface';
 import assets from '../assets';
 import configData from '../defaultData';
 import { ITokenObject, assets as tokenAssets, tokenStore } from '@scom/scom-token-list';
-import { isClientWalletConnected, State, PaymentProviders } from '../store';
-import { Constants, IEventBusRegistry, IRpcWallet, Utils, Wallet } from '@ijstech/eth-wallet';
+import { State, PaymentProviders } from '../store';
+import { Utils, Wallet } from '@ijstech/eth-wallet';
 import ScomDappContainer, { DappContainerHeader } from '@scom/scom-dapp-container';
 import { fullWidthButtonStyle, halfWidthButtonStyle } from './index.css';
 import { PaymentHeader } from './common/index';
 import translations from '../translations.json';
 import { Model } from '../model';
+import { EVMWallet, TonWallet } from '../wallets';
+
 const path = application.currentModuleDir;
 const Theme = Styles.Theme.ThemeVars;
 
@@ -55,17 +57,14 @@ export class WalletPayment extends Module {
     private _dappContainer: ScomDappContainer;
     private _model: Model;
     private _state: State;
-    private rpcWalletEvents: IEventBusRegistry[] = [];
-    private isWalletInitialized: boolean;
     private isToPay: boolean;
     private copyAddressTimer: any;
     private copyAmountTimer: any;
     private iconCopyAddress: Icon;
     private iconCopyAmount: Icon;
-    private tonConnectUI: any;
-    private tonWeb: any;
-    private isTonWalletConnected: boolean;
     private provider: PaymentProvider;
+    private pnlEVMWallet: Panel;
+    private selectedToken: ITokenObject;
 
     public onBack: () => void;
     public onPaid: (paymentStatus: IPaymentStatus) => void;
@@ -111,20 +110,46 @@ export class WalletPayment extends Module {
         return this.model.networks;
     }
 
-    get rpcWallet(): IRpcWallet {
-        return this.state.getRpcWallet();
-    }
-
     async onStartPayment(provider: PaymentProvider) {
         if (!this.header) return;
         this.provider = provider;
         if (provider === PaymentProvider.Metamask) {
-            await this.initWallet();
-        } else if (provider === PaymentProvider.TonWallet) {
-            this.initTonWallet();
+            const evmWallet = new EVMWallet();
+            this.model.walletModel = evmWallet;
+            evmWallet.on("chainChanged", this.handleEVMWalletChainChanged.bind(this));
+            evmWallet.on("walletConnected", this.handleEVMWalletConnected.bind(this));
+            evmWallet.on("walletUpdated", (data: any) => {
+                this.updateDappContainer(data);
+            });
+            evmWallet.setData({
+                wallets: this.model.wallets,
+                networks: this.model.networks,
+                chainId: configData.defaultData.defaultChainId,
+                defaultChainId: configData.defaultData.defaultChainId
+            })
+            await evmWallet.initWallet();
+        }
+        else if (provider === PaymentProvider.TonWallet) {
+            const moduleDir = this['currentModuleDir'] || path;
+            const tonWallet = new TonWallet(moduleDir, this.handleTonWalletStatusChanged.bind(this));
+            this.model.walletModel = tonWallet;
+            await tonWallet.initWallet();
         }
         this.showFirstScreen();
         this.updateAmount();
+        this.checkWalletStatus();
+    }
+
+    private handleTonWalletStatusChanged(isConnected: boolean) {
+        this.checkWalletStatus();
+    }
+
+    private handleEVMWalletConnected() {
+        this.checkWalletStatus();
+    }
+
+    private handleEVMWalletChainChanged() {
+        this.showFirstScreen();
         this.checkWalletStatus();
     }
 
@@ -136,114 +161,6 @@ export class WalletPayment extends Module {
         this.btnPay.visible = false;
         this.btnBack.width = '100%';
         this.isToPay = false;
-    }
-
-    private removeRpcWalletEvents() {
-        const rpcWallet = this.rpcWallet;
-        for (let event of this.rpcWalletEvents) {
-            rpcWallet.unregisterWalletEvent(event);
-        }
-        this.rpcWalletEvents = [];
-    }
-
-    private async resetRpcWallet() {
-        this.removeRpcWalletEvents();
-        await this.state.initRpcWallet(configData.defaultData.defaultChainId);
-        const rpcWallet = this.rpcWallet;
-        const chainChangedEvent = rpcWallet.registerWalletEvent(this, Constants.RpcWalletEvent.ChainChanged, async (chainId: number) => {
-            this.showFirstScreen();
-            this.checkWalletStatus();
-        });
-        const connectedEvent = rpcWallet.registerWalletEvent(this, Constants.RpcWalletEvent.Connected, async (connected: boolean) => {
-            this.checkWalletStatus();
-        });
-        this.rpcWalletEvents.push(chainChangedEvent, connectedEvent);
-        this.updateDappContainer();
-    }
-
-    private async initWallet() {
-        if (this.isWalletInitialized) return;
-        try {
-            await Wallet.getClientInstance().init();
-            await this.resetRpcWallet();
-            await this.rpcWallet.init();
-            this.isWalletInitialized = true;
-        } catch (err) {
-            console.log(err);
-        }
-    }
-
-    private initTonWallet() {
-        try {
-            if (this.tonConnectUI) return;
-            let UI = window['TON_CONNECT_UI'];
-            this.tonConnectUI = new UI.TonConnectUI({
-                manifestUrl: 'https://ton.noto.fan/tonconnect/manifest.json',
-                buttonRootId: 'btnTonWallet'
-            });
-            this.tonConnectUI.connectionRestored.then(async (restored: boolean) => {
-                this.isTonWalletConnected = this.tonConnectUI.connected;
-                this.checkWalletStatus();
-            });
-            this.tonConnectUI.onStatusChange((walletAndwalletInfo) => {
-                this.isTonWalletConnected = !!walletAndwalletInfo;
-                this.checkWalletStatus();
-            });
-        } catch (err) {
-            console.log(err);
-        }
-    }
-
-    private async connectTonWallet() {
-        try {
-            await this.tonConnectUI.openModal();
-        }
-        catch (err) {
-            console.log(err);
-        }
-    }
-
-    private async loadTonWeb() {
-        if (this.tonWeb) return;
-        const self = this;
-        const moduleDir = this['currentModuleDir'] || path;
-        return new Promise<void>((resolve, reject) => {
-            RequireJS.config({
-                baseUrl: `${moduleDir}/lib`,
-                paths: {
-                    'tonweb': 'tonweb'
-                }
-            })
-            RequireJS.require(['tonweb'], function (TonWeb: any) {
-                // self.tonWeb = new TonWeb(new TonWeb.HttpProvider('https://testnet.toncenter.com/api/v2/jsonRPC'));
-                self.tonWeb = new TonWeb();
-                resolve();
-            });
-        })
-    }
-
-    private async loadTonConnectUI() {
-        if (window['TON_CONNECT_UI']) return;
-        const moduleDir = this['currentModuleDir'] || path;
-        return new Promise<void>((resolve, reject) => {
-            RequireJS.config({
-                baseUrl: `${moduleDir}/lib`,
-                paths: {
-                    'tonconnect-ui': 'tonconnect-ui'
-                }
-            })
-            RequireJS.require(['tonconnect-ui'], function (TonConnectUI: any) {
-                window['TON_CONNECT_UI'] = TonConnectUI;
-                resolve();
-            });
-        })
-    }
-
-    private async loadLib() {
-        const promises: Promise<void>[] = [];
-        promises.push(this.loadTonConnectUI())
-        promises.push(this.loadTonWeb())
-        await Promise.all(promises);
     }
 
     private updateAmount() {
@@ -258,20 +175,15 @@ export class WalletPayment extends Module {
 
     private async checkWalletStatus() {
         const paymentProvider = this.provider;
-        let isConnected: boolean;
-        if (paymentProvider === PaymentProvider.Metamask) {
-            isConnected = isClientWalletConnected();
-        } else if (paymentProvider === PaymentProvider.TonWallet) {
-            isConnected = this.isTonWalletConnected;
-        }
+        let isConnected = this.model.walletModel.isWalletConnected();
         this.pnlWallet.visible = !isConnected;
         const provider = PaymentProviders.find(v => v.provider === paymentProvider);
         if (isConnected) {
+            const address = this.model.walletModel.getWalletAddress();
             if (paymentProvider === PaymentProvider.Metamask) {
-                const wallet = this.state.getRpcWallet();
-                const address = wallet.address;
-                const chainId = wallet.chainId;
-                const network = this.state.getNetworkInfo(chainId);
+                const evmWallet = this.model.walletModel as EVMWallet;
+                const chainId = evmWallet.getRpcWallet()?.chainId;
+                const network = evmWallet.getNetworkInfo(chainId);
                 if (provider) {
                     this.imgCurrentWallet.url = assets.fullPath(`img/${provider.image}`);
                     this.lbCurrentAddress.caption = address.substr(0, 6) + '...' + address.substr(-4);
@@ -281,8 +193,6 @@ export class WalletPayment extends Module {
                 }
                 await this.renderErcTokens(chainId);
             } else if (paymentProvider === PaymentProvider.TonWallet) {
-                const account = this.tonConnectUI.account;
-                const address = account.address;
                 this.pnlNetwork.visible = false;
                 if (provider) {
                     this.imgCurrentWallet.url = assets.fullPath(`img/${provider.image}`);
@@ -317,7 +227,8 @@ export class WalletPayment extends Module {
     private async renderErcTokens(chainId: number) {
         const tokens = this.tokens.filter(v => v.chainId === chainId);
         await this.updateTokenBalances(tokens);
-        const network = this.state.getNetworkInfo(chainId);
+        const evmWallet = this.model.walletModel as EVMWallet;
+        const network = evmWallet.getNetworkInfo(chainId);
         const nodeItems: HTMLElement[] = [];
         for (const token of tokens) {
             const balances = tokenStore.getTokenBalancesByChainId(chainId) || {};
@@ -354,9 +265,9 @@ export class WalletPayment extends Module {
     }
 
     private async getTonBalance() {
-        const account = this.tonConnectUI.account;
-        const balance = await this.tonWeb.getBalance(account.address);
-        return this.tonWeb.utils.fromNano(balance);
+        const tonWallet = this.model.walletModel as TonWallet;
+        const balance = await tonWallet.getTonBalance();
+        return balance.toFixed();
     }
 
     private async renderTonToken() {
@@ -394,23 +305,12 @@ export class WalletPayment extends Module {
         </i-stack>);
     }
 
-    private updateDappContainer() {
-        const containerData = {
-            wallets: this.wallets,
-            networks: this.networks,
-            showHeader: true,
-            rpcWalletId: this.state.getRpcWallet()?.instanceId
-        }
-        this.dappContainer.setData(containerData)
+    private updateDappContainer(data: any) {
+        this.dappContainer.setData(data)
     }
 
     private handleConnectWallet() {
-        if (this.provider === PaymentProvider.Metamask) {
-            const header = this.dappContainer.querySelector('dapp-container-header') as DappContainerHeader;
-            header?.openConnectModal();
-        } else if (this.provider === PaymentProvider.TonWallet) {
-            this.connectTonWallet();
-        }
+        this.model.walletModel.connectWallet(this.pnlEVMWallet);
     }
 
     private handleShowNetworks() {
@@ -441,6 +341,7 @@ export class WalletPayment extends Module {
         this.lbUSD.caption = `${formattedAmount} ${currency || 'USD'}`;
         this.lbUSD.visible = !isTon;
         this.imgPayToken.url = tokenImg;
+        this.selectedToken = token;
     }
 
     private async handleCopyAddress() {
@@ -471,23 +372,23 @@ export class WalletPayment extends Module {
 
     private async handlePay() {
         if (this.onPaid) {
-            let address = '';
+            let address = this.model.walletModel.getWalletAddress();
             if (this.provider === PaymentProvider.Metamask) {
                 const wallet = Wallet.getClientInstance();
-                address = wallet.address;
                 this.model.networkCode = wallet.chainId.toString();
             } else if (this.provider === PaymentProvider.TonWallet) {
-                const account = this.tonConnectUI.account;
-                address = account.address;
                 this.model.networkCode = 'TON';
             }
-            await this.model.handlePlaceMarketplaceOrder();
+
+            console.log(this.model.payment.address, this.selectedToken, this.model.totalAmount);
+            const receipt = await this.model.walletModel.transferToken(this.model.payment.address, this.selectedToken, this.model.totalAmount);
+            // await this.model.handlePlaceMarketplaceOrder();
             // TODO - pay with crypto 
-            const receipt = '0x00000000000000000000000000000';
+            // const receipt = '0x00000000000000000000000000000';
             this.model.referenceId = receipt;
             this.onPaid({ status: 'pending', provider: this.provider, receipt, ownerAddress: address });
             setTimeout(async () => {
-                await this.model.handlePaymentSuccess();
+                // await this.model.handlePaymentSuccess();
                 this.onPaid({ status: 'complete', provider: this.provider, receipt, ownerAddress: address });
             }, 3000)
         }
@@ -504,7 +405,6 @@ export class WalletPayment extends Module {
     async init() {
         this.i18n.init({ ...translations });
         super.init();
-        this.loadLib();
         this.onBack = this.getAttribute('onBack', true) || this.onBack;
         this.onPaid = this.getAttribute('onPaid', true) || this.onPaid;
         const state = this.getAttribute('state', true);
@@ -687,6 +587,7 @@ export class WalletPayment extends Module {
                 </i-stack>
             </i-stack>
             <i-button id="btnTonWallet" visible={false} />
+            <i-panel id="pnlEVMWallet"></i-panel>
         </i-stack>
     }
 }
