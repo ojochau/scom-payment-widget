@@ -85,9 +85,10 @@ export class PaymentModule extends Module {
         if (state) this.state = state;
         if (model) this.model = model;
         this.invoiceCreation.onContinue = () => {
+            const isShippingInfoShown = this.model.isShippingInfoShown;
             this.invoiceCreation.visible = false;
-            this.shippingInfo.visible = this.model.hasPhysicalProduct;
-            this.paymentMethod.visible = !this.model.hasPhysicalProduct;
+            this.shippingInfo.visible = isShippingInfoShown;
+            this.paymentMethod.visible = !isShippingInfoShown;
             this.paymentMethod.updateUI();
         };
         this.shippingInfo.onContinue = () => {
@@ -110,9 +111,10 @@ export class PaymentModule extends Module {
             }
         };
         this.paymentMethod.onBack = () => {
+            const isShippingInfoShown = this.model.isShippingInfoShown;
             this.paymentMethod.visible = false;
-            this.invoiceCreation.visible = !this.model.hasPhysicalProduct;
-            this.shippingInfo.visible = this.model.hasPhysicalProduct;
+            this.invoiceCreation.visible = !isShippingInfoShown;
+            this.shippingInfo.visible = isShippingInfoShown;
         };
         this.walletPayment.onPaid = (paymentStatus: IPaymentStatus) => {
             this.walletPayment.visible = false;
