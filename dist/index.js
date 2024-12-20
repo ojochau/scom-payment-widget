@@ -295,7 +295,8 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "check_stripe_payment_status": "Check Stripe payment status",
             "check": "Check",
             "coming_soon": "Coming Soon!",
-            "payment_coming_soon": "This payment method is coming soon!"
+            "payment_coming_soon": "This payment method is coming soon!",
+            "the_stall_owner_has_not_set_up_payments_yet": "The stall owner has not set up payments yet!",
         },
         "zh-hant": {
             "pay": "付款",
@@ -336,7 +337,8 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "check_stripe_payment_status": "查看 Stripe 付款狀態",
             "check": "檢查",
             "coming_soon": "快來了！",
-            "payment_coming_soon": "這種付款方式即將推出！敬請期待！"
+            "payment_coming_soon": "這種付款方式即將推出！敬請期待！",
+            "the_stall_owner_has_not_set_up_payments_yet": "攤位老闆還沒有設置付款方式！",
         },
         "vi": {
             "pay": "Thanh toán",
@@ -377,7 +379,8 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "check_stripe_payment_status": "Kiểm tra trạng thái thanh toán Stripe",
             "check": "Kiểm tra",
             "coming_soon": "Sắp ra mắt!",
-            "payment_coming_soon": "Phương thức thanh toán này sẽ có sớm!"
+            "payment_coming_soon": "Phương thức thanh toán này sẽ có sớm!",
+            "the_stall_owner_has_not_set_up_payments_yet": "Chủ quầy hàng chưa thiết lập phương thức thanh toán!",
         }
     };
 });
@@ -493,6 +496,18 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
         get walletAddress() {
             return this.payment?.address || '';
         }
+        get cryptoPayoutOptions() {
+            return this.payment?.cryptoPayoutOptions || [];
+        }
+        get stripeAccountId() {
+            return this.payment?.stripeAccountId;
+        }
+        get hasPayment() {
+            return this.cryptoPayoutOptions.length > 0 || !!this.stripeAccountId;
+        }
+        get isShippingInfoShown() {
+            return this.hasPayment && this.hasPhysicalProduct;
+        }
         get baseStripeApi() {
             return this._baseStripeApi ?? '/stripe';
         }
@@ -603,7 +618,8 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
                     },
                     body: JSON.stringify({
                         currency: this.stripeCurrency,
-                        amount: this.stripeAmount
+                        amount: this.stripeAmount,
+                        accountId: this.stripeAccountId
                     })
                 });
                 if (response.ok) {
@@ -1040,10 +1056,12 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
             this.updateUI();
         }
         updateUI() {
-            this.lbPayMethod.caption = this.i18n.get('$how_will_you_pay');
             this.pnlPaymentType.visible = true;
             this.pnlPaymentMethod.visible = false;
-            this.pnlCryptoPayment.visible = this.model.payment?.cryptoPayoutOptions?.length > 0;
+            const { cryptoPayoutOptions, stripeAccountId, hasPayment } = this.model;
+            this.pnlCryptoPayment.visible = cryptoPayoutOptions.length > 0;
+            this.pnlFiatPayment.visible = !!stripeAccountId;
+            this.lbPayMethod.caption = this.i18n.get(hasPayment ? '$how_will_you_pay' : '$the_stall_owner_has_not_set_up_payments_yet');
         }
         async init() {
             this.i18n.init({ ...translations_json_6.default });
@@ -1865,9 +1883,10 @@ define("@scom/scom-payment-widget/components/paymentModule.tsx", ["require", "ex
             if (model)
                 this.model = model;
             this.invoiceCreation.onContinue = () => {
+                const isShippingInfoShown = this.model.isShippingInfoShown;
                 this.invoiceCreation.visible = false;
-                this.shippingInfo.visible = this.model.hasPhysicalProduct;
-                this.paymentMethod.visible = !this.model.hasPhysicalProduct;
+                this.shippingInfo.visible = isShippingInfoShown;
+                this.paymentMethod.visible = !isShippingInfoShown;
                 this.paymentMethod.updateUI();
             };
             this.shippingInfo.onContinue = () => {
@@ -1891,9 +1910,10 @@ define("@scom/scom-payment-widget/components/paymentModule.tsx", ["require", "ex
                 }
             };
             this.paymentMethod.onBack = () => {
+                const isShippingInfoShown = this.model.isShippingInfoShown;
                 this.paymentMethod.visible = false;
-                this.invoiceCreation.visible = !this.model.hasPhysicalProduct;
-                this.shippingInfo.visible = this.model.hasPhysicalProduct;
+                this.invoiceCreation.visible = !isShippingInfoShown;
+                this.shippingInfo.visible = isShippingInfoShown;
             };
             this.walletPayment.onPaid = (paymentStatus) => {
                 this.walletPayment.visible = false;

@@ -133,10 +133,12 @@ export class PaymentMethod extends Module {
     }
 
     updateUI() {
-        this.lbPayMethod.caption = this.i18n.get('$how_will_you_pay');
         this.pnlPaymentType.visible = true;
         this.pnlPaymentMethod.visible = false;
-        this.pnlCryptoPayment.visible = this.model.payment?.cryptoPayoutOptions?.length > 0;
+        const { cryptoPayoutOptions, stripeAccountId, hasPayment } = this.model;
+        this.pnlCryptoPayment.visible = cryptoPayoutOptions.length > 0;
+        this.pnlFiatPayment.visible = !!stripeAccountId;
+        this.lbPayMethod.caption = this.i18n.get(hasPayment ? '$how_will_you_pay' : '$the_stall_owner_has_not_set_up_payments_yet');
     }
 
     async init() {
@@ -207,7 +209,7 @@ class PaymentTypeModule extends Module {
     set model(value: Model) {
         this._model = value;
     }
-    
+
     private handlePaymentType() {
         if (this.onSelectPaymentType) this.onSelectPaymentType(this.type);
     }
@@ -224,7 +226,7 @@ class PaymentTypeModule extends Module {
             this.lblDescription.visible = true;
         }
     }
-    
+
     render() {
         return (
             <i-stack

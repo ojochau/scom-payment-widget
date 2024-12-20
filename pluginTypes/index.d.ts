@@ -45,6 +45,7 @@ declare module "@scom/scom-payment-widget/interface.ts" {
         payload?: string;
         address?: string;
         cryptoPayoutOptions?: ICryptoPayoutOption[];
+        stripeAccountId?: string;
     }
     interface IOrderItem {
         productId: string;
@@ -199,6 +200,7 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             check: string;
             coming_soon: string;
             payment_coming_soon: string;
+            the_stall_owner_has_not_set_up_payments_yet: string;
         };
         "zh-hant": {
             pay: string;
@@ -240,6 +242,7 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             check: string;
             coming_soon: string;
             payment_coming_soon: string;
+            the_stall_owner_has_not_set_up_payments_yet: string;
         };
         vi: {
             pay: string;
@@ -281,6 +284,7 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             check: string;
             coming_soon: string;
             payment_coming_soon: string;
+            the_stall_owner_has_not_set_up_payments_yet: string;
         };
     };
     export default _default;
@@ -343,6 +347,10 @@ declare module "@scom/scom-payment-widget/model.ts" {
         get totalQuantity(): number;
         get hasPhysicalProduct(): boolean;
         get walletAddress(): string;
+        get cryptoPayoutOptions(): import("@scom/scom-payment-widget/interface.ts").ICryptoPayoutOption[];
+        get stripeAccountId(): string;
+        get hasPayment(): boolean;
+        get isShippingInfoShown(): boolean;
         get baseStripeApi(): string;
         set baseStripeApi(value: string);
         get returnUrl(): string;

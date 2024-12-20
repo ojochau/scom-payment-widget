@@ -38,7 +38,8 @@ export default {
     "check_stripe_payment_status": "Check Stripe payment status",
     "check": "Check",
     "coming_soon": "Coming Soon!",
-    "payment_coming_soon": "This payment method is coming soon!"
+    "payment_coming_soon": "This payment method is coming soon!",
+    "the_stall_owner_has_not_set_up_payments_yet": "The stall owner has not set up payments yet!",
   },
   "zh-hant": {
     "pay": "付款",
@@ -79,7 +80,8 @@ export default {
     "check_stripe_payment_status": "查看 Stripe 付款狀態",
     "check": "檢查",
     "coming_soon": "快來了！",
-    "payment_coming_soon": "這種付款方式即將推出！敬請期待！"
+    "payment_coming_soon": "這種付款方式即將推出！敬請期待！",
+    "the_stall_owner_has_not_set_up_payments_yet": "攤位老闆還沒有設置付款方式！",
   },
   "vi": {
     "pay": "Thanh toán",
@@ -120,6 +122,7 @@ export default {
     "check_stripe_payment_status": "Kiểm tra trạng thái thanh toán Stripe",
     "check": "Kiểm tra",
     "coming_soon": "Sắp ra mắt!",
-    "payment_coming_soon": "Phương thức thanh toán này sẽ có sớm!"
+    "payment_coming_soon": "Phương thức thanh toán này sẽ có sớm!",
+    "the_stall_owner_has_not_set_up_payments_yet": "Chủ quầy hàng chưa thiết lập phương thức thanh toán!",
   }
 }

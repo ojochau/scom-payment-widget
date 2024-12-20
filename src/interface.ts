@@ -47,6 +47,7 @@ export interface IPaymentInfo {
   payload?: string;
   address?: string; //wallet
   cryptoPayoutOptions?: ICryptoPayoutOption[];
+  stripeAccountId?: string;
 }
 
 interface IOrderItem {

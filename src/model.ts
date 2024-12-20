@@ -88,6 +88,22 @@ export class Model {
 		return this.payment?.address || '';
 	}
 
+	get cryptoPayoutOptions() {
+		return this.payment?.cryptoPayoutOptions || [];
+	}
+
+	get stripeAccountId() {
+		return this.payment?.stripeAccountId
+	}
+
+	get hasPayment() {
+		return this.cryptoPayoutOptions.length > 0 || !!this.stripeAccountId;
+	}
+
+	get isShippingInfoShown() {
+		return this.hasPayment && this.hasPhysicalProduct;
+	}
+
 	get baseStripeApi() {
 		return this._baseStripeApi ?? '/stripe';
 	}
@@ -219,7 +235,8 @@ export class Model {
 				},
 				body: JSON.stringify({
 					currency: this.stripeCurrency,
-					amount: this.stripeAmount
+					amount: this.stripeAmount,
+					accountId: this.stripeAccountId
 				})
 			});
 			if (response.ok) {
