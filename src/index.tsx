@@ -1,11 +1,9 @@
 import { Module, Container, customElements, ControlElement, Styles, Button, StackLayout } from '@ijstech/components';
 import { PaymentModule } from './components';
 import { INetworkConfig, IPaymentActivity, IPaymentInfo, IPlaceOrder, ProductType, IProduct } from './interface';
-import { State } from './store';
 import { ITokenObject } from "@scom/scom-token-list";
 import configData from './defaultData';
 import { dappContainerStyle } from './index.css';
-import { IRpcWallet } from '@ijstech/eth-wallet';
 import ScomDappContainer from '@scom/scom-dapp-container';
 import { StatusPaymentTracking } from './components/index';
 import translations from './translations.json';
@@ -45,7 +43,6 @@ export class ScomPaymentWidget extends Module {
 	private pnlWrapper: StackLayout;
 	private btnPay: Button;
 	private statusPaymentTracking: StatusPaymentTracking;
-	private state: State;
 	private paymentModule: PaymentModule;
 	private _mode: Mode;
 	private _showButtonPay: boolean;
@@ -136,10 +133,6 @@ export class ScomPaymentWidget extends Module {
 		this.model.tokens = value;
 	}
 
-	get rpcWallet(): IRpcWallet {
-		return this.state.getRpcWallet();
-	}
-
 	private async updateTheme() {
 		const themeVar = this.containerDapp?.theme || 'dark';
 		this.updateStyle('--divider', '#fff');
@@ -172,7 +165,6 @@ export class ScomPaymentWidget extends Module {
 		if (!this.paymentModule) {
 			this.paymentModule = new PaymentModule();
 			this.paymentModule.model = this.model;
-			this.paymentModule.state = this.state;
 			this.paymentModule.dappContainer = this.containerDapp;
 			if (this.isUrl) {
 				this.paymentModule.width = '100%';
@@ -242,9 +234,6 @@ export class ScomPaymentWidget extends Module {
 	}
 
 	async init() {
-		if (!this.state) {
-			this.state = new State(configData);
-		}
 		this.i18n.init({ ...translations });
 		super.init();
 		this.updateTheme();

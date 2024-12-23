@@ -1,5 +1,4 @@
 import { Module, customElements, ControlElement } from '@ijstech/components';
-import { State } from '../store';
 import { IPaymentStatus, PaymentProvider } from '../interface';
 import { InvoiceCreation } from './invoiceCreation';
 import { ShippingInfo } from './shippingInfo';
@@ -13,7 +12,6 @@ import { Model } from '../model';
 
 interface ScomPaymentWidgetPaymentElement extends ControlElement {
     model?: Model;
-    state?: State;
 }
 
 declare global {
@@ -33,7 +31,6 @@ export class PaymentModule extends Module {
     private stripePayment: StripePayment;
     private statusPayment: StatusPayment;
     private _dappContainer: ScomDappContainer;
-    private _state: State;
     private _model: Model;
     private isModal: boolean;
 
@@ -53,14 +50,6 @@ export class PaymentModule extends Module {
         this._dappContainer = container;
     }
 
-    get state() {
-        return this._state;
-    }
-
-    set state(value: State) {
-        this._state = value;
-    }
-
     show(isModal: boolean = true) {
         this.invoiceCreation.model = this.model;
         this.invoiceCreation.visible = true;
@@ -70,19 +59,17 @@ export class PaymentModule extends Module {
         this.paymentMethod.visible = false;
         this.walletPayment.visible = false;
         this.walletPayment.model = this.model;
-        this.walletPayment.state = this.state;
         this.walletPayment.dappContainer = this.dappContainer;
         this.stripePayment.model = this.model;
         this.stripePayment.visible = false;
+        this.statusPayment.model = this.model;
         this.statusPayment.visible = false;
         this.isModal = isModal;
     }
 
     async init() {
         await super.init();
-        const state = this.getAttribute('state', true);
         const model = this.getAttribute('model', true);
-        if (state) this.state = state;
         if (model) this.model = model;
         this.invoiceCreation.onContinue = () => {
             const isShippingInfoShown = this.model.isShippingInfoShown;
@@ -119,7 +106,7 @@ export class PaymentModule extends Module {
         this.walletPayment.onPaid = (paymentStatus: IPaymentStatus) => {
             this.walletPayment.visible = false;
             this.statusPayment.visible = true;
-            this.statusPayment.updateStatus(this.state, paymentStatus);
+            this.statusPayment.updateStatus(paymentStatus);
         }
         this.walletPayment.onBack = () => {
             this.paymentMethod.visible = true;

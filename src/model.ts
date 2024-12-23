@@ -11,7 +11,7 @@ export interface IWalletModel {
 	isWalletConnected(): boolean;
 	connectWallet(modalContainer?: Component): Promise<void>;
 	getWalletAddress(): string;
-	transferToken(to: string, token: ITokenObject, amount: number): Promise<any>;
+	transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<any>;
 }
 
 export class Model {
@@ -213,7 +213,6 @@ export class Model {
 		const { merchantId, stallId } = this.placeOrder;
 		return {
 			id: IdUtils.generateUUID(),
-			sender: '',
 			recipient: merchantId,
 			amount: this.totalAmount.toString(),
 			currencyCode: this.currency,

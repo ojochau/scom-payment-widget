@@ -85,7 +85,6 @@ export interface IPlaceOrder {
 
 export interface IPaymentActivity {
   id: string;
-  sender: string;
   recipient: string;
   amount: string;
   currencyCode: string;

@@ -3,7 +3,7 @@ import { IPaymentStatus, PaymentProvider } from '../interface';
 import assets from '../assets';
 import configData from '../defaultData';
 import { ITokenObject, assets as tokenAssets, tokenStore } from '@scom/scom-token-list';
-import { State, PaymentProviders } from '../store';
+import { PaymentProviders } from '../store';
 import { Utils, Wallet } from '@ijstech/eth-wallet';
 import ScomDappContainer, { DappContainerHeader } from '@scom/scom-dapp-container';
 import { fullWidthButtonStyle, halfWidthButtonStyle } from './index.css';
@@ -56,7 +56,6 @@ export class WalletPayment extends Module {
     private lbCurrentNetwork: Label;
     private _dappContainer: ScomDappContainer;
     private _model: Model;
-    private _state: State;
     private isToPay: boolean;
     private copyAddressTimer: any;
     private copyAmountTimer: any;
@@ -88,14 +87,6 @@ export class WalletPayment extends Module {
     set model(value: Model) {
         this._model = value;
         this.updateAmount();
-    }
-
-    get state() {
-        return this._state;
-    }
-
-    set state(value: State) {
-        this._state = value;
     }
 
     get tokens() {
@@ -375,22 +366,29 @@ export class WalletPayment extends Module {
             let address = this.model.walletModel.getWalletAddress();
             if (this.provider === PaymentProvider.Metamask) {
                 const wallet = Wallet.getClientInstance();
-                this.model.networkCode = wallet.chainId.toString();
+                this.model.networkCode = this.model.cryptoPayoutOptions.find(option => option.chainId === wallet.chainId.toString())?.networkCode;
             } else if (this.provider === PaymentProvider.TonWallet) {
                 this.model.networkCode = 'TON';
             }
 
-            console.log(this.model.payment.address, this.selectedToken, this.model.totalAmount);
-            const receipt = await this.model.walletModel.transferToken(this.model.payment.address, this.selectedToken, this.model.totalAmount);
-            // await this.model.handlePlaceMarketplaceOrder();
-            // TODO - pay with crypto 
-            // const receipt = '0x00000000000000000000000000000';
-            this.model.referenceId = receipt;
-            this.onPaid({ status: 'pending', provider: this.provider, receipt, ownerAddress: address });
-            setTimeout(async () => {
-                // await this.model.handlePaymentSuccess();
-                this.onPaid({ status: 'complete', provider: this.provider, receipt, ownerAddress: address });
-            }, 3000)
+            await this.model.handlePlaceMarketplaceOrder();
+            await this.model.walletModel.transferToken(
+                this.model.payment.address, 
+                this.selectedToken, 
+                this.model.totalAmount,
+                async (error: Error, receipt?: string) => {
+                    if (error) {
+                        this.onPaid({ status: 'failed', provider: this.provider, receipt: '', ownerAddress: address });
+                        return;
+                    }
+                    this.model.referenceId = receipt;
+                    this.onPaid({ status: 'pending', provider: this.provider, receipt, ownerAddress: address });
+                },
+                async (receipt: any) => {
+                    await this.model.handlePaymentSuccess();
+                    this.onPaid({ status: 'complete', provider: this.provider, receipt: receipt.transactionHash, ownerAddress: address });
+                }
+            );
         }
     }
 
@@ -407,10 +405,6 @@ export class WalletPayment extends Module {
         super.init();
         this.onBack = this.getAttribute('onBack', true) || this.onBack;
         this.onPaid = this.getAttribute('onPaid', true) || this.onPaid;
-        const state = this.getAttribute('state', true);
-        if (state) {
-            this.state = state;
-        }
         const model = this.getAttribute('model', true);
         if (model) {
             this.model = model;

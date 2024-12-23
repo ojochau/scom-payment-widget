@@ -1,9 +1,11 @@
 import { Module, Container, customElements, ControlElement, Styles, Label, Button, Image } from '@ijstech/components';
 import { fullWidthButtonStyle, loadingImageStyle, textCenterStyle } from './index.css';
 import assets from '../assets';
-import { PaymentProviders, State } from '../store';
+import { PaymentProviders } from '../store';
 import { IPaymentStatus, PaymentProvider } from '../interface';
 import translations from '../translations.json';
+import { Model } from '../model';
+import { EVMWallet } from '../wallets';
 const Theme = Styles.Theme.ThemeVars;
 
 interface ScomPaymentWidgetStatusPaymentElement extends ControlElement {
@@ -20,7 +22,6 @@ declare global {
 
 @customElements('scom-payment-widget--status-payment')
 export class StatusPayment extends Module {
-    private state: State;
     private receipt: string;
     private status: string;
     private provider: PaymentProvider;
@@ -31,10 +32,19 @@ export class StatusPayment extends Module {
     private lbAddress: Label;
     private imgWallet: Image;
     private btnClose: Button;
+    private _model: Model;
     public onClose: (status: string) => void;
 
     constructor(parent?: Container, options?: ScomPaymentWidgetStatusPaymentElement) {
         super(parent, options);
+    }
+
+    set model(data: Model) {
+        this._model = data;
+    }
+
+    get model() {
+        return this._model;
     }
 
     private getStatusText(status: "pending" | "complete" | "failed") {
@@ -47,8 +57,7 @@ export class StatusPayment extends Module {
         return this.i18n.get('$payment_pending');
     }
 
-    updateStatus(state: State, info: IPaymentStatus) {
-        this.state = state;
+    updateStatus(info: IPaymentStatus) {
         const { status, receipt, provider, ownerAddress } = info;
         this.receipt = receipt;
         this.status = status;
@@ -74,7 +83,9 @@ export class StatusPayment extends Module {
 
     private handleViewTransaction() {
         if (this.provider === PaymentProvider.Metamask) {
-            const network = this.state.getNetworkInfo(this.state.getChainId());
+            const evmWallet = this.model.walletModel as EVMWallet;
+            const chainId = evmWallet.getRpcWallet()?.chainId;
+            const network = evmWallet.getNetworkInfo(chainId);
             if (network && network.explorerTxUrl) {
                 const url = `${network.explorerTxUrl}${this.receipt}`;
                 window.open(url);
