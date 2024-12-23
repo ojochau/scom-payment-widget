@@ -69,7 +69,7 @@ export class PaymentMethod extends Module {
         if (type === PaymentType.Crypto) {
             const cryptoOptions = this.model.payment?.cryptoPayoutOptions || [];
             if (!cryptoOptions.length) return [];
-            const hasTonWallet = cryptoOptions.find(opt => opt.cryptoCode === "TON") != null;
+            const hasTonWallet = cryptoOptions.find(opt => opt.networkCode === "TON") != null;
             if (!hasTonWallet) {
                 return PaymentProviders.filter(v => v.type === type && v.provider !== PaymentProvider.TonWallet);
             } else if (cryptoOptions.length === 1) {
@@ -114,9 +114,10 @@ export class PaymentMethod extends Module {
             this.handlePaymentProvider(PaymentProvider.Stripe);
         } else if (type) {
             this.model.paymentMethod = 'EVM';
-            this.renderMethodItems(type);
-            this.pnlPaymentType.visible = false;
-            this.pnlPaymentMethod.visible = true;
+            this.handlePaymentProvider(PaymentProvider.Metamask);
+            // this.renderMethodItems(type);
+            // this.pnlPaymentType.visible = false;
+            // this.pnlPaymentMethod.visible = true;
         }
     }
 
@@ -172,7 +173,7 @@ export class PaymentMethod extends Module {
                         id="pnlCryptoPayment"
                         width="100%"
                         type={PaymentType.Crypto}
-                        title="$cryptocurrency"
+                        title="$web3_wallet"
                         iconName="wallet"
                         visible={false}
                         onSelectPaymentType={this.handlePaymentType}

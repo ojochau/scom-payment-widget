@@ -208,6 +208,11 @@ export class EVMWallet extends EventEmitter {
         await wallet.switchNetwork(rpcWallet.chainId);
     }
 
+    async disconnectWallet() {
+        const wallet = Wallet.getClientInstance();
+        await wallet.disconnect();
+    }
+
     getNetworkInfo(chainId: number) {
         return this.networkMap[chainId];
     }
@@ -221,8 +226,26 @@ export class EVMWallet extends EventEmitter {
         }
     }
 
-    async transferToken(to: string, token: ITokenObject, amount: number) {
+    async transferToken(
+        to: string, 
+        token: ITokenObject, 
+        amount: number, 
+        callback?: (error: Error, receipt?: string) => Promise<void>,
+        confirmationCallback?: (receipt: any) => Promise<void>
+) {
         const wallet = Wallet.getClientInstance();
+        wallet.registerSendTxEvents({
+            transactionHash: (error: Error, receipt?: string) => {
+                if (callback) {
+                    callback(error, receipt);
+                }
+            },
+            confirmation: (receipt: any) => {
+                if (confirmationCallback) {
+                    confirmationCallback(receipt);
+                }
+            },
+        })
         let receipt: TransactionReceipt;
         if (!token.address) {
             receipt = await wallet.send(to, amount);
@@ -235,6 +258,6 @@ export class EVMWallet extends EventEmitter {
                 amount: Utils.toDecimals(amount, decimals)
             });
         }
-        return receipt;
+        return receipt?.transactionHash;
     }
 }

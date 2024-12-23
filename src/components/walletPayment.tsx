@@ -3,7 +3,7 @@ import { IPaymentStatus, PaymentProvider } from '../interface';
 import assets from '../assets';
 import configData from '../defaultData';
 import { ITokenObject, assets as tokenAssets, tokenStore } from '@scom/scom-token-list';
-import { State, PaymentProviders } from '../store';
+import { PaymentProviders } from '../store';
 import { Utils, Wallet } from '@ijstech/eth-wallet';
 import ScomDappContainer, { DappContainerHeader } from '@scom/scom-dapp-container';
 import { fullWidthButtonStyle, halfWidthButtonStyle } from './index.css';
@@ -48,7 +48,6 @@ export class WalletPayment extends Module {
     private lbUSD: Label;
     private btnBack: Button;
     private btnPay: Button;
-    private imgWallet: Image;
     private lbWallet: Label;
     private imgCurrentWallet: Image;
     private lbCurrentAddress: Label;
@@ -56,7 +55,6 @@ export class WalletPayment extends Module {
     private lbCurrentNetwork: Label;
     private _dappContainer: ScomDappContainer;
     private _model: Model;
-    private _state: State;
     private isToPay: boolean;
     private copyAddressTimer: any;
     private copyAmountTimer: any;
@@ -88,14 +86,6 @@ export class WalletPayment extends Module {
     set model(value: Model) {
         this._model = value;
         this.updateAmount();
-    }
-
-    get state() {
-        return this._state;
-    }
-
-    set state(value: State) {
-        this._state = value;
     }
 
     get tokens() {
@@ -201,8 +191,7 @@ export class WalletPayment extends Module {
                 await this.renderTonToken();
             }
         } else if (provider) {
-            this.imgWallet.url = assets.fullPath(`img/${provider.image}`);
-            this.lbWallet.caption = `Connect to ${provider.provider}`;
+            this.lbWallet.caption = `$connect_web3_wallet`;
         }
         this.pnlTokens.visible = isConnected;
     }
@@ -357,6 +346,10 @@ export class WalletPayment extends Module {
         } catch { }
     }
 
+    private async handleDisconnectWallet() {
+        await this.model.walletModel.disconnectWallet();
+    }
+
     private async handleCopyAmount() {
         try {
             await application.copyToClipboard(this.model.totalAmount.toString());
@@ -375,22 +368,29 @@ export class WalletPayment extends Module {
             let address = this.model.walletModel.getWalletAddress();
             if (this.provider === PaymentProvider.Metamask) {
                 const wallet = Wallet.getClientInstance();
-                this.model.networkCode = wallet.chainId.toString();
+                this.model.networkCode = this.model.cryptoPayoutOptions.find(option => option.chainId === wallet.chainId.toString())?.networkCode;
             } else if (this.provider === PaymentProvider.TonWallet) {
                 this.model.networkCode = 'TON';
             }
 
-            console.log(this.model.payment.address, this.selectedToken, this.model.totalAmount);
-            const receipt = await this.model.walletModel.transferToken(this.model.payment.address, this.selectedToken, this.model.totalAmount);
-            // await this.model.handlePlaceMarketplaceOrder();
-            // TODO - pay with crypto 
-            // const receipt = '0x00000000000000000000000000000';
-            this.model.referenceId = receipt;
-            this.onPaid({ status: 'pending', provider: this.provider, receipt, ownerAddress: address });
-            setTimeout(async () => {
-                // await this.model.handlePaymentSuccess();
-                this.onPaid({ status: 'complete', provider: this.provider, receipt, ownerAddress: address });
-            }, 3000)
+            await this.model.handlePlaceMarketplaceOrder();
+            await this.model.walletModel.transferToken(
+                this.model.payment.address,
+                this.selectedToken,
+                this.model.totalAmount,
+                async (error: Error, receipt?: string) => {
+                    if (error) {
+                        this.onPaid({ status: 'failed', provider: this.provider, receipt: '', ownerAddress: address });
+                        return;
+                    }
+                    this.model.referenceId = receipt;
+                    this.onPaid({ status: 'pending', provider: this.provider, receipt, ownerAddress: address });
+                },
+                async (receipt: any) => {
+                    await this.model.handlePaymentSuccess();
+                    this.onPaid({ status: 'complete', provider: this.provider, receipt: receipt.transactionHash, ownerAddress: address });
+                }
+            );
         }
     }
 
@@ -407,10 +407,6 @@ export class WalletPayment extends Module {
         super.init();
         this.onBack = this.getAttribute('onBack', true) || this.onBack;
         this.onPaid = this.getAttribute('onPaid', true) || this.onPaid;
-        const state = this.getAttribute('state', true);
-        if (state) {
-            this.state = state;
-        }
         const model = this.getAttribute('model', true);
         if (model) {
             this.model = model;
@@ -451,10 +447,10 @@ export class WalletPayment extends Module {
             </i-stack>
             <i-stack direction="vertical" gap="1.5rem" width="100%" height="100%" alignItems="center" padding={{ top: '1rem', bottom: '1rem' }}>
                 <i-stack id="pnlWallet" visible={false} direction="vertical" gap="2rem" width="100%" height="100%" alignItems="center" justifyContent="center" padding={{ left: '1rem', right: '1rem' }}>
-                    <i-image id="imgWallet" width={64} height={64} />
+                    <i-icon name="wallet" width={64} height={64} fill={Theme.colors.primary.main} />
                     <i-label id="lbWallet" font={{ size: '0.825rem', bold: true }} />
                     <i-button
-                        caption="$connect_wallet"
+                        caption="$connect"
                         background={{ color: Theme.colors.primary.main }}
                         class={fullWidthButtonStyle}
                         onClick={this.handleConnectWallet}
@@ -477,6 +473,15 @@ export class WalletPayment extends Module {
                         >
                             <i-image id="imgCurrentWallet" width={24} height={24} minWidth={24} />
                             <i-label id="lbCurrentAddress" />
+                            <i-stack
+                                direction="horizontal"
+                                padding={{ top: '0.25rem', bottom: '0.25rem', left: '0.25rem', right: '0.25rem' }}
+                                gap="0.375rem"
+                                cursor="pointer"
+                                onClick={this.handleDisconnectWallet}
+                            >
+                                <i-icon name="power-off" width={16} height={16}/>
+                            </i-stack>
                         </i-stack>
                         <i-stack
                             id="pnlNetwork"

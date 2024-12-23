@@ -69,6 +69,9 @@ export class TonWallet {
         }
     }
 
+    async disconnectWallet() {
+    }
+
     async sendTransaction(txData: any) {
         return await this.tonConnectUI.sendTransaction(txData);
     }
@@ -102,7 +105,13 @@ export class TonWallet {
         }
     }
 
-    async transferToken(to: string, token: ITokenObject, amount: number) {
+    async transferToken(
+        to: string, 
+        token: ITokenObject, 
+        amount: number, 
+        callback?: (error: Error, receipt?: string) => Promise<void>,
+        confirmationCallback?: (receipt: any) => Promise<void>
+    ) {
         let receipt: any;
         if (!token.address) {
             const transaction = {
