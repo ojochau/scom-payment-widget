@@ -145,6 +145,8 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "quantity": "Quantity",
             "fiat_currency": "Fiat currency",
             "cryptocurrency": "Cryptocurrency",
+            "web3_wallet": "Web3 Wallet",
+            "connect_web3_wallet": "Connect to Web3 Wallet",
             "select_payment_gateway": "Select a payment gateway",
             "select_your_wallet": "Select your wallet",
             "how_will_you_pay": "How will you pay?",
@@ -158,7 +160,7 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "check_payment_status": "Check your payment status here",
             "cannot_get_payment_info": "Cannot get payment info",
             "paid_to_address": "Paid to address",
-            "connect_wallet": "Connect Wallet",
+            "connect": "Connect",
             "payment_received_success": "Success! Payment received.",
             "payment_processing": "Payment processing. We'll update you when payment is received.",
             "something_went_wrong": "Something went wrong!",
@@ -187,6 +189,8 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "quantity": "數量",
             "fiat_currency": "法幣",
             "cryptocurrency": "加密貨幣",
+            "web3_wallet": "Web3 錢包",
+            "connect_web3_wallet": "連接到 Web3 錢包",
             "select_payment_gateway": "選擇支付閘道",
             "select_your_wallet": "選擇你的錢包",
             "how_will_you_pay": "你將如何付款？",
@@ -200,7 +204,7 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "check_payment_status": "在這裡查看您的付款狀態",
             "cannot_get_payment_info": "無法獲取付款信息",
             "paid_to_address": "付款至地址",
-            "connect_wallet": "連接錢包",
+            "connect": "連接",
             "payment_received_success": "成功！付款已收到",
             "payment_processing": "付款處理中。收到付款後，我們會更新狀態",
             "something_went_wrong": "出錯了！",
@@ -229,6 +233,8 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "quantity": "Số lượng",
             "fiat_currency": "Tiền pháp định",
             "cryptocurrency": "Tiền điện tử",
+            "web3_wallet": "Ví Web3",
+            "connect_web3_wallet": "Kết nối với Ví Web3",
             "select_payment_gateway": "Chọn cổng thanh toán",
             "select_your_wallet": "Chọn ví của bạn",
             "how_will_you_pay": "Bạn sẽ thanh toán như thế nào?",
@@ -242,7 +248,7 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "check_payment_status": "Kiểm tra trạng thái thanh toán của bạn tại đây",
             "cannot_get_payment_info": "Không thể lấy thông tin thanh toán",
             "paid_to_address": "Thanh toán đến địa chỉ",
-            "connect_wallet": "Kết nối ví",
+            "connect": "Kết nối",
             "payment_received_success": "Thành công! Đã nhận được thanh toán",
             "payment_processing": "Đang xử lý thanh toán. Chúng tôi sẽ cập nhật cho bạn khi thanh toán được nhận",
             "something_went_wrong": "Đã có lỗi xảy ra!",
@@ -985,9 +991,10 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
             }
             else if (type) {
                 this.model.paymentMethod = 'EVM';
-                this.renderMethodItems(type);
-                this.pnlPaymentType.visible = false;
-                this.pnlPaymentMethod.visible = true;
+                this.handlePaymentProvider(interface_3.PaymentProvider.Metamask);
+                // this.renderMethodItems(type);
+                // this.pnlPaymentType.visible = false;
+                // this.pnlPaymentMethod.visible = true;
             }
         }
         handlePaymentProvider(provider) {
@@ -1028,7 +1035,7 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
                     this.$render("i-label", { id: "lbPayMethod", caption: "$how_will_you_pay", font: { size: '1rem', bold: true, color: Theme.colors.primary.main } }),
                     this.$render("i-stack", { id: "pnlPaymentType", direction: "vertical", gap: "1rem", width: "100%", height: "100%", alignItems: "center" },
                         this.$render("scom-payment-widget--payment-type", { id: "pnlFiatPayment", width: "100%", type: interface_3.PaymentType.Fiat, title: "$fiat_currency", iconName: "exchange-alt", onSelectPaymentType: this.handlePaymentType }),
-                        this.$render("scom-payment-widget--payment-type", { id: "pnlCryptoPayment", width: "100%", type: interface_3.PaymentType.Crypto, title: "$cryptocurrency", iconName: "wallet", visible: false, onSelectPaymentType: this.handlePaymentType })),
+                        this.$render("scom-payment-widget--payment-type", { id: "pnlCryptoPayment", width: "100%", type: interface_3.PaymentType.Crypto, title: "$web3_wallet", iconName: "wallet", visible: false, onSelectPaymentType: this.handlePaymentType })),
                     this.$render("i-stack", { id: "pnlPaymentMethod", visible: false, direction: "vertical", gap: "2rem", justifyContent: "center", alignItems: "center", height: "100%", width: "100%" },
                         this.$render("i-stack", { id: "pnlMethodItems", direction: "vertical", gap: "1rem", width: "100%", height: "100%" })),
                     this.$render("i-button", { caption: "$back", class: index_css_4.fullWidthButtonStyle, background: { color: Theme.colors.secondary.main }, onClick: this.handleBack })),
@@ -1242,6 +1249,10 @@ define("@scom/scom-payment-widget/wallets/evmWallet.ts", ["require", "exports", 
             const wallet = eth_wallet_1.Wallet.getClientInstance();
             await wallet.switchNetwork(rpcWallet.chainId);
         }
+        async disconnectWallet() {
+            const wallet = eth_wallet_1.Wallet.getClientInstance();
+            await wallet.disconnect();
+        }
         getNetworkInfo(chainId) {
             return this.networkMap[chainId];
         }
@@ -1345,6 +1356,8 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
             catch (err) {
                 alert(err);
             }
+        }
+        async disconnectWallet() {
         }
         async sendTransaction(txData) {
             return await this.tonConnectUI.sendTransaction(txData);
@@ -1793,8 +1806,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                 }
             }
             else if (provider) {
-                this.imgWallet.url = assets_3.default.fullPath(`img/${provider.image}`);
-                this.lbWallet.caption = `Connect to ${provider.provider}`;
+                this.lbWallet.caption = `$connect_web3_wallet`;
             }
             this.pnlTokens.visible = isConnected;
         }
@@ -1910,6 +1922,9 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             }
             catch { }
         }
+        async handleDisconnectWallet() {
+            await this.model.walletModel.disconnectWallet();
+        }
         async handleCopyAmount() {
             try {
                 await components_14.application.copyToClipboard(this.model.totalAmount.toString());
@@ -1977,15 +1992,17 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                             this.$render("i-label", { id: "lbPayAmount", font: { size: '1rem', color: Theme.text.primary, bold: true } })))),
                 this.$render("i-stack", { direction: "vertical", gap: "1.5rem", width: "100%", height: "100%", alignItems: "center", padding: { top: '1rem', bottom: '1rem' } },
                     this.$render("i-stack", { id: "pnlWallet", visible: false, direction: "vertical", gap: "2rem", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", padding: { left: '1rem', right: '1rem' } },
-                        this.$render("i-image", { id: "imgWallet", width: 64, height: 64 }),
+                        this.$render("i-icon", { name: "wallet", width: 64, height: 64, fill: Theme.colors.primary.main }),
                         this.$render("i-label", { id: "lbWallet", font: { size: '0.825rem', bold: true } }),
-                        this.$render("i-button", { caption: "$connect_wallet", background: { color: Theme.colors.primary.main }, class: index_css_7.fullWidthButtonStyle, onClick: this.handleConnectWallet }),
+                        this.$render("i-button", { caption: "$connect", background: { color: Theme.colors.primary.main }, class: index_css_7.fullWidthButtonStyle, onClick: this.handleConnectWallet }),
                         this.$render("i-button", { caption: "$back", background: { color: Theme.colors.secondary.main }, class: index_css_7.fullWidthButtonStyle, onClick: this.handleBack })),
                     this.$render("i-stack", { id: "pnlTokens", visible: false, direction: "vertical", gap: "1rem", justifyContent: "center", alignItems: "center", height: "100%", width: "100%" },
                         this.$render("i-stack", { direction: "horizontal", justifyContent: "space-between", alignItems: "center", gap: "1rem", width: "100%", wrap: "wrap", margin: { bottom: '0.5rem' }, padding: { left: '1rem', right: '1rem' } },
                             this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", alignItems: "center", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }, border: { style: 'solid', width: 1, color: Theme.divider, radius: 8 } },
                                 this.$render("i-image", { id: "imgCurrentWallet", width: 24, height: 24, minWidth: 24 }),
-                                this.$render("i-label", { id: "lbCurrentAddress" })),
+                                this.$render("i-label", { id: "lbCurrentAddress" }),
+                                this.$render("i-stack", { direction: "horizontal", padding: { top: '0.25rem', bottom: '0.25rem', left: '0.25rem', right: '0.25rem' }, gap: "0.375rem", cursor: "pointer", onClick: this.handleDisconnectWallet },
+                                    this.$render("i-icon", { name: "power-off", width: 16, height: 16 }))),
                             this.$render("i-stack", { id: "pnlNetwork", direction: "horizontal", gap: "0.5rem", alignItems: "center", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }, border: { style: 'solid', width: 1, color: Theme.divider, radius: 8 }, cursor: "pointer", width: "fit-content", onClick: this.handleShowNetworks },
                                 this.$render("i-image", { id: "imgCurrentNetwork", width: 24, height: 24, minWidth: 24 }),
                                 this.$render("i-label", { id: "lbCurrentNetwork" }))),

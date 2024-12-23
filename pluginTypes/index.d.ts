@@ -144,6 +144,8 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             quantity: string;
             fiat_currency: string;
             cryptocurrency: string;
+            web3_wallet: string;
+            connect_web3_wallet: string;
             select_payment_gateway: string;
             select_your_wallet: string;
             how_will_you_pay: string;
@@ -157,7 +159,7 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             check_payment_status: string;
             cannot_get_payment_info: string;
             paid_to_address: string;
-            connect_wallet: string;
+            connect: string;
             payment_received_success: string;
             payment_processing: string;
             something_went_wrong: string;
@@ -186,6 +188,8 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             quantity: string;
             fiat_currency: string;
             cryptocurrency: string;
+            web3_wallet: string;
+            connect_web3_wallet: string;
             select_payment_gateway: string;
             select_your_wallet: string;
             how_will_you_pay: string;
@@ -199,7 +203,7 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             check_payment_status: string;
             cannot_get_payment_info: string;
             paid_to_address: string;
-            connect_wallet: string;
+            connect: string;
             payment_received_success: string;
             payment_processing: string;
             something_went_wrong: string;
@@ -228,6 +232,8 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             quantity: string;
             fiat_currency: string;
             cryptocurrency: string;
+            web3_wallet: string;
+            connect_web3_wallet: string;
             select_payment_gateway: string;
             select_your_wallet: string;
             how_will_you_pay: string;
@@ -241,7 +247,7 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             check_payment_status: string;
             cannot_get_payment_info: string;
             paid_to_address: string;
-            connect_wallet: string;
+            connect: string;
             payment_received_success: string;
             payment_processing: string;
             something_went_wrong: string;
@@ -303,6 +309,7 @@ declare module "@scom/scom-payment-widget/model.ts" {
         initWallet(): Promise<void>;
         isWalletConnected(): boolean;
         connectWallet(modalContainer?: Component): Promise<void>;
+        disconnectWallet(): Promise<void>;
         getWalletAddress(): string;
         transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<any>;
     }
@@ -646,6 +653,7 @@ declare module "@scom/scom-payment-widget/wallets/evmWallet.ts" {
         isWalletConnected(): boolean;
         isNetworkConnected(): boolean;
         switchNetwork(): Promise<void>;
+        disconnectWallet(): Promise<void>;
         getNetworkInfo(chainId: number): IExtendedNetwork;
         viewExplorerByAddress(address: string): void;
         transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<string>;
@@ -664,6 +672,7 @@ declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
         loadLib(moduleDir: string): Promise<unknown>;
         initWallet(): Promise<void>;
         connectWallet(): Promise<void>;
+        disconnectWallet(): Promise<void>;
         sendTransaction(txData: any): Promise<any>;
         constructPayloadForTokenTransfer(to: string, token: ITokenObject, amount: number): any;
         getWalletAddress(): any;
@@ -796,7 +805,6 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private lbUSD;
         private btnBack;
         private btnPay;
-        private imgWallet;
         private lbWallet;
         private imgCurrentWallet;
         private lbCurrentAddress;
@@ -838,6 +846,7 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private handleShowNetworks;
         private handleSelectToken;
         private handleCopyAddress;
+        private handleDisconnectWallet;
         private handleCopyAmount;
         private handlePay;
         private handleBack;

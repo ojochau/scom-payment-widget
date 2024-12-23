@@ -114,9 +114,10 @@ export class PaymentMethod extends Module {
             this.handlePaymentProvider(PaymentProvider.Stripe);
         } else if (type) {
             this.model.paymentMethod = 'EVM';
-            this.renderMethodItems(type);
-            this.pnlPaymentType.visible = false;
-            this.pnlPaymentMethod.visible = true;
+            this.handlePaymentProvider(PaymentProvider.Metamask);
+            // this.renderMethodItems(type);
+            // this.pnlPaymentType.visible = false;
+            // this.pnlPaymentMethod.visible = true;
         }
     }
 
@@ -172,7 +173,7 @@ export class PaymentMethod extends Module {
                         id="pnlCryptoPayment"
                         width="100%"
                         type={PaymentType.Crypto}
-                        title="$cryptocurrency"
+                        title="$web3_wallet"
                         iconName="wallet"
                         visible={false}
                         onSelectPaymentType={this.handlePaymentType}

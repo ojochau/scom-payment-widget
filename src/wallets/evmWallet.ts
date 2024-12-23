@@ -208,6 +208,11 @@ export class EVMWallet extends EventEmitter {
         await wallet.switchNetwork(rpcWallet.chainId);
     }
 
+    async disconnectWallet() {
+        const wallet = Wallet.getClientInstance();
+        await wallet.disconnect();
+    }
+
     getNetworkInfo(chainId: number) {
         return this.networkMap[chainId];
     }

@@ -10,6 +10,7 @@ export interface IWalletModel {
 	initWallet(): Promise<void>;
 	isWalletConnected(): boolean;
 	connectWallet(modalContainer?: Component): Promise<void>;
+	disconnectWallet(): Promise<void>;
 	getWalletAddress(): string;
 	transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<any>;
 }

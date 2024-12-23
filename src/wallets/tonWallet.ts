@@ -69,6 +69,9 @@ export class TonWallet {
         }
     }
 
+    async disconnectWallet() {
+    }
+
     async sendTransaction(txData: any) {
         return await this.tonConnectUI.sendTransaction(txData);
     }

@@ -48,7 +48,6 @@ export class WalletPayment extends Module {
     private lbUSD: Label;
     private btnBack: Button;
     private btnPay: Button;
-    private imgWallet: Image;
     private lbWallet: Label;
     private imgCurrentWallet: Image;
     private lbCurrentAddress: Label;
@@ -192,8 +191,7 @@ export class WalletPayment extends Module {
                 await this.renderTonToken();
             }
         } else if (provider) {
-            this.imgWallet.url = assets.fullPath(`img/${provider.image}`);
-            this.lbWallet.caption = `Connect to ${provider.provider}`;
+            this.lbWallet.caption = `$connect_web3_wallet`;
         }
         this.pnlTokens.visible = isConnected;
     }
@@ -348,6 +346,10 @@ export class WalletPayment extends Module {
         } catch { }
     }
 
+    private async handleDisconnectWallet() {
+        await this.model.walletModel.disconnectWallet();
+    }
+
     private async handleCopyAmount() {
         try {
             await application.copyToClipboard(this.model.totalAmount.toString());
@@ -373,8 +375,8 @@ export class WalletPayment extends Module {
 
             await this.model.handlePlaceMarketplaceOrder();
             await this.model.walletModel.transferToken(
-                this.model.payment.address, 
-                this.selectedToken, 
+                this.model.payment.address,
+                this.selectedToken,
                 this.model.totalAmount,
                 async (error: Error, receipt?: string) => {
                     if (error) {
@@ -445,10 +447,10 @@ export class WalletPayment extends Module {
             </i-stack>
             <i-stack direction="vertical" gap="1.5rem" width="100%" height="100%" alignItems="center" padding={{ top: '1rem', bottom: '1rem' }}>
                 <i-stack id="pnlWallet" visible={false} direction="vertical" gap="2rem" width="100%" height="100%" alignItems="center" justifyContent="center" padding={{ left: '1rem', right: '1rem' }}>
-                    <i-image id="imgWallet" width={64} height={64} />
+                    <i-icon name="wallet" width={64} height={64} fill={Theme.colors.primary.main} />
                     <i-label id="lbWallet" font={{ size: '0.825rem', bold: true }} />
                     <i-button
-                        caption="$connect_wallet"
+                        caption="$connect"
                         background={{ color: Theme.colors.primary.main }}
                         class={fullWidthButtonStyle}
                         onClick={this.handleConnectWallet}
@@ -471,6 +473,15 @@ export class WalletPayment extends Module {
                         >
                             <i-image id="imgCurrentWallet" width={24} height={24} minWidth={24} />
                             <i-label id="lbCurrentAddress" />
+                            <i-stack
+                                direction="horizontal"
+                                padding={{ top: '0.25rem', bottom: '0.25rem', left: '0.25rem', right: '0.25rem' }}
+                                gap="0.375rem"
+                                cursor="pointer"
+                                onClick={this.handleDisconnectWallet}
+                            >
+                                <i-icon name="power-off" width={16} height={16}/>
+                            </i-stack>
                         </i-stack>
                         <i-stack
                             id="pnlNetwork"
