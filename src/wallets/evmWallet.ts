@@ -1,4 +1,5 @@
 import ScomWalletModal from "@scom/scom-wallet-modal";
+import ScomNetworkMoal from "@scom/scom-network-modal";
 import {
     application,
     Component
@@ -46,12 +47,12 @@ class EventEmitter {
 
 export class EVMWallet extends EventEmitter {
     private mdEVMWallet: ScomWalletModal;
+    private mdNetwork: ScomNetworkMoal;
     private _wallets: IWalletPlugin[];
     private _networks: INetworkConfig[];
     private rpcWalletEvents: IEventBusRegistry[] = [];
     private rpcWalletId: string = '';
     private defaultChainId: number;
-    private _chainId: number;
     private defaultWallets: IWalletPlugin[] = [
         {
             "name": "metamask"
@@ -92,11 +93,10 @@ export class EVMWallet extends EventEmitter {
         }, {});
     }
 
-    setData(data: {wallets: IWalletPlugin[], networks: INetworkConfig[], chainId: number, defaultChainId: number}) {
-        const { wallets, networks, chainId, defaultChainId } = data;
+    setData(data: {wallets: IWalletPlugin[], networks: INetworkConfig[], defaultChainId: number}) {
+        const { wallets, networks, defaultChainId } = data;
         this.wallets = wallets;
         this.networks = networks;
-        this._chainId = chainId;
         this.defaultChainId = defaultChainId || 0;
     }
 
@@ -141,7 +141,7 @@ export class EVMWallet extends EventEmitter {
 
     async resetRpcWallet() {
         this.removeRpcWalletEvents();
-        this.initRpcWallet(this._chainId || this.defaultChainId);
+        this.initRpcWallet(this.defaultChainId);
         const rpcWallet = this.getRpcWallet();
         const chainChangedEvent = rpcWallet.registerWalletEvent(this, Constants.RpcWalletEvent.ChainChanged, async (chainId: number) => {
             this.emit("chainChanged");
@@ -150,24 +150,6 @@ export class EVMWallet extends EventEmitter {
             this.emit("walletConnected");
         });
         this.rpcWalletEvents.push(chainChangedEvent, connectedEvent);
-        const dappContainerData = this.getDappContainerData();
-        this.emit("walletUpdated", dappContainerData);
-    }
-
-    private getDappContainerData = () => {
-        const rpcWallet = this.getRpcWallet();
-        const containerData = {
-            wallets: this.wallets,
-            networks: this.networks,
-            showHeader: true,
-            rpcWalletId: rpcWallet.instanceId
-        }
-        return containerData;
-    }
-
-    updateDappContainerData() {
-        const dappContainerData = this.getDappContainerData();
-        this.emit("walletUpdated", dappContainerData);
     }
 
     getWalletAddress() {
@@ -192,6 +174,22 @@ export class EVMWallet extends EventEmitter {
         this.mdEVMWallet.showModal();
     }
 
+    async openNetworkModal(modalContainer: Component) {
+        if (!this.mdNetwork) {
+            await application.loadPackage('@scom/scom-network-modal', '*');
+            this.mdNetwork = new ScomNetworkMoal(undefined, {
+                networks: this.networks,
+                rpcWalletId: this.rpcWalletId,
+                switchNetworkOnSelect: true
+            });
+            modalContainer.append(this.mdNetwork);
+        }
+        await this.mdNetwork.setData({
+            selectedChainId: this.getRpcWallet()?.chainId
+        })
+        this.mdNetwork.showModal();
+    }
+
     isWalletConnected() {
         const wallet = Wallet.getClientInstance();
         return wallet.isConnected;
@@ -213,7 +211,10 @@ export class EVMWallet extends EventEmitter {
         await wallet.disconnect();
     }
 
-    getNetworkInfo(chainId: number) {
+    getNetworkInfo(chainId?: number) {
+        if (!chainId) {
+            chainId = this.getRpcWallet()?.chainId;
+        }
         return this.networkMap[chainId];
     }
 
@@ -222,6 +223,15 @@ export class EVMWallet extends EventEmitter {
         let network = this.getNetworkInfo(rpcWallet.chainId);
         if (network && network.explorerAddressUrl) {
             let url = `${network.explorerAddressUrl}${address}`;
+            window.open(url);
+        }
+    }
+
+    viewExplorerByTransactionHash(hash: string) {
+        const rpcWallet = this.getRpcWallet();
+        let network = this.getNetworkInfo(rpcWallet.chainId);
+        if (network && network.explorerTxUrl) {
+            let url = `${network.explorerTxUrl}${hash}`;
             window.open(url);
         }
     }

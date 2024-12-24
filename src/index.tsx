@@ -3,8 +3,6 @@ import { PaymentModule } from './components';
 import { INetworkConfig, IPaymentActivity, IPaymentInfo, IPlaceOrder, ProductType, IProduct } from './interface';
 import { ITokenObject } from "@scom/scom-token-list";
 import configData from './defaultData';
-import { dappContainerStyle } from './index.css';
-import ScomDappContainer from '@scom/scom-dapp-container';
 import { StatusPaymentTracking } from './components/index';
 import translations from './translations.json';
 import { Model } from './model';
@@ -39,7 +37,6 @@ declare global {
 @customElements('i-scom-payment-widget')
 export class ScomPaymentWidget extends Module {
 	private model: Model;
-	private containerDapp: ScomDappContainer;
 	private pnlWrapper: StackLayout;
 	private btnPay: Button;
 	private statusPaymentTracking: StatusPaymentTracking;
@@ -133,28 +130,6 @@ export class ScomPaymentWidget extends Module {
 		this.model.tokens = value;
 	}
 
-	private async updateTheme() {
-		const themeVar = this.containerDapp?.theme || 'dark';
-		this.updateStyle('--divider', '#fff');
-		const theme = {
-			[themeVar]: {
-				inputFontColor: '#fff',
-				secondaryColor: '#444444',
-				modalColor: '#000'
-			}
-		};
-		await this.containerDapp.ready();
-		this.containerDapp.setTag(theme);
-	}
-
-	private updateStyle(name: string, value: any) {
-		if (value) {
-			this.style.setProperty(name, value);
-		} else {
-			this.style.removeProperty(name);
-		}
-	}
-
 	onStartPayment(payment?: IPaymentInfo) {
 		this.initModel();
 		if (payment) this.payment = payment;
@@ -165,7 +140,6 @@ export class ScomPaymentWidget extends Module {
 		if (!this.paymentModule) {
 			this.paymentModule = new PaymentModule();
 			this.paymentModule.model = this.model;
-			this.paymentModule.dappContainer = this.containerDapp;
 			if (this.isUrl) {
 				this.paymentModule.width = '100%';
 				this.paymentModule.maxWidth = 480;
@@ -236,7 +210,6 @@ export class ScomPaymentWidget extends Module {
 	async init() {
 		this.i18n.init({ ...translations });
 		super.init();
-		this.updateTheme();
 		this.openPaymentModal = this.openPaymentModal.bind(this);
 		this.placeMarketplaceOrder = this.getAttribute('placeMarketplaceOrder', true) || this.placeMarketplaceOrder;
 		this.onPaymentSuccess = this.getAttribute('onPaymentSuccess', true) || this.onPaymentSuccess;
@@ -263,7 +236,7 @@ export class ScomPaymentWidget extends Module {
 	}
 
 	render() {
-		return <i-scom-dapp-container id="containerDapp" showHeader={true} showFooter={false} class={dappContainerStyle}>
+		return <i-panel width='100%'>
 			<i-stack
 				id="pnlWrapper"
 				direction="vertical"
@@ -287,6 +260,6 @@ export class ScomPaymentWidget extends Module {
 				/>
 				<scom-payment-widget--stripe-payment-tracking id="statusPaymentTracking" visible={false} width="100%" height="100%" />
 			</i-stack>
-		</i-scom-dapp-container>
+		</i-panel>
 	}
 }

@@ -1,5 +1,5 @@
 /// <reference path="@ijstech/eth-wallet/index.d.ts" />
-/// <reference path="@scom/scom-dapp-container/@ijstech/eth-wallet/index.d.ts" />
+/// <reference path="@scom/scom-network-modal/@ijstech/eth-wallet/index.d.ts" />
 /// <amd-module name="@scom/scom-payment-widget/interface.ts" />
 declare module "@scom/scom-payment-widget/interface.ts" {
     export enum ProductType {
@@ -311,6 +311,7 @@ declare module "@scom/scom-payment-widget/model.ts" {
         connectWallet(modalContainer?: Component): Promise<void>;
         disconnectWallet(): Promise<void>;
         getWalletAddress(): string;
+        viewExplorerByTransactionHash(hash: string): void;
         transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<any>;
     }
     export class Model {
@@ -622,12 +623,12 @@ declare module "@scom/scom-payment-widget/wallets/evmWallet.ts" {
     }
     export class EVMWallet extends EventEmitter {
         private mdEVMWallet;
+        private mdNetwork;
         private _wallets;
         private _networks;
         private rpcWalletEvents;
         private rpcWalletId;
         private defaultChainId;
-        private _chainId;
         private defaultWallets;
         private networkMap;
         get wallets(): IWalletPlugin[];
@@ -638,24 +639,23 @@ declare module "@scom/scom-payment-widget/wallets/evmWallet.ts" {
         setData(data: {
             wallets: IWalletPlugin[];
             networks: INetworkConfig[];
-            chainId: number;
             defaultChainId: number;
         }): void;
         initWallet(): Promise<void>;
         private removeRpcWalletEvents;
         private initRpcWallet;
         resetRpcWallet(): Promise<void>;
-        private getDappContainerData;
-        updateDappContainerData(): void;
         getWalletAddress(): string;
         getRpcWallet(): import("@ijstech/eth-wallet").IRpcWallet;
         connectWallet(modalContainer: Component): Promise<void>;
+        openNetworkModal(modalContainer: Component): Promise<void>;
         isWalletConnected(): boolean;
         isNetworkConnected(): boolean;
         switchNetwork(): Promise<void>;
         disconnectWallet(): Promise<void>;
-        getNetworkInfo(chainId: number): IExtendedNetwork;
+        getNetworkInfo(chainId?: number): IExtendedNetwork;
         viewExplorerByAddress(address: string): void;
+        viewExplorerByTransactionHash(hash: string): void;
         transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<string>;
     }
 }
@@ -676,6 +676,7 @@ declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
         sendTransaction(txData: any): Promise<any>;
         constructPayloadForTokenTransfer(to: string, token: ITokenObject, amount: number): any;
         getWalletAddress(): any;
+        viewExplorerByTransactionHash(hash: string): void;
         getTonBalance(): Promise<import("@ijstech/eth-wallet").BigNumber>;
         transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<any>;
     }
@@ -773,7 +774,6 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
     import { Module, Container, ControlElement } from '@ijstech/components';
     import { IPaymentStatus, PaymentProvider } from "@scom/scom-payment-widget/interface.ts";
     import { ITokenObject } from '@scom/scom-token-list';
-    import ScomDappContainer from '@scom/scom-dapp-container';
     import { Model } from "@scom/scom-payment-widget/model.ts";
     interface ScomPaymentWidgetWalletPaymentElement extends ControlElement {
         model?: Model;
@@ -810,7 +810,6 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private lbCurrentAddress;
         private imgCurrentNetwork;
         private lbCurrentNetwork;
-        private _dappContainer;
         private _model;
         private isToPay;
         private copyAddressTimer;
@@ -823,8 +822,6 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         onBack: () => void;
         onPaid: (paymentStatus: IPaymentStatus) => void;
         constructor(parent?: Container, options?: ScomPaymentWidgetWalletPaymentElement);
-        get dappContainer(): ScomDappContainer;
-        set dappContainer(container: ScomDappContainer);
         get model(): Model;
         set model(value: Model);
         get tokens(): ITokenObject[];
@@ -837,11 +834,8 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private showFirstScreen;
         private updateAmount;
         private checkWalletStatus;
-        private updateTokenBalances;
         private renderErcTokens;
-        private getTonBalance;
         private renderTonToken;
-        private updateDappContainer;
         private handleConnectWallet;
         private handleShowNetworks;
         private handleSelectToken;
@@ -857,7 +851,6 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
 /// <amd-module name="@scom/scom-payment-widget/components/paymentModule.tsx" />
 declare module "@scom/scom-payment-widget/components/paymentModule.tsx" {
     import { Module, ControlElement } from '@ijstech/components';
-    import ScomDappContainer from '@scom/scom-dapp-container';
     import { Model } from "@scom/scom-payment-widget/model.ts";
     interface ScomPaymentWidgetPaymentElement extends ControlElement {
         model?: Model;
@@ -876,13 +869,10 @@ declare module "@scom/scom-payment-widget/components/paymentModule.tsx" {
         private walletPayment;
         private stripePayment;
         private statusPayment;
-        private _dappContainer;
         private _model;
         private isModal;
         get model(): Model;
         set model(value: Model);
-        get dappContainer(): ScomDappContainer;
-        set dappContainer(container: ScomDappContainer);
         show(isModal?: boolean): void;
         init(): Promise<void>;
         render(): any;
@@ -933,10 +923,6 @@ declare module "@scom/scom-payment-widget/components/index.ts" {
     import { StatusPaymentTracking } from "@scom/scom-payment-widget/components/stripePaymentTracking.tsx";
     export { PaymentModule, ShippingInfo, InvoiceCreation, PaymentMethod, WalletPayment, StripePayment, StatusPaymentTracking, StatusPayment };
 }
-/// <amd-module name="@scom/scom-payment-widget/index.css.ts" />
-declare module "@scom/scom-payment-widget/index.css.ts" {
-    export const dappContainerStyle: string;
-}
 /// <amd-module name="@scom/scom-payment-widget" />
 declare module "@scom/scom-payment-widget" {
     import { Module, Container, ControlElement } from '@ijstech/components';
@@ -968,7 +954,6 @@ declare module "@scom/scom-payment-widget" {
     }
     export class ScomPaymentWidget extends Module {
         private model;
-        private containerDapp;
         private pnlWrapper;
         private btnPay;
         private statusPaymentTracking;
@@ -998,8 +983,6 @@ declare module "@scom/scom-payment-widget" {
         set networks(value: INetworkConfig[]);
         get tokens(): ITokenObject[];
         set tokens(value: ITokenObject[]);
-        private updateTheme;
-        private updateStyle;
         onStartPayment(payment?: IPaymentInfo): void;
         private openPaymentModal;
         private handlePay;

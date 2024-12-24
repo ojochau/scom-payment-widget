@@ -82,17 +82,7 @@ export class StatusPayment extends Module {
     }
 
     private handleViewTransaction() {
-        if (this.provider === PaymentProvider.Metamask) {
-            const evmWallet = this.model.walletModel as EVMWallet;
-            const chainId = evmWallet.getRpcWallet()?.chainId;
-            const network = evmWallet.getNetworkInfo(chainId);
-            if (network && network.explorerTxUrl) {
-                const url = `${network.explorerTxUrl}${this.receipt}`;
-                window.open(url);
-            }
-        } else if (this.provider === PaymentProvider.TonWallet) {
-            window.open(`https://tonscan.org/transaction/${this.receipt}`);
-        }
+        this.model.walletModel.viewExplorerByTransactionHash(this.receipt);
     }
 
     private handleClose() {

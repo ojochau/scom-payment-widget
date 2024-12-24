@@ -5,7 +5,6 @@ import configData from '../defaultData';
 import { ITokenObject, assets as tokenAssets, tokenStore } from '@scom/scom-token-list';
 import { PaymentProviders } from '../store';
 import { Utils, Wallet } from '@ijstech/eth-wallet';
-import ScomDappContainer, { DappContainerHeader } from '@scom/scom-dapp-container';
 import { fullWidthButtonStyle, halfWidthButtonStyle } from './index.css';
 import { PaymentHeader } from './common/index';
 import translations from '../translations.json';
@@ -53,7 +52,6 @@ export class WalletPayment extends Module {
     private lbCurrentAddress: Label;
     private imgCurrentNetwork: Image;
     private lbCurrentNetwork: Label;
-    private _dappContainer: ScomDappContainer;
     private _model: Model;
     private isToPay: boolean;
     private copyAddressTimer: any;
@@ -69,14 +67,6 @@ export class WalletPayment extends Module {
 
     constructor(parent?: Container, options?: ScomPaymentWidgetWalletPaymentElement) {
         super(parent, options);
-    }
-
-    get dappContainer() {
-        return this._dappContainer;
-    }
-
-    set dappContainer(container: ScomDappContainer) {
-        this._dappContainer = container;
     }
 
     get model() {
@@ -108,23 +98,18 @@ export class WalletPayment extends Module {
             this.model.walletModel = evmWallet;
             evmWallet.on("chainChanged", this.handleEVMWalletChainChanged.bind(this));
             evmWallet.on("walletConnected", this.handleEVMWalletConnected.bind(this));
-            evmWallet.on("walletUpdated", (data: any) => {
-                this.updateDappContainer(data);
-            });
             evmWallet.setData({
                 wallets: this.model.wallets,
                 networks: this.model.networks,
-                chainId: configData.defaultData.defaultChainId,
                 defaultChainId: configData.defaultData.defaultChainId
             })
-            await evmWallet.initWallet();
         }
         else if (provider === PaymentProvider.TonWallet) {
             const moduleDir = this['currentModuleDir'] || path;
             const tonWallet = new TonWallet(moduleDir, this.handleTonWalletStatusChanged.bind(this));
             this.model.walletModel = tonWallet;
-            await tonWallet.initWallet();
         }
+        await this.model.walletModel.initWallet();
         this.showFirstScreen();
         this.updateAmount();
         this.checkWalletStatus();
@@ -172,8 +157,7 @@ export class WalletPayment extends Module {
             const address = this.model.walletModel.getWalletAddress();
             if (paymentProvider === PaymentProvider.Metamask) {
                 const evmWallet = this.model.walletModel as EVMWallet;
-                const chainId = evmWallet.getRpcWallet()?.chainId;
-                const network = evmWallet.getNetworkInfo(chainId);
+                const network = evmWallet.getNetworkInfo();
                 if (provider) {
                     this.imgCurrentWallet.url = assets.fullPath(`img/${provider.image}`);
                     this.lbCurrentAddress.caption = address.substr(0, 6) + '...' + address.substr(-4);
@@ -181,7 +165,7 @@ export class WalletPayment extends Module {
                     this.lbCurrentNetwork.caption = network.chainName;
                     this.pnlNetwork.visible = true;
                 }
-                await this.renderErcTokens(chainId);
+                await this.renderErcTokens();
             } else if (paymentProvider === PaymentProvider.TonWallet) {
                 this.pnlNetwork.visible = false;
                 if (provider) {
@@ -196,33 +180,34 @@ export class WalletPayment extends Module {
         this.pnlTokens.visible = isConnected;
     }
 
-    private async updateTokenBalances(tokens?: ITokenObject[]) {
-        const arr = (tokens || this.tokens).reduce((acc, token) => {
-            const { chainId } = token;
-            if (!acc[chainId]) {
-                acc[chainId] = [];
-            }
-            acc[chainId].push(token);
-            return acc;
-        }, {});
-        let promises: Promise<any>[] = [];
-        for (const chainId in arr) {
-            const tokens = arr[chainId];
-            promises.push(tokenStore.updateTokenBalancesByChainId(Number(chainId), tokens));
-        }
-        await Promise.all(promises);
-    }
+    // private async updateTokenBalances(tokens?: ITokenObject[]) {
+    //     const arr = (tokens || this.tokens).reduce((acc, token) => {
+    //         const { chainId } = token;
+    //         if (!acc[chainId]) {
+    //             acc[chainId] = [];
+    //         }
+    //         acc[chainId].push(token);
+    //         return acc;
+    //     }, {});
+    //     let promises: Promise<any>[] = [];
+    //     for (const chainId in arr) {
+    //         const tokens = arr[chainId];
+    //         promises.push(tokenStore.updateTokenBalancesByChainId(Number(chainId), tokens));
+    //     }
+    //     await Promise.all(promises);
+    // }
 
-    private async renderErcTokens(chainId: number) {
-        const tokens = this.tokens.filter(v => v.chainId === chainId);
-        await this.updateTokenBalances(tokens);
+    private async renderErcTokens() {
         const evmWallet = this.model.walletModel as EVMWallet;
+        const chainId = evmWallet.getRpcWallet()?.chainId;
+        const tokens = this.tokens.filter(v => v.chainId === chainId);
+        // await this.updateTokenBalances(tokens);
         const network = evmWallet.getNetworkInfo(chainId);
         const nodeItems: HTMLElement[] = [];
         for (const token of tokens) {
-            const balances = tokenStore.getTokenBalancesByChainId(chainId) || {};
-            const tokenBalance = balances[token.address?.toLowerCase() || token.symbol] || 0;
-            const formattedBalance = FormatUtils.formatNumber(tokenBalance, { decimalFigures: 2 });
+            // const balances = tokenStore.getTokenBalancesByChainId(chainId) || {};
+            // const tokenBalance = balances[token.address?.toLowerCase() || token.symbol] || 0;
+            // const formattedBalance = FormatUtils.formatNumber(tokenBalance, { decimalFigures: 2 });
             nodeItems.push(
                 <i-stack
                     direction="horizontal"
@@ -243,9 +228,9 @@ export class WalletPayment extends Module {
                             <i-label caption={network.chainName || ''} font={{ size: '0.75rem', color: Theme.text.primary }} />
                         </i-stack>
                     </i-stack>
-                    <i-stack direction="vertical" gap="0.25rem">
+                    {/* <i-stack direction="vertical" gap="0.25rem">
                         <i-label caption={`${formattedBalance} ${token.symbol}`} font={{ bold: true, color: Theme.text.primary }} />
-                    </i-stack>
+                    </i-stack> */}
                 </i-stack>
             );
         }
@@ -253,11 +238,11 @@ export class WalletPayment extends Module {
         this.pnlTokenItems.append(...nodeItems);
     }
 
-    private async getTonBalance() {
-        const tonWallet = this.model.walletModel as TonWallet;
-        const balance = await tonWallet.getTonBalance();
-        return balance.toFixed();
-    }
+    // private async getTonBalance() {
+    //     const tonWallet = this.model.walletModel as TonWallet;
+    //     const balance = await tonWallet.getTonBalance();
+    //     return balance.toFixed();
+    // }
 
     private async renderTonToken() {
         const tonToken = {
@@ -266,8 +251,8 @@ export class WalletPayment extends Module {
             symbol: 'TON',
             decimals: 18
         }
-        const balance = await this.getTonBalance();
-        const formattedBalance = FormatUtils.formatNumber(balance, { decimalFigures: 2 });
+        // const balance = await this.getTonBalance();
+        // const formattedBalance = FormatUtils.formatNumber(balance, { decimalFigures: 2 });
         this.pnlTokenItems.clearInnerHTML();
         this.pnlTokenItems.appendChild(<i-stack
             direction="horizontal"
@@ -288,14 +273,10 @@ export class WalletPayment extends Module {
                     <i-label caption="Ton" font={{ size: '0.75rem', color: Theme.text.primary }} />
                 </i-stack>
             </i-stack>
-            <i-stack direction="vertical" gap="0.25rem">
+            {/* <i-stack direction="vertical" gap="0.25rem">
                 <i-label caption={`${formattedBalance} ${tonToken.symbol}`} font={{ bold: true, color: Theme.text.primary }} />
-            </i-stack>
+            </i-stack> */}
         </i-stack>);
-    }
-
-    private updateDappContainer(data: any) {
-        this.dappContainer.setData(data)
     }
 
     private handleConnectWallet() {
@@ -303,8 +284,8 @@ export class WalletPayment extends Module {
     }
 
     private handleShowNetworks() {
-        const header = this.dappContainer.querySelector('dapp-container-header') as DappContainerHeader;
-        header?.openNetworkModal();
+        const evmWallet = this.model.walletModel as EVMWallet;
+        evmWallet.openNetworkModal(this.pnlEVMWallet);
     }
 
     private handleSelectToken(token: ITokenObject, isTon?: boolean) {

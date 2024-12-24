@@ -7,8 +7,7 @@
         "@scom/scom-token-list",
         "@scom/scom-network-list",
         "@scom/scom-wallet-modal",
-        "@ijstech/eth-wallet",
-        "@scom/scom-multicall",
-        "@scom/scom-dapp-container"
+        "@scom/scom-network-modal",
+        "@ijstech/eth-wallet"
     ]
 }
