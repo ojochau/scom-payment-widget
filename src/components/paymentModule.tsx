@@ -6,7 +6,6 @@ import { PaymentMethod } from './paymentMethod';
 import { StatusPayment } from './statusPayment';
 import { StripePayment } from './stripePayment';
 import { WalletPayment } from './walletPayment';
-import ScomDappContainer from '@scom/scom-dapp-container';
 import { elementStyle } from './index.css';
 import { Model } from '../model';
 
@@ -30,7 +29,6 @@ export class PaymentModule extends Module {
     private walletPayment: WalletPayment;
     private stripePayment: StripePayment;
     private statusPayment: StatusPayment;
-    private _dappContainer: ScomDappContainer;
     private _model: Model;
     private isModal: boolean;
 
@@ -42,14 +40,6 @@ export class PaymentModule extends Module {
         this._model = value;
     }
 
-    get dappContainer() {
-        return this._dappContainer;
-    }
-
-    set dappContainer(container: ScomDappContainer) {
-        this._dappContainer = container;
-    }
-
     show(isModal: boolean = true) {
         this.invoiceCreation.model = this.model;
         this.invoiceCreation.visible = true;
@@ -59,7 +49,6 @@ export class PaymentModule extends Module {
         this.paymentMethod.visible = false;
         this.walletPayment.visible = false;
         this.walletPayment.model = this.model;
-        this.walletPayment.dappContainer = this.dappContainer;
         this.stripePayment.model = this.model;
         this.stripePayment.visible = false;
         this.statusPayment.model = this.model;

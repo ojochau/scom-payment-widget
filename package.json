@@ -21,7 +21,7 @@
         "@scom/scom-network-list": "^0.1.0",
         "@scom/scom-token-list": "^0.1.0",
         "@scom/scom-wallet-modal": "^0.1.0",
-        "@scom/scom-dapp-container": "^0.1.2"
+        "@scom/scom-network-modal": "^0.1.0"
     },
     "devDependencies": {
         "@ijstech/cli": "^0.1.34",

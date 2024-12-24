@@ -90,6 +90,10 @@ export class TonWallet {
         return this.tonConnectUI.account;
     }
 
+    viewExplorerByTransactionHash(hash: string) {
+        window.open(`https://tonscan.org/transaction/${hash}`);
+    }
+
     async getTonBalance() {
         try {
             const address = this.tonConnectUI.account;

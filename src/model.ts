@@ -12,6 +12,7 @@ export interface IWalletModel {
 	connectWallet(modalContainer?: Component): Promise<void>;
 	disconnectWallet(): Promise<void>;
 	getWalletAddress(): string;
+	viewExplorerByTransactionHash(hash: string) : void;
 	transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<any>;
 }
 
