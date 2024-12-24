@@ -102,7 +102,7 @@ declare module "@scom/scom-payment-widget/interface.ts" {
         Metamask = "Metamask"
     }
     export interface IPaymentStatus {
-        status: 'pending' | 'complete' | 'failed';
+        status: 'pending' | 'completed' | 'failed';
         receipt: string;
         provider: PaymentProvider;
         ownerAddress: string;
@@ -324,6 +324,7 @@ declare module "@scom/scom-payment-widget/model.ts" {
         private _referenceId;
         private _networkCode;
         private _paymentMethod;
+        private _isCompleted;
         private orderId;
         private shippingInfo;
         onPaymentSuccess: (data: IPaymentActivity) => Promise<void>;
@@ -366,10 +367,13 @@ declare module "@scom/scom-payment-widget/model.ts" {
         set networkCode(value: string);
         get paymentMethod(): 'Stripe' | 'EVM';
         set paymentMethod(value: 'Stripe' | 'EVM');
+        get isCompleted(): boolean;
+        set isCompleted(value: boolean);
         get placeOrder(): IPlaceOrder;
         get paymentActivity(): IPaymentActivity;
         handlePlaceMarketplaceOrder(): Promise<void>;
         handlePaymentSuccess(): Promise<void>;
+        processCompletedHandler(): void;
         updateShippingInfo(value: IShippingInfo): void;
         createPaymentIntent(): Promise<string>;
     }
@@ -713,6 +717,7 @@ declare module "@scom/scom-payment-widget/components/statusPayment.tsx" {
         private imgWallet;
         private btnClose;
         private _model;
+        private pnlViewTransaction;
         onClose: (status: string) => void;
         constructor(parent?: Container, options?: ScomPaymentWidgetStatusPaymentElement);
         set model(data: Model);
@@ -842,6 +847,7 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private handleCopyAddress;
         private handleDisconnectWallet;
         private handleCopyAmount;
+        private updateBtnPay;
         private handlePay;
         private handleBack;
         init(): Promise<void>;
@@ -874,6 +880,7 @@ declare module "@scom/scom-payment-widget/components/paymentModule.tsx" {
         get model(): Model;
         set model(value: Model);
         show(isModal?: boolean): void;
+        private processCompletedHandler;
         init(): Promise<void>;
         render(): any;
     }

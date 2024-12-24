@@ -110,7 +110,7 @@ export enum PaymentProvider {
 }
 
 export interface IPaymentStatus {
-  status: 'pending' | 'complete' | 'failed';
+  status: 'pending' | 'completed' | 'failed';
   receipt: string;
   provider: PaymentProvider;
   ownerAddress: string;
