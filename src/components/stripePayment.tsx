@@ -106,18 +106,30 @@ export class StripePayment extends Module {
             const url = `${returnUrl}/${orderId}`;
             const jsonString = JSON.stringify(paymentActivity);
             const encodedData = btoa(jsonString);
-            const { error } = await this.stripe.confirmPayment({
-                elements: this.stripeElements,
-                confirmParams: {
-                    return_url: `${url}?data=${encodedData}`
-                },
-                clientSecret
-            })
-            if (error) {
-                this.showAlert('error', this.i18n.get('$payment_failed'), error.message);
-            } else {
-                await this.model.handlePaymentSuccess();
-                this.showAlert('success', this.i18n.get('$payment_completed'), `${this.i18n.get('$check_payment_status')} <a href='${url}' target='_blank'>${orderId}</a>`);
+            try {
+                const { error } = await this.stripe.confirmPayment({
+                    elements: this.stripeElements,
+                    confirmParams: {
+                        return_url: `${url}?data=${encodedData}`
+                    },
+                    clientSecret
+                })
+                if (error) {
+                    this.showAlert('error', this.i18n.get('$payment_failed'), error.message);
+                } else {
+                    await this.model.handlePaymentSuccess();
+                    this.showAlert('success', this.i18n.get('$payment_completed'), '');
+                }
+            } catch (error) {
+                // mini app
+                const data = await this.stripe.retrievePaymentIntent(clientSecret);
+                const status = data?.paymentIntent.status;
+                if (status === 'succeeded' || status === 'processing') {
+                    await this.model.handlePaymentSuccess();
+                    this.showAlert('success', this.i18n.get('$payment_completed'), '');
+                } else {
+                    this.showAlert('error', this.i18n.get('$payment_failed'), status || error?.message || '');
+                }
             }
             this.showButtonIcon(false);
         })

@@ -54,6 +54,15 @@ export class PaymentModule extends Module {
         this.statusPayment.model = this.model;
         this.statusPayment.visible = false;
         this.isModal = isModal;
+        this.model.isCompleted = false;
+    }
+
+    private processCompletedHandler() {
+        if (this.isModal) {
+            this.closeModal();
+        } else {
+            this.model.processCompletedHandler();
+        }
     }
 
     async init() {
@@ -105,14 +114,8 @@ export class PaymentModule extends Module {
             this.paymentMethod.visible = true;
             this.stripePayment.visible = false;
         }
-        this.stripePayment.onClose = () => {
-            if (this.isModal) this.closeModal();
-            window.location.assign(`${this.model.returnUrl}/${this.model.paymentActivity.orderId || ''}`)
-        }
-        this.statusPayment.onClose = () => {
-            if (this.isModal) this.closeModal();
-            window.location.assign(`${this.model.returnUrl}/${this.model.paymentActivity.orderId || ''}`);
-        }
+        this.stripePayment.onClose = this.processCompletedHandler.bind(this);
+        this.statusPayment.onClose = this.processCompletedHandler.bind(this);
     }
 
     render() {

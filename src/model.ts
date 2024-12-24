@@ -26,6 +26,7 @@ export class Model {
 	private _referenceId: string;
 	private _networkCode: string;
 	private _paymentMethod: 'Stripe' | 'EVM';
+	private _isCompleted: boolean;
 	private orderId: string;
 	private shippingInfo: IShippingInfo = {
 		contact: {
@@ -187,12 +188,25 @@ export class Model {
 		this._paymentMethod = value;
 	}
 
+	get isCompleted() {
+		return this._isCompleted;
+	}
+
+	set isCompleted(value: boolean) {
+		this._isCompleted = value;
+	}
+
 	get placeOrder(): IPlaceOrder {
 		const { stallId, stallUri } = this.products[0];
 		const merchantId = stallUri?.split(':')[1] || '';
+		const shippingInfo = this.isShippingInfoShown ? this.shippingInfo : {
+			contact: {
+				nostr: ''
+			}
+		}
 		const order: IOrder = {
 			id: this.orderId,
-			...this.shippingInfo,
+			...shippingInfo,
 			currency: this.currency,
 			totalAmount: this.totalAmount,
 			items: this.products.map(v => {
@@ -236,6 +250,13 @@ export class Model {
 	async handlePaymentSuccess() {
 		if (this.onPaymentSuccess) {
 			await this.onPaymentSuccess(this.paymentActivity);
+			this.isCompleted = true;
+		}
+	}
+
+	processCompletedHandler() {
+		if (this.isCompleted) {
+			window.location.assign(`${this.returnUrl}/${this.paymentActivity.orderId || ''}`);
 		}
 	}
 

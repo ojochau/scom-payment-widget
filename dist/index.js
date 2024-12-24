@@ -509,12 +509,23 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
         set paymentMethod(value) {
             this._paymentMethod = value;
         }
+        get isCompleted() {
+            return this._isCompleted;
+        }
+        set isCompleted(value) {
+            this._isCompleted = value;
+        }
         get placeOrder() {
             const { stallId, stallUri } = this.products[0];
             const merchantId = stallUri?.split(':')[1] || '';
+            const shippingInfo = this.isShippingInfoShown ? this.shippingInfo : {
+                contact: {
+                    nostr: ''
+                }
+            };
             const order = {
                 id: this.orderId,
-                ...this.shippingInfo,
+                ...shippingInfo,
                 currency: this.currency,
                 totalAmount: this.totalAmount,
                 items: this.products.map(v => {
@@ -555,6 +566,12 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
         async handlePaymentSuccess() {
             if (this.onPaymentSuccess) {
                 await this.onPaymentSuccess(this.paymentActivity);
+                this.isCompleted = true;
+            }
+        }
+        processCompletedHandler() {
+            if (this.isCompleted) {
+                window.location.assign(`${this.returnUrl}/${this.paymentActivity.orderId || ''}`);
             }
         }
         updateShippingInfo(value) {
@@ -1458,7 +1475,7 @@ define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "ex
             return this._model;
         }
         getStatusText(status) {
-            if (status === 'complete') {
+            if (status === 'completed') {
                 return this.i18n.get('$payment_completed');
             }
             if (status === 'failed') {
@@ -1472,7 +1489,8 @@ define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "ex
             this.status = status;
             this.provider = provider;
             const isPending = status === 'pending';
-            const isCompleted = status === 'complete';
+            const isCompleted = status === 'completed';
+            this.pnlViewTransaction.visible = isPending || isCompleted;
             this.lbHeaderStatus.caption = this.i18n.get(isPending ? '$payment_pending' : isCompleted ? '$success' : '$failed');
             this.lbHeaderStatus.style.color = isPending ? Theme.colors.primary.main : isCompleted ? Theme.colors.success.main : Theme.colors.error.main;
             this.lbHeaderStatus.style.marginInline = isPending ? 'inherit' : 'auto';
@@ -1513,7 +1531,7 @@ define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "ex
                             this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", alignItems: "center", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }, border: { style: 'solid', width: 1, color: Theme.divider, radius: 8 } },
                                 this.$render("i-image", { id: "imgWallet", width: 24, height: 24, minWidth: 24 }),
                                 this.$render("i-label", { id: "lbAddress" })),
-                            this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", alignItems: "center", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }, border: { style: 'solid', width: 1, color: Theme.divider, radius: 8 }, cursor: "pointer", width: "fit-content", onClick: this.handleViewTransaction },
+                            this.$render("i-stack", { id: "pnlViewTransaction", direction: "horizontal", gap: "0.5rem", alignItems: "center", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }, border: { style: 'solid', width: 1, color: Theme.divider, radius: 8 }, cursor: "pointer", width: "fit-content", onClick: this.handleViewTransaction },
                                 this.$render("i-label", { caption: "$view_transaction" }))),
                         this.$render("i-stack", { direction: "vertical", alignItems: "center", justifyContent: "center", gap: "1rem", width: "100%", height: "100%" },
                             this.$render("i-image", { id: "imgStatus", width: 64, height: 64 }),
@@ -1618,19 +1636,33 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                 const url = `${returnUrl}/${orderId}`;
                 const jsonString = JSON.stringify(paymentActivity);
                 const encodedData = btoa(jsonString);
-                const { error } = await this.stripe.confirmPayment({
-                    elements: this.stripeElements,
-                    confirmParams: {
-                        return_url: `${url}?data=${encodedData}`
-                    },
-                    clientSecret
-                });
-                if (error) {
-                    this.showAlert('error', this.i18n.get('$payment_failed'), error.message);
+                try {
+                    const { error } = await this.stripe.confirmPayment({
+                        elements: this.stripeElements,
+                        confirmParams: {
+                            return_url: `${url}?data=${encodedData}`
+                        },
+                        clientSecret
+                    });
+                    if (error) {
+                        this.showAlert('error', this.i18n.get('$payment_failed'), error.message);
+                    }
+                    else {
+                        await this.model.handlePaymentSuccess();
+                        this.showAlert('success', this.i18n.get('$payment_completed'), '');
+                    }
                 }
-                else {
-                    await this.model.handlePaymentSuccess();
-                    this.showAlert('success', this.i18n.get('$payment_completed'), `${this.i18n.get('$check_payment_status')} <a href='${url}' target='_blank'>${orderId}</a>`);
+                catch (error) {
+                    // mini app
+                    const data = await this.stripe.retrievePaymentIntent(clientSecret);
+                    const status = data?.paymentIntent.status;
+                    if (status === 'succeeded' || status === 'processing') {
+                        await this.model.handlePaymentSuccess();
+                        this.showAlert('success', this.i18n.get('$payment_completed'), '');
+                    }
+                    else {
+                        this.showAlert('error', this.i18n.get('$payment_failed'), status || error?.message || '');
+                    }
                 }
                 this.showButtonIcon(false);
             });
@@ -1871,6 +1903,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             this.pnlPayAmount.visible = true;
             this.pnlPayDetail.visible = true;
             this.btnPay.visible = true;
+            this.updateBtnPay(false);
             this.btnBack.width = 'calc(50% - 1rem)';
             this.isToPay = true;
             const tokenImg = isTon ? assets_3.default.fullPath('img/ton.png') : scom_token_list_1.assets.tokenPath(token, token.chainId);
@@ -1922,8 +1955,13 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             }
             catch { }
         }
+        updateBtnPay(value) {
+            this.btnPay.rightIcon.spin = value;
+            this.btnPay.rightIcon.visible = value;
+        }
         async handlePay() {
             if (this.onPaid) {
+                this.updateBtnPay(true);
                 let address = this.model.walletModel.getWalletAddress();
                 if (this.provider === interface_4.PaymentProvider.Metamask) {
                     const wallet = eth_wallet_3.Wallet.getClientInstance();
@@ -1934,6 +1972,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                 }
                 await this.model.handlePlaceMarketplaceOrder();
                 await this.model.walletModel.transferToken(this.model.payment.address, this.selectedToken, this.model.totalAmount, async (error, receipt) => {
+                    this.updateBtnPay(false);
                     if (error) {
                         this.onPaid({ status: 'failed', provider: this.provider, receipt: '', ownerAddress: address });
                         return;
@@ -1942,7 +1981,8 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                     this.onPaid({ status: 'pending', provider: this.provider, receipt, ownerAddress: address });
                 }, async (receipt) => {
                     await this.model.handlePaymentSuccess();
-                    this.onPaid({ status: 'complete', provider: this.provider, receipt: receipt.transactionHash, ownerAddress: address });
+                    this.onPaid({ status: 'completed', provider: this.provider, receipt: receipt.transactionHash, ownerAddress: address });
+                    this.updateBtnPay(false);
                 });
             }
         }
@@ -2042,6 +2082,15 @@ define("@scom/scom-payment-widget/components/paymentModule.tsx", ["require", "ex
             this.statusPayment.model = this.model;
             this.statusPayment.visible = false;
             this.isModal = isModal;
+            this.model.isCompleted = false;
+        }
+        processCompletedHandler() {
+            if (this.isModal) {
+                this.closeModal();
+            }
+            else {
+                this.model.processCompletedHandler();
+            }
         }
         async init() {
             await super.init();
@@ -2094,16 +2143,8 @@ define("@scom/scom-payment-widget/components/paymentModule.tsx", ["require", "ex
                 this.paymentMethod.visible = true;
                 this.stripePayment.visible = false;
             };
-            this.stripePayment.onClose = () => {
-                if (this.isModal)
-                    this.closeModal();
-                window.location.assign(`${this.model.returnUrl}/${this.model.paymentActivity.orderId || ''}`);
-            };
-            this.statusPayment.onClose = () => {
-                if (this.isModal)
-                    this.closeModal();
-                window.location.assign(`${this.model.returnUrl}/${this.model.paymentActivity.orderId || ''}`);
-            };
+            this.stripePayment.onClose = this.processCompletedHandler.bind(this);
+            this.statusPayment.onClose = this.processCompletedHandler.bind(this);
         }
         render() {
             return (this.$render("i-stack", { margin: { top: '1rem' }, direction: "vertical", width: "100%", minHeight: 480, border: { radius: 12, style: 'solid', width: 1, color: '#ffffff4d' }, overflow: "hidden" },
@@ -2364,6 +2405,7 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             await this.paymentModule.ready();
             this.paymentModule.show();
             modal.refresh();
+            modal.onClose = () => this.model.processCompletedHandler();
         }
         handlePay() {
             if (this.payment) {

@@ -163,6 +163,7 @@ export class ScomPaymentWidget extends Module {
 		await this.paymentModule.ready();
 		this.paymentModule.show();
 		modal.refresh();
+		modal.onClose = () => this.model.processCompletedHandler();
 	}
 
 	private handlePay() {

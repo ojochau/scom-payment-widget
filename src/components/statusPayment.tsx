@@ -1,4 +1,4 @@
-import { Module, Container, customElements, ControlElement, Styles, Label, Button, Image } from '@ijstech/components';
+import { Module, Container, customElements, ControlElement, Styles, Label, Button, Image, StackLayout } from '@ijstech/components';
 import { fullWidthButtonStyle, loadingImageStyle, textCenterStyle } from './index.css';
 import assets from '../assets';
 import { PaymentProviders } from '../store';
@@ -33,6 +33,7 @@ export class StatusPayment extends Module {
     private imgWallet: Image;
     private btnClose: Button;
     private _model: Model;
+    private pnlViewTransaction: StackLayout;
     public onClose: (status: string) => void;
 
     constructor(parent?: Container, options?: ScomPaymentWidgetStatusPaymentElement) {
@@ -47,8 +48,8 @@ export class StatusPayment extends Module {
         return this._model;
     }
 
-    private getStatusText(status: "pending" | "complete" | "failed") {
-        if (status === 'complete') {
+    private getStatusText(status: "pending" | "completed" | "failed") {
+        if (status === 'completed') {
             return this.i18n.get('$payment_completed');
         }
         if (status === 'failed') {
@@ -63,7 +64,8 @@ export class StatusPayment extends Module {
         this.status = status;
         this.provider = provider;
         const isPending = status === 'pending';
-        const isCompleted = status === 'complete';
+        const isCompleted = status === 'completed';
+        this.pnlViewTransaction.visible = isPending || isCompleted;
         this.lbHeaderStatus.caption = this.i18n.get(isPending ? '$payment_pending' : isCompleted ? '$success' : '$failed');
         this.lbHeaderStatus.style.color = isPending ? Theme.colors.primary.main : isCompleted ? Theme.colors.success.main : Theme.colors.error.main;
         this.lbHeaderStatus.style.marginInline = isPending ? 'inherit' : 'auto';
@@ -124,6 +126,7 @@ export class StatusPayment extends Module {
                             <i-label id="lbAddress" />
                         </i-stack>
                         <i-stack
+                            id="pnlViewTransaction"
                             direction="horizontal"
                             gap="0.5rem"
                             alignItems="center"

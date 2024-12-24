@@ -294,6 +294,7 @@ export class WalletPayment extends Module {
         this.pnlPayAmount.visible = true;
         this.pnlPayDetail.visible = true;
         this.btnPay.visible = true;
+        this.updateBtnPay(false);
         this.btnBack.width = 'calc(50% - 1rem)';
         this.isToPay = true;
         const tokenImg = isTon ? assets.fullPath('img/ton.png') : tokenAssets.tokenPath(token, token.chainId);
@@ -344,8 +345,14 @@ export class WalletPayment extends Module {
         } catch { }
     }
 
+    private updateBtnPay(value: boolean) {
+        this.btnPay.rightIcon.spin = value;
+        this.btnPay.rightIcon.visible = value;
+    }
+
     private async handlePay() {
         if (this.onPaid) {
+            this.updateBtnPay(true);
             let address = this.model.walletModel.getWalletAddress();
             if (this.provider === PaymentProvider.Metamask) {
                 const wallet = Wallet.getClientInstance();
@@ -360,6 +367,7 @@ export class WalletPayment extends Module {
                 this.selectedToken,
                 this.model.totalAmount,
                 async (error: Error, receipt?: string) => {
+                    this.updateBtnPay(false);
                     if (error) {
                         this.onPaid({ status: 'failed', provider: this.provider, receipt: '', ownerAddress: address });
                         return;
@@ -369,7 +377,8 @@ export class WalletPayment extends Module {
                 },
                 async (receipt: any) => {
                     await this.model.handlePaymentSuccess();
-                    this.onPaid({ status: 'complete', provider: this.provider, receipt: receipt.transactionHash, ownerAddress: address });
+                    this.onPaid({ status: 'completed', provider: this.provider, receipt: receipt.transactionHash, ownerAddress: address });
+                    this.updateBtnPay(false);
                 }
             );
         }
@@ -461,7 +470,7 @@ export class WalletPayment extends Module {
                                 cursor="pointer"
                                 onClick={this.handleDisconnectWallet}
                             >
-                                <i-icon name="power-off" width={16} height={16}/>
+                                <i-icon name="power-off" width={16} height={16} />
                             </i-stack>
                         </i-stack>
                         <i-stack
