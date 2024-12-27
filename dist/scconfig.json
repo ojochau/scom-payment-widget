@@ -4,10 +4,10 @@
     "version": "0.1.15",
     "dependencies": [
         "@ijstech/components",
+        "@ijstech/eth-wallet",
         "@scom/scom-token-list",
         "@scom/scom-network-list",
         "@scom/scom-wallet-modal",
-        "@scom/scom-network-modal",
-        "@ijstech/eth-wallet"
+        "@scom/scom-network-modal"
     ]
 }

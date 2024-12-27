@@ -225,7 +225,7 @@ export class ScomPaymentWidget extends Module {
 			this.showButtonPay = this.getAttribute('showButtonPay', true, false);
 			this.payButtonCaption = this.getAttribute('payButtonCaption', true, this.i18n.get('$pay'));
 			this.networks = this.getAttribute('networks', true, configData.defaultData.networks);
-			this.tokens = this.getAttribute('tokens', true, configData.defaultData.tokens);
+			this.tokens = this.getAttribute('tokens', true);
 			this.wallets = this.getAttribute('wallets', true, configData.defaultData.wallets);
 			if (payment) this.payment = payment;
 		}

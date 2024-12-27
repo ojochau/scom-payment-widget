@@ -46,6 +46,7 @@ export class WalletPayment extends Module {
     private lbAmountToPay: Label;
     private lbUSD: Label;
     private btnBack: Button;
+    private btnSwitchNetwork: Button;
     private btnPay: Button;
     private lbWallet: Label;
     private imgCurrentWallet: Image;
@@ -112,7 +113,7 @@ export class WalletPayment extends Module {
         await this.model.walletModel.initWallet();
         this.showFirstScreen();
         this.updateAmount();
-        this.checkWalletStatus();
+        await this.checkWalletStatus();
     }
 
     private handleTonWalletStatusChanged(isConnected: boolean) {
@@ -154,27 +155,31 @@ export class WalletPayment extends Module {
         this.pnlWallet.visible = !isConnected;
         const provider = PaymentProviders.find(v => v.provider === paymentProvider);
         if (isConnected) {
+            if (this.isToPay) {
+                this.updatePaymentButtonVisibility();
+            }
             const address = this.model.walletModel.getWalletAddress();
-            if (paymentProvider === PaymentProvider.Metamask) {
-                const evmWallet = this.model.walletModel as EVMWallet;
-                const network = evmWallet.getNetworkInfo();
-                if (provider) {
-                    this.imgCurrentWallet.url = assets.fullPath(`img/${provider.image}`);
-                    this.lbCurrentAddress.caption = address.substr(0, 6) + '...' + address.substr(-4);
+            if (provider) {
+                this.imgCurrentWallet.url = assets.fullPath(`img/${provider.image}`);
+                this.lbCurrentAddress.caption = address.substr(0, 6) + '...' + address.substr(-4);
+                const network = this.model.walletModel.getNetworkInfo();
+                if (network) {
                     this.imgCurrentNetwork.url = network.image;
                     this.lbCurrentNetwork.caption = network.chainName;
                     this.pnlNetwork.visible = true;
                 }
-                await this.renderErcTokens();
-            } else if (paymentProvider === PaymentProvider.TonWallet) {
-                this.pnlNetwork.visible = false;
-                if (provider) {
-                    this.imgCurrentWallet.url = assets.fullPath(`img/${provider.image}`);
-                    this.lbCurrentAddress.caption = address.substr(0, 6) + '...' + address.substr(-4);
+                else {
+                    this.pnlNetwork.visible = false;
                 }
+            }
+            if (paymentProvider === PaymentProvider.Metamask) {
+                await this.renderErcTokens();
+            } 
+            else if (paymentProvider === PaymentProvider.TonWallet) {
                 await this.renderTonToken();
             }
-        } else if (provider) {
+        } 
+        else if (provider) {
             this.lbWallet.caption = `$connect_web3_wallet`;
         }
         this.pnlTokens.visible = isConnected;
@@ -198,11 +203,10 @@ export class WalletPayment extends Module {
     // }
 
     private async renderErcTokens() {
-        const evmWallet = this.model.walletModel as EVMWallet;
-        const chainId = evmWallet.getRpcWallet()?.chainId;
+        const network = this.model.walletModel.getNetworkInfo();
+        const chainId = network.chainId;
         const tokens = this.tokens.filter(v => v.chainId === chainId);
         // await this.updateTokenBalances(tokens);
-        const network = evmWallet.getNetworkInfo(chainId);
         const nodeItems: HTMLElement[] = [];
         for (const token of tokens) {
             // const balances = tokenStore.getTokenBalancesByChainId(chainId) || {};
@@ -284,8 +288,17 @@ export class WalletPayment extends Module {
     }
 
     private handleShowNetworks() {
-        const evmWallet = this.model.walletModel as EVMWallet;
-        evmWallet.openNetworkModal(this.pnlEVMWallet);
+        this.model.walletModel.openNetworkModal(this.pnlEVMWallet);
+    }
+
+    private updatePaymentButtonVisibility() {
+        if (this.model.walletModel.isNetworkConnected()) {
+            this.btnPay.visible = true;
+            this.btnSwitchNetwork.visible = false;
+        } else {
+            this.btnPay.visible = false;
+            this.btnSwitchNetwork.visible = true;
+        }
     }
 
     private handleSelectToken(token: ITokenObject, isTon?: boolean) {
@@ -293,7 +306,7 @@ export class WalletPayment extends Module {
         this.pnlTokenItems.visible = false;
         this.pnlPayAmount.visible = true;
         this.pnlPayDetail.visible = true;
-        this.btnPay.visible = true;
+        this.updatePaymentButtonVisibility();
         this.updateBtnPay(false);
         this.btnBack.width = 'calc(50% - 1rem)';
         this.isToPay = true;
@@ -350,6 +363,10 @@ export class WalletPayment extends Module {
         this.btnPay.rightIcon.visible = value;
     }
 
+    private async handleSwitchNetwork() {
+        await this.model.walletModel.switchNetwork();
+    }
+
     private async handlePay() {
         if (this.onPaid) {
             this.updateBtnPay(true);
@@ -360,8 +377,7 @@ export class WalletPayment extends Module {
             } else if (this.provider === PaymentProvider.TonWallet) {
                 this.model.networkCode = 'TON';
             }
-
-            await this.model.handlePlaceMarketplaceOrder();
+    
             await this.model.walletModel.transferToken(
                 this.model.payment.address,
                 this.selectedToken,
@@ -372,6 +388,7 @@ export class WalletPayment extends Module {
                         this.onPaid({ status: 'failed', provider: this.provider, receipt: '', ownerAddress: address });
                         return;
                     }
+                    await this.model.handlePlaceMarketplaceOrder();
                     this.model.referenceId = receipt;
                     this.onPaid({ status: 'pending', provider: this.provider, receipt, ownerAddress: address });
                 },
@@ -493,7 +510,7 @@ export class WalletPayment extends Module {
                         <i-label caption="$paid_to_address" />
                         <i-stack
                             direction="horizontal"
-                            alignItems="center"
+                            alignItems="stretch"
                             width="100%"
                             margin={{ bottom: '1rem' }}
                             border={{ radius: 8 }}
@@ -514,7 +531,6 @@ export class WalletPayment extends Module {
                                 direction="horizontal"
                                 width={32}
                                 minWidth={32}
-                                height="100%"
                                 alignItems="center"
                                 justifyContent="center"
                                 cursor="pointer"
@@ -527,7 +543,7 @@ export class WalletPayment extends Module {
                         </i-stack>
                         <i-stack
                             direction="horizontal"
-                            alignItems="center"
+                            alignItems="stretch"
                             width="100%"
                             border={{ radius: 8 }}
                             background={{ color: Theme.input.background }}
@@ -549,7 +565,6 @@ export class WalletPayment extends Module {
                                 direction="horizontal"
                                 width={32}
                                 minWidth={32}
-                                height="100%"
                                 alignItems="center"
                                 justifyContent="center"
                                 cursor="pointer"
@@ -569,6 +584,14 @@ export class WalletPayment extends Module {
                             background={{ color: Theme.colors.secondary.main }}
                             class={fullWidthButtonStyle}
                             onClick={this.handleBack}
+                        />
+                        <i-button
+                            id="btnSwitchNetwork"
+                            visible={false}
+                            caption="$switch_network"
+                            background={{ color: Theme.colors.primary.main }}
+                            class={halfWidthButtonStyle}
+                            onClick={this.handleSwitchNetwork}
                         />
                         <i-button
                             id="btnPay"
