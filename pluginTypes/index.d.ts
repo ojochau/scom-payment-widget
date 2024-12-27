@@ -2,6 +2,7 @@
 /// <reference path="@scom/scom-network-modal/@ijstech/eth-wallet/index.d.ts" />
 /// <amd-module name="@scom/scom-payment-widget/interface.ts" />
 declare module "@scom/scom-payment-widget/interface.ts" {
+    import { INetwork } from "@ijstech/eth-wallet";
     export enum ProductType {
         Physical = "Physical",
         Digital = "Digital",
@@ -111,6 +112,10 @@ declare module "@scom/scom-payment-widget/interface.ts" {
         chainName?: string;
         chainId: number;
     }
+    export interface IExtendedNetwork extends INetwork {
+        explorerTxUrl?: string;
+        explorerAddressUrl?: string;
+    }
 }
 /// <amd-module name="@scom/scom-payment-widget/components/index.css.ts" />
 declare module "@scom/scom-payment-widget/components/index.css.ts" {
@@ -169,6 +174,7 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             coming_soon: string;
             payment_coming_soon: string;
             the_stall_owner_has_not_set_up_payments_yet: string;
+            switch_network: string;
         };
         "zh-hant": {
             pay: string;
@@ -213,6 +219,7 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             coming_soon: string;
             payment_coming_soon: string;
             the_stall_owner_has_not_set_up_payments_yet: string;
+            switch_network: string;
         };
         vi: {
             pay: string;
@@ -257,6 +264,7 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             coming_soon: string;
             payment_coming_soon: string;
             the_stall_owner_has_not_set_up_payments_yet: string;
+            switch_network: string;
         };
     };
     export default _default;
@@ -271,13 +279,6 @@ declare module "@scom/scom-payment-widget/defaultData.ts" {
             defaultChainId: number;
             networks: {
                 chainId: number;
-            }[];
-            tokens: {
-                chainId: number;
-                name: string;
-                address: string;
-                symbol: string;
-                decimals: number;
             }[];
             wallets: {
                 name: string;
@@ -302,13 +303,17 @@ declare module "@scom/scom-payment-widget/store.ts" {
 }
 /// <amd-module name="@scom/scom-payment-widget/model.ts" />
 declare module "@scom/scom-payment-widget/model.ts" {
-    import { INetworkConfig, IPaymentActivity, IPaymentInfo, IPlaceOrder, IShippingInfo } from "@scom/scom-payment-widget/interface.ts";
+    import { IExtendedNetwork, INetworkConfig, IPaymentActivity, IPaymentInfo, IPlaceOrder, IShippingInfo } from "@scom/scom-payment-widget/interface.ts";
     import { ITokenObject } from '@scom/scom-token-list';
     import { Component } from '@ijstech/components';
     export interface IWalletModel {
         initWallet(): Promise<void>;
         isWalletConnected(): boolean;
+        isNetworkConnected(): boolean;
+        getNetworkInfo(chainId?: number): IExtendedNetwork;
+        openNetworkModal(modalContainer: Component): Promise<void>;
         connectWallet(modalContainer?: Component): Promise<void>;
+        switchNetwork(): Promise<void>;
         disconnectWallet(): Promise<void>;
         getWalletAddress(): string;
         viewExplorerByTransactionHash(hash: string): void;
@@ -604,20 +609,13 @@ declare module "@scom/scom-payment-widget/components/paymentMethod.tsx" {
 /// <amd-module name="@scom/scom-payment-widget/wallets/evmWallet.ts" />
 declare module "@scom/scom-payment-widget/wallets/evmWallet.ts" {
     import { Component } from "@ijstech/components";
-    import { IClientSideProvider, INetwork } from "@ijstech/eth-wallet";
+    import { IClientSideProvider } from "@ijstech/eth-wallet";
     import { ITokenObject } from "@scom/scom-token-list";
-    export interface IExtendedNetwork extends INetwork {
-        explorerTxUrl?: string;
-        explorerAddressUrl?: string;
-    }
+    import { IExtendedNetwork, INetworkConfig } from "@scom/scom-payment-widget/interface.ts";
     export interface IWalletPlugin {
         name: string;
         packageName?: string;
         provider?: IClientSideProvider;
-    }
-    export interface INetworkConfig {
-        chainName?: string;
-        chainId: number;
     }
     class EventEmitter {
         private events;
@@ -665,6 +663,7 @@ declare module "@scom/scom-payment-widget/wallets/evmWallet.ts" {
 }
 /// <amd-module name="@scom/scom-payment-widget/wallets/tonWallet.ts" />
 declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
+    import { Component } from "@ijstech/components";
     import { ITokenObject } from "@scom/scom-token-list";
     export class TonWallet {
         private toncore;
@@ -673,9 +672,13 @@ declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
         private _onTonWalletStatusChanged;
         constructor(moduleDir: string, onTonWalletStatusChanged: (isConnected: boolean) => void);
         isWalletConnected(): boolean;
+        isNetworkConnected(): boolean;
         loadLib(moduleDir: string): Promise<unknown>;
         initWallet(): Promise<void>;
         connectWallet(): Promise<void>;
+        getNetworkInfo(): any;
+        openNetworkModal(modalContainer: Component): Promise<void>;
+        switchNetwork(): Promise<void>;
         disconnectWallet(): Promise<void>;
         sendTransaction(txData: any): Promise<any>;
         constructPayloadForTokenTransfer(to: string, token: ITokenObject, amount: number): any;
@@ -809,6 +812,7 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private lbAmountToPay;
         private lbUSD;
         private btnBack;
+        private btnSwitchNetwork;
         private btnPay;
         private lbWallet;
         private imgCurrentWallet;
@@ -843,11 +847,13 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private renderTonToken;
         private handleConnectWallet;
         private handleShowNetworks;
+        private updatePaymentButtonVisibility;
         private handleSelectToken;
         private handleCopyAddress;
         private handleDisconnectWallet;
         private handleCopyAmount;
         private updateBtnPay;
+        private handleSwitchNetwork;
         private handlePay;
         private handleBack;
         init(): Promise<void>;
@@ -869,6 +875,7 @@ declare module "@scom/scom-payment-widget/components/paymentModule.tsx" {
         }
     }
     export class PaymentModule extends Module {
+        private pnlPaymentModule;
         private invoiceCreation;
         private shippingInfo;
         private paymentMethod;

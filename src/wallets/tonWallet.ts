@@ -1,4 +1,4 @@
-import { RequireJS } from "@ijstech/components";
+import { Component, RequireJS } from "@ijstech/components";
 import { Utils } from "@ijstech/eth-wallet";
 import { ITokenObject } from "@scom/scom-token-list";
 
@@ -21,6 +21,10 @@ export class TonWallet {
         return this._isWalletConnected;
     }
 
+    isNetworkConnected() {
+        return this._isWalletConnected;
+    }
+    
     async loadLib(moduleDir: string) {
         let self = this;
         return new Promise((resolve, reject) => {
@@ -67,6 +71,16 @@ export class TonWallet {
         catch (err) {
             alert(err)
         }
+    }
+
+    getNetworkInfo() {
+        return null;
+    }
+
+    async openNetworkModal(modalContainer: Component) {
+    }
+
+    async switchNetwork() {
     }
 
     async disconnectWallet() {

@@ -1,4 +1,4 @@
-import { Module, customElements, ControlElement } from '@ijstech/components';
+import { Module, customElements, ControlElement, StackLayout } from '@ijstech/components';
 import { IPaymentStatus, PaymentProvider } from '../interface';
 import { InvoiceCreation } from './invoiceCreation';
 import { ShippingInfo } from './shippingInfo';
@@ -23,6 +23,7 @@ declare global {
 
 @customElements('scom-payment-widget--payment-module')
 export class PaymentModule extends Module {
+    private pnlPaymentModule: StackLayout;
     private invoiceCreation: InvoiceCreation;
     private shippingInfo: ShippingInfo;
     private paymentMethod: PaymentMethod;
@@ -47,12 +48,10 @@ export class PaymentModule extends Module {
         this.shippingInfo.visible = false;
         this.paymentMethod.model = this.model;
         this.paymentMethod.visible = false;
-        this.walletPayment.visible = false;
-        this.walletPayment.model = this.model;
-        this.stripePayment.model = this.model;
-        this.stripePayment.visible = false;
         this.statusPayment.model = this.model;
         this.statusPayment.visible = false;
+        if (this.walletPayment) this.walletPayment.visible = false;
+        if (this.stripePayment) this.stripePayment.visible = false;
         this.isModal = isModal;
         this.model.isCompleted = false;
     }
@@ -85,13 +84,40 @@ export class PaymentModule extends Module {
             this.invoiceCreation.visible = true;
             this.shippingInfo.visible = false;
         };
-        this.paymentMethod.onSelectedPaymentProvider = (paymentProvider: PaymentProvider) => {
-            this.paymentMethod.visible = false;
+        this.paymentMethod.onSelectedPaymentProvider = async (paymentProvider: PaymentProvider) => {
             if (paymentProvider === PaymentProvider.Metamask || paymentProvider === PaymentProvider.TonWallet) {
+                if (!this.walletPayment) {
+                    this.walletPayment = new WalletPayment(undefined, { visible: false, class: elementStyle });
+                    this.walletPayment.model = this.model;
+                    this.walletPayment.onPaid = (paymentStatus: IPaymentStatus) => {
+                        this.walletPayment.visible = false;
+                        this.statusPayment.visible = true;
+                        this.statusPayment.updateStatus(paymentStatus);
+                    }
+                    this.walletPayment.onBack = () => {
+                        this.paymentMethod.visible = true;
+                        this.walletPayment.visible = false;
+                    };
+                    this.statusPayment.onClose = this.processCompletedHandler.bind(this);
+                    this.pnlPaymentModule.append(this.walletPayment);
+                }
+                await this.walletPayment.onStartPayment(paymentProvider);
                 this.paymentMethod.visible = false;
-                this.walletPayment.onStartPayment(paymentProvider);
                 this.walletPayment.visible = true;
-            } else {
+                
+            } 
+            else {
+                if (!this.stripePayment) {
+                    this.stripePayment = new StripePayment(undefined, { visible: false, class: elementStyle });
+                    this.stripePayment.model = this.model;
+                    this.stripePayment.onBack = () => {
+                        this.paymentMethod.visible = true;
+                        this.stripePayment.visible = false;
+                    }
+                    this.stripePayment.onClose = this.processCompletedHandler.bind(this);
+                    this.pnlPaymentModule.append(this.stripePayment);
+                }
+                this.paymentMethod.visible = false;
                 this.stripePayment.visible = true;
             }
         };
@@ -101,26 +127,12 @@ export class PaymentModule extends Module {
             this.invoiceCreation.visible = !isShippingInfoShown;
             this.shippingInfo.visible = isShippingInfoShown;
         };
-        this.walletPayment.onPaid = (paymentStatus: IPaymentStatus) => {
-            this.walletPayment.visible = false;
-            this.statusPayment.visible = true;
-            this.statusPayment.updateStatus(paymentStatus);
-        }
-        this.walletPayment.onBack = () => {
-            this.paymentMethod.visible = true;
-            this.walletPayment.visible = false;
-        };
-        this.stripePayment.onBack = () => {
-            this.paymentMethod.visible = true;
-            this.stripePayment.visible = false;
-        }
-        this.stripePayment.onClose = this.processCompletedHandler.bind(this);
-        this.statusPayment.onClose = this.processCompletedHandler.bind(this);
     }
 
     render() {
         return (
             <i-stack
+                id="pnlPaymentModule"
                 margin={{ top: '1rem' }}
                 direction="vertical"
                 width="100%"
@@ -131,8 +143,6 @@ export class PaymentModule extends Module {
                 <scom-payment-widget--invoice-creation id="invoiceCreation" visible={false} class={elementStyle} />
                 <scom-payment-widget--shipping-info id="shippingInfo" visible={false} class={elementStyle} />
                 <scom-payment-widget--payment-method id="paymentMethod" visible={false} class={elementStyle} />
-                <scom-payment-widget--wallet-payment id="walletPayment" visible={false} class={elementStyle} />
-                <scom-payment-widget--stripe-payment id="stripePayment" visible={false} class={elementStyle} />
                 <scom-payment-widget--status-payment id="statusPayment" visible={false} class={elementStyle} />
             </i-stack>
         )

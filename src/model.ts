@@ -1,4 +1,4 @@
-import { INetworkConfig, IOrder, IPaymentActivity, IPaymentInfo, IPlaceOrder, IShippingInfo, ProductType } from './interface';
+import { IExtendedNetwork, INetworkConfig, IOrder, IPaymentActivity, IPaymentInfo, IPlaceOrder, IShippingInfo, ProductType } from './interface';
 import { ITokenObject } from '@scom/scom-token-list';
 import configData from './defaultData';
 import { stripeCurrencies, stripeSpecialCurrencies, stripeZeroDecimalCurrencies } from './store';
@@ -9,7 +9,11 @@ declare const window: any;
 export interface IWalletModel {
 	initWallet(): Promise<void>;
 	isWalletConnected(): boolean;
+	isNetworkConnected(): boolean;
+	getNetworkInfo(chainId?: number): IExtendedNetwork;
+	openNetworkModal(modalContainer: Component): Promise<void>;
 	connectWallet(modalContainer?: Component): Promise<void>;
+	switchNetwork(): Promise<void>;
 	disconnectWallet(): Promise<void>;
 	getWalletAddress(): string;
 	viewExplorerByTransactionHash(hash: string) : void;
@@ -157,7 +161,7 @@ export class Model {
 	}
 
 	get tokens() {
-		return this._tokens ?? configData.defaultData.tokens;
+		return this._tokens;
 	}
 
 	set tokens(value: ITokenObject[]) {

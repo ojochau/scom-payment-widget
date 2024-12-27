@@ -1,3 +1,5 @@
+import { INetwork } from "@ijstech/eth-wallet";
+
 export enum ProductType {
   Physical = "Physical",
   Digital = "Digital",
@@ -120,3 +122,8 @@ export interface INetworkConfig {
   chainName?: string;
   chainId: number;
 }
+
+export interface IExtendedNetwork extends INetwork {
+  explorerTxUrl?: string;
+  explorerAddressUrl?: string;
+};

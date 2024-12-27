@@ -7,21 +7,12 @@ import {
 import { Constants, Contracts, IClientSideProvider, IEventBusRegistry, INetwork, TransactionReceipt, Utils, Wallet } from "@ijstech/eth-wallet";
 import getNetworkList from "@scom/scom-network-list";
 import { ITokenObject } from "@scom/scom-token-list";
-
-export interface IExtendedNetwork extends INetwork {
-    explorerTxUrl?: string;
-    explorerAddressUrl?: string;
-};
+import { IExtendedNetwork, INetworkConfig } from '../interface';
 
 export interface IWalletPlugin {
     name: string;
     packageName?: string;
     provider?: IClientSideProvider;
-}
-
-export interface INetworkConfig {
-    chainName?: string;
-    chainId: number;
 }
 
 class EventEmitter {
@@ -242,8 +233,12 @@ export class EVMWallet extends EventEmitter {
         amount: number, 
         callback?: (error: Error, receipt?: string) => Promise<void>,
         confirmationCallback?: (receipt: any) => Promise<void>
-) {
+    ) {
         const wallet = Wallet.getClientInstance();
+        const rpcWallet = this.getRpcWallet();
+        if (wallet.chainId !== rpcWallet.chainId) {
+            await wallet.switchNetwork(rpcWallet.chainId);
+        }
         wallet.registerSendTxEvents({
             transactionHash: (error: Error, receipt?: string) => {
                 if (callback) {
