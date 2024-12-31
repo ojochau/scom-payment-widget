@@ -472,7 +472,7 @@ declare module "@scom/scom-payment-widget/model.ts" {
         get stripeAmount(): number;
         get totalQuantity(): number;
         get hasPhysicalProduct(): boolean;
-        get walletAddress(): string;
+        get toAddress(): string;
         get cryptoPayoutOptions(): import("@scom/scom-payment-widget/interface.ts").ICryptoPayoutOption[];
         get stripeAccountId(): string;
         get hasPayment(): boolean;
@@ -798,12 +798,14 @@ declare module "@scom/scom-payment-widget/components/stripePayment.tsx" {
         private btnBack;
         private header;
         private mdAlert;
+        private pnlLoading;
         private publishableKey;
         onClose: () => void;
         onBack: () => void;
         constructor(parent?: Container, options?: ScomPaymentWidgetStripePaymentElement);
         set model(data: Model);
         get model(): Model;
+        onStartPayment(): void;
         private updateAmount;
         private initStripePayment;
         private handleStripeCheckoutClick;

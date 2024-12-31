@@ -112,7 +112,7 @@ export class Model {
 		return this.products.some(v => v.productType === ProductType.Physical);
 	}
 
-	get walletAddress() {
+	get toAddress() {
 		return this.payment?.address || '';
 	}
 

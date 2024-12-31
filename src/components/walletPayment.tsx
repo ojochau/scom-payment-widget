@@ -299,10 +299,9 @@ export class WalletPayment extends Module {
         const tokenAddress = token.address === Utils.nullAddress ? undefined : token.address;
         this.model.payment.address = this.model.payment.cryptoPayoutOptions.find(option => {
             if (isTon) return option.networkCode === "TON" && option.tokenAddress === tokenAddress;
-            else return option.chainId === token.chainId.toString() && option.tokenAddress === tokenAddress
+            return option.chainId === token.chainId.toString() && option.tokenAddress == tokenAddress;
         })?.walletAddress || "";
-        const { totalAmount, currency, walletAddress } = this.model;
-        const toAddress = walletAddress;
+        const { totalAmount, currency, toAddress } = this.model;
         this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);
         const formattedAmount = FormatUtils.formatNumber(totalAmount, { decimalFigures: 2 });
         this.lbAmountToPay.caption = `${formattedAmount} ${token.symbol}`;
@@ -314,7 +313,7 @@ export class WalletPayment extends Module {
 
     private async handleCopyAddress() {
         try {
-            await application.copyToClipboard(this.model.walletAddress);
+            await application.copyToClipboard(this.model.toAddress);
             this.iconCopyAddress.name = 'check';
             this.iconCopyAddress.fill = Theme.colors.success.main;
             if (this.copyAddressTimer) clearTimeout(this.copyAddressTimer);

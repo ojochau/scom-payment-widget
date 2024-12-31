@@ -1,4 +1,4 @@
-import { Module, Container, customElements, ControlElement, Styles, Alert, Button } from '@ijstech/components';
+import { Module, Container, customElements, ControlElement, Styles, Alert, Button, VStack } from '@ijstech/components';
 import { getStripeKey } from '../store';
 import { alertStyle, halfWidthButtonStyle } from './index.css';
 import { loadStripe } from '../utils';
@@ -31,6 +31,7 @@ export class StripePayment extends Module {
     private btnBack: Button;
     private header: PaymentHeader;
     private mdAlert: Alert;
+    private pnlLoading: VStack;
     private publishableKey: string;
     public onClose: () => void;
     public onBack: () => void;
@@ -48,6 +49,10 @@ export class StripePayment extends Module {
         return this._model;
     }
 
+    onStartPayment() {
+        this.updateAmount();
+    }
+
     private updateAmount() {
         if (this.model && this.header) {
             const { title, currency, totalAmount } = this.model;
@@ -57,6 +62,7 @@ export class StripePayment extends Module {
     }
 
     private async initStripePayment() {
+        if (!this.stripeElements) this.pnlLoading.visible = true;
         if (!window.Stripe) {
             await loadStripe();
         }
@@ -77,10 +83,18 @@ export class StripePayment extends Module {
             this.stripeElements = this.stripe.elements({
                 mode: 'payment',
                 currency: stripeCurrency,
-                amount: stripeAmount
+                amount: stripeAmount,
+                appearance: {
+                    theme: 'night'
+                },
             });
             const paymentElement = this.stripeElements.create('payment');
             paymentElement.mount('#pnlStripePaymentForm');
+        }
+        if (this.pnlLoading.visible) {
+            setTimeout(() => {
+                this.pnlLoading.visible = false;
+            }, 500)
         }
     }
 
@@ -173,8 +187,35 @@ export class StripePayment extends Module {
     render() {
         return <i-stack direction="vertical" alignItems="center" width="100%">
             <scom-payment-widget--header id="header" margin={{ bottom: '1rem' }} display="flex" />
-            <i-stack direction="vertical" gap="1rem" width="100%" height="100%" alignItems="center" padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}>
-                <i-stack direction="vertical" id="pnlStripePaymentForm" background={{ color: '#fff' }} border={{ radius: 12 }} padding={{ top: '1rem', left: '1rem', bottom: '2rem', right: '1rem' }} />
+            <i-stack direction="vertical" width="100%" height="100%" alignItems="center" padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }} position="relative">
+                <i-vstack
+                    id="pnlLoading"
+                    visible={false}
+                    width="100%"
+                    minHeight={315}
+                    position="absolute"
+                    bottom={0}
+                    zIndex={899}
+                    background={{ color: Theme.background.main }}
+                    class="i-loading-overlay"
+                >
+                    <i-vstack
+                        horizontalAlignment="center"
+                        verticalAlignment="center"
+                        position="absolute"
+                        top="calc(50% - 0.75rem)"
+                        left="calc(50% - 0.75rem)"
+                    >
+                        <i-icon
+                            class="i-loading-spinner_icon"
+                            name="spinner"
+                            width={24}
+                            height={24}
+                            fill={Theme.colors.primary.main}
+                        />
+                    </i-vstack>
+                </i-vstack>
+                <i-stack direction="vertical" id="pnlStripePaymentForm" background={{ color: '#30313d' }} border={{ radius: 12 }} padding={{ top: '1rem', left: '1rem', bottom: '2rem', right: '1rem' }} margin={{ bottom: '1rem' }} />
                 <i-stack direction="horizontal" width="100%" alignItems="center" justifyContent="center" margin={{ top: 'auto' }} gap="1rem" wrap="wrap-reverse">
                     <i-button
                         id="btnBack"

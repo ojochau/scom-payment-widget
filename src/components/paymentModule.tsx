@@ -117,6 +117,7 @@ export class PaymentModule extends Module {
                     this.stripePayment.onClose = this.processCompletedHandler.bind(this);
                     this.pnlPaymentModule.append(this.stripePayment);
                 }
+                this.stripePayment.onStartPayment();
                 this.paymentMethod.visible = false;
                 this.stripePayment.visible = true;
             }
