@@ -432,7 +432,7 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
         get hasPhysicalProduct() {
             return this.products.some(v => v.productType === interface_2.ProductType.Physical);
         }
-        get walletAddress() {
+        get toAddress() {
             return this.payment?.address || '';
         }
         get cryptoPayoutOptions() {
@@ -1576,6 +1576,9 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
         get model() {
             return this._model;
         }
+        onStartPayment() {
+            this.updateAmount();
+        }
         updateAmount() {
             if (this.model && this.header) {
                 const { title, currency, totalAmount } = this.model;
@@ -1584,6 +1587,8 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
             }
         }
         async initStripePayment() {
+            if (!this.stripeElements)
+                this.pnlLoading.visible = true;
             if (!window.Stripe) {
                 await (0, utils_1.loadStripe)();
             }
@@ -1605,10 +1610,18 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                 this.stripeElements = this.stripe.elements({
                     mode: 'payment',
                     currency: stripeCurrency,
-                    amount: stripeAmount
+                    amount: stripeAmount,
+                    appearance: {
+                        theme: 'night'
+                    },
                 });
                 const paymentElement = this.stripeElements.create('payment');
                 paymentElement.mount('#pnlStripePaymentForm');
+            }
+            if (this.pnlLoading.visible) {
+                setTimeout(() => {
+                    this.pnlLoading.visible = false;
+                }, 500);
             }
         }
         async handleStripeCheckoutClick() {
@@ -1703,8 +1716,11 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
         render() {
             return this.$render("i-stack", { direction: "vertical", alignItems: "center", width: "100%" },
                 this.$render("scom-payment-widget--header", { id: "header", margin: { bottom: '1rem' }, display: "flex" }),
-                this.$render("i-stack", { direction: "vertical", gap: "1rem", width: "100%", height: "100%", alignItems: "center", padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' } },
-                    this.$render("i-stack", { direction: "vertical", id: "pnlStripePaymentForm", background: { color: '#fff' }, border: { radius: 12 }, padding: { top: '1rem', left: '1rem', bottom: '2rem', right: '1rem' } }),
+                this.$render("i-stack", { direction: "vertical", width: "100%", height: "100%", alignItems: "center", padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, position: "relative" },
+                    this.$render("i-vstack", { id: "pnlLoading", visible: false, width: "100%", minHeight: 315, position: "absolute", bottom: 0, zIndex: 899, background: { color: Theme.background.main }, class: "i-loading-overlay" },
+                        this.$render("i-vstack", { horizontalAlignment: "center", verticalAlignment: "center", position: "absolute", top: "calc(50% - 0.75rem)", left: "calc(50% - 0.75rem)" },
+                            this.$render("i-icon", { class: "i-loading-spinner_icon", name: "spinner", width: 24, height: 24, fill: Theme.colors.primary.main }))),
+                    this.$render("i-stack", { direction: "vertical", id: "pnlStripePaymentForm", background: { color: '#30313d' }, border: { radius: 12 }, padding: { top: '1rem', left: '1rem', bottom: '2rem', right: '1rem' }, margin: { bottom: '1rem' } }),
                     this.$render("i-stack", { direction: "horizontal", width: "100%", alignItems: "center", justifyContent: "center", margin: { top: 'auto' }, gap: "1rem", wrap: "wrap-reverse" },
                         this.$render("i-button", { id: "btnBack", caption: "$back", background: { color: Theme.colors.secondary.main }, class: index_css_6.halfWidthButtonStyle, onClick: this.handleBack }),
                         this.$render("i-button", { id: "btnCheckout", caption: "$checkout", background: { color: Theme.colors.primary.main }, class: index_css_6.halfWidthButtonStyle, onClick: this.handleStripeCheckoutClick }))),
@@ -1921,10 +1937,9 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             this.model.payment.address = this.model.payment.cryptoPayoutOptions.find(option => {
                 if (isTon)
                     return option.cryptoCode === "TON";
-                return option.tokenAddress === tokenAddress;
+                return option.tokenAddress == tokenAddress;
             })?.walletAddress || "";
-            const { totalAmount, currency, walletAddress } = this.model;
-            const toAddress = walletAddress;
+            const { totalAmount, currency, toAddress } = this.model;
             this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);
             const formattedAmount = components_14.FormatUtils.formatNumber(totalAmount, { decimalFigures: 2 });
             this.lbAmountToPay.caption = `${formattedAmount} ${token.symbol}`;
@@ -1935,7 +1950,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         }
         async handleCopyAddress() {
             try {
-                await components_14.application.copyToClipboard(this.model.walletAddress);
+                await components_14.application.copyToClipboard(this.model.toAddress);
                 this.iconCopyAddress.name = 'check';
                 this.iconCopyAddress.fill = Theme.colors.success.main;
                 if (this.copyAddressTimer)
@@ -2158,6 +2173,7 @@ define("@scom/scom-payment-widget/components/paymentModule.tsx", ["require", "ex
                         this.stripePayment.onClose = this.processCompletedHandler.bind(this);
                         this.pnlPaymentModule.append(this.stripePayment);
                     }
+                    this.stripePayment.onStartPayment();
                     this.paymentMethod.visible = false;
                     this.stripePayment.visible = true;
                 }
