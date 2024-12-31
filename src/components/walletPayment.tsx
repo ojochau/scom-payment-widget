@@ -59,7 +59,6 @@ export class WalletPayment extends Module {
     private copyAmountTimer: any;
     private iconCopyAddress: Icon;
     private iconCopyAmount: Icon;
-    private provider: PaymentProvider;
     private pnlEVMWallet: Panel;
     private selectedToken: ITokenObject;
 
@@ -91,40 +90,23 @@ export class WalletPayment extends Module {
         return this.model.networks;
     }
 
-    async onStartPayment(provider: PaymentProvider) {
+    get provider() {
+        return this.model.walletModel instanceof TonWallet ? PaymentProvider.TonWallet : PaymentProvider.Metamask;
+    }
+
+    async onStartPayment() {
         if (!this.header) return;
-        this.provider = provider;
-        if (provider === PaymentProvider.Metamask) {
-            const evmWallet = new EVMWallet();
-            this.model.walletModel = evmWallet;
-            evmWallet.on("chainChanged", this.handleEVMWalletChainChanged.bind(this));
-            evmWallet.on("walletConnected", this.handleEVMWalletConnected.bind(this));
-            evmWallet.setData({
-                wallets: this.model.wallets,
-                networks: this.model.networks,
-                defaultChainId: configData.defaultData.defaultChainId
-            })
-        }
-        else if (provider === PaymentProvider.TonWallet) {
-            const moduleDir = this['currentModuleDir'] || path;
-            const tonWallet = new TonWallet(moduleDir, this.handleTonWalletStatusChanged.bind(this));
-            this.model.walletModel = tonWallet;
-        }
-        await this.model.walletModel.initWallet();
+        this.model.handleWalletConnected = this.handleWalletConnected.bind(this);
+        this.model.handleWalletChainChanged = this.handleWalletChainChanged.bind(this);
         this.showFirstScreen();
-        this.updateAmount();
-        await this.checkWalletStatus();
+        this.pnlWallet.visible = true;
     }
 
-    private handleTonWalletStatusChanged(isConnected: boolean) {
+    private handleWalletConnected() {
         this.checkWalletStatus();
     }
 
-    private handleEVMWalletConnected() {
-        this.checkWalletStatus();
-    }
-
-    private handleEVMWalletChainChanged() {
+    private handleWalletChainChanged() {
         this.showFirstScreen();
         this.checkWalletStatus();
     }
@@ -134,6 +116,8 @@ export class WalletPayment extends Module {
         this.pnlPayAmount.visible = false;
         this.pnlTokenItems.visible = true;
         this.pnlPayDetail.visible = false;
+        this.pnlWallet.visible = false;
+        this.pnlTokens.visible = false;
         this.btnPay.visible = false;
         this.btnBack.width = '100%';
         this.isToPay = false;
@@ -179,9 +163,6 @@ export class WalletPayment extends Module {
                 await this.renderTonToken();
             }
         } 
-        else if (provider) {
-            this.lbWallet.caption = `$connect_web3_wallet`;
-        }
         this.pnlTokens.visible = isConnected;
     }
 
@@ -254,7 +235,7 @@ export class WalletPayment extends Module {
             name: 'Toncoin',
             symbol: 'TON',
             decimals: 18
-        }
+        }  
         // const balance = await this.getTonBalance();
         // const formattedBalance = FormatUtils.formatNumber(balance, { decimalFigures: 2 });
         this.pnlTokenItems.clearInnerHTML();
@@ -283,8 +264,11 @@ export class WalletPayment extends Module {
         </i-stack>);
     }
 
-    private handleConnectWallet() {
-        this.model.walletModel.connectWallet(this.pnlEVMWallet);
+    private async handleConnectWallet() {
+        const moduleDir = this['currentModuleDir'] || path;
+        const provider = await this.model.connectWallet(moduleDir, this.pnlEVMWallet);
+        // console.log('provider', provider);
+        // this.provider = provider;
     }
 
     private handleShowNetworks() {
@@ -314,8 +298,8 @@ export class WalletPayment extends Module {
         this.imgToken.url = tokenImg;
         const tokenAddress = token.address === Utils.nullAddress ? undefined : token.address;
         this.model.payment.address = this.model.payment.cryptoPayoutOptions.find(option => {
-            if (isTon) return option.cryptoCode === "TON";
-            return option.tokenAddress == tokenAddress;
+            if (isTon) return option.networkCode === "TON" && option.tokenAddress === tokenAddress;
+            return option.chainId === token.chainId.toString() && option.tokenAddress == tokenAddress;
         })?.walletAddress || "";
         const { totalAmount, currency, toAddress } = this.model;
         this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);
@@ -454,7 +438,7 @@ export class WalletPayment extends Module {
             <i-stack direction="vertical" gap="1.5rem" width="100%" height="100%" alignItems="center" padding={{ top: '1rem', bottom: '1rem' }}>
                 <i-stack id="pnlWallet" visible={false} direction="vertical" gap="2rem" width="100%" height="100%" alignItems="center" justifyContent="center" padding={{ left: '1rem', right: '1rem' }}>
                     <i-icon name="wallet" width={64} height={64} fill={Theme.colors.primary.main} />
-                    <i-label id="lbWallet" font={{ size: '0.825rem', bold: true }} />
+                    <i-label id="lbWallet" font={{ size: '0.825rem', bold: true }} caption='$connect_web3_wallet' />
                     <i-button
                         caption="$connect"
                         background={{ color: Theme.colors.primary.main }}

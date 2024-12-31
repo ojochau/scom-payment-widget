@@ -8,6 +8,7 @@
         "@scom/scom-token-list",
         "@scom/scom-network-list",
         "@scom/scom-wallet-modal",
+        "@ijstech/eth-contract",
         "@scom/scom-network-modal"
     ]
 }

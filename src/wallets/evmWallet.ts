@@ -155,13 +155,19 @@ export class EVMWallet extends EventEmitter {
     async connectWallet(modalContainer: Component) {
         if (!this.mdEVMWallet) {
             await application.loadPackage('@scom/scom-wallet-modal', '*');
-            this.mdEVMWallet = new ScomWalletModal();
+            this.mdEVMWallet = new ScomWalletModal(undefined, {
+                wallets: this.wallets,
+                networks: this.networks,
+                onCustomWalletSelected: async (wallet: IClientSideProvider) => {
+                    console.log('onCustomWalletSelected', wallet);
+                }
+            });
             modalContainer.append(this.mdEVMWallet);
         }
-        await this.mdEVMWallet.setData({
-            networks: this.networks,
-            wallets: this.wallets
-        })
+        // await this.mdEVMWallet.setData({
+        //     networks: this.networks,
+        //     wallets: this.wallets
+        // })
         this.mdEVMWallet.showModal();
     }
 
