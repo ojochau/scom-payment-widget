@@ -1,13 +1,16 @@
-import { IExtendedNetwork, INetworkConfig, IOrder, IPaymentActivity, IPaymentInfo, IPlaceOrder, IShippingInfo, ProductType } from './interface';
+import { IExtendedNetwork, INetworkConfig, IOrder, IPaymentActivity, IPaymentInfo, IPlaceOrder, IShippingInfo, PaymentProvider, ProductType } from './interface';
 import { ITokenObject } from '@scom/scom-token-list';
 import configData from './defaultData';
 import { stripeCurrencies, stripeSpecialCurrencies, stripeZeroDecimalCurrencies } from './store';
-import { Component, IdUtils } from '@ijstech/components';
+import { application, Component, IdUtils } from '@ijstech/components';
+import ScomWalletModal from '@scom/scom-wallet-modal';
+import { IClientSideProvider } from '@ijstech/eth-wallet';
+import TonWalletProvider from './wallets/tonProvider';
+import { EVMWallet, TonWallet } from './wallets';
 
 declare const window: any;
 
 export interface IWalletModel {
-	initWallet(): Promise<void>;
 	isWalletConnected(): boolean;
 	isNetworkConnected(): boolean;
 	getNetworkInfo(chainId?: number): IExtendedNetwork;
@@ -40,6 +43,7 @@ export class Model {
 	public onPaymentSuccess: (data: IPaymentActivity) => Promise<void>;
 	public placeMarketplaceOrder: (data: IPlaceOrder) => Promise<void>;
 	private _walletModel: IWalletModel;
+	private mdWallet: ScomWalletModal;
 	constructor() { }
 
 	get walletModel() {
@@ -243,6 +247,77 @@ export class Model {
 			paymentMethod: this.paymentMethod
 		}
 	}
+
+	async handleWalletConnected() {		
+	}
+
+	async handleWalletChainChanged() {
+	}
+
+	async connectWallet(moduleDir: string, modalContainer: Component) {
+		return new Promise<PaymentProvider>(async (resolve, reject) => {
+			if (!this.mdWallet) {
+				const tonWalletProvider = new TonWalletProvider(null, { name: 'tonwallet' });
+				const tonWallet = new TonWallet(
+					tonWalletProvider,
+					moduleDir, 
+					this.handleWalletConnected.bind(this)
+				);
+				tonWalletProvider.onAccountChanged = (account: string) => {
+					this.mdWallet.hideModal();
+					this.walletModel = tonWallet;
+					this.handleWalletConnected();
+				}
+				const evmWallet = new EVMWallet();
+				evmWallet.on("chainChanged", () => {
+					this.walletModel = evmWallet;
+					this.handleWalletChainChanged();
+				});
+				evmWallet.on("walletConnected", () => {
+					this.walletModel = evmWallet;
+					this.handleWalletConnected();
+				});
+				evmWallet.setData({
+					wallets: this.wallets,
+					networks: this.networks,
+					defaultChainId: configData.defaultData.defaultChainId
+				})
+				evmWallet.initWallet();
+				const wallets = [
+					{
+						"name": "metamask"
+					},
+					{
+						"name": "walletconnect"
+					},
+					{
+						"name": "tonwallet",
+						provider: tonWalletProvider
+					}
+				]
+				await application.loadPackage('@scom/scom-wallet-modal', '*');
+				this.mdWallet = new ScomWalletModal(undefined, {
+					wallets: wallets,
+					networks: this.networks,
+					onCustomWalletSelected: async (provider: IClientSideProvider) => {
+						console.log('onCustomWalletSelected', provider);
+						let paymentProvider: PaymentProvider;
+						if (provider.name === 'tonwallet') {
+							this.walletModel = tonWallet;
+							paymentProvider = PaymentProvider.TonWallet;
+						}
+						else {
+							this.walletModel = evmWallet;
+							paymentProvider = PaymentProvider.Metamask;
+						}
+						resolve(paymentProvider);
+					}
+				});
+				modalContainer.append(this.mdWallet);
+			}
+			this.mdWallet.showModal();
+		});
+    }
 
 	async handlePlaceMarketplaceOrder() {
 		if (this.placeMarketplaceOrder) {

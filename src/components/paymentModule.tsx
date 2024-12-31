@@ -101,7 +101,7 @@ export class PaymentModule extends Module {
                     this.statusPayment.onClose = this.processCompletedHandler.bind(this);
                     this.pnlPaymentModule.append(this.walletPayment);
                 }
-                await this.walletPayment.onStartPayment(paymentProvider);
+                await this.walletPayment.onStartPayment();
                 this.paymentMethod.visible = false;
                 this.walletPayment.visible = true;
                 
