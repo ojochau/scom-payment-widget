@@ -301,13 +301,133 @@ declare module "@scom/scom-payment-widget/store.ts" {
     export const stripeZeroDecimalCurrencies: string[];
     export const stripeSpecialCurrencies: string[];
 }
+/// <amd-module name="@scom/scom-payment-widget/wallets/tonProvider.ts" />
+declare module "@scom/scom-payment-widget/wallets/tonProvider.ts" {
+    import { IClientProviderOptions, IClientSideProvider, IClientSideProviderEvents, IConnectWalletEventPayload } from '@ijstech/eth-wallet';
+    export default class TonWalletProvider implements IClientSideProvider {
+        protected _events?: IClientSideProviderEvents;
+        protected _options?: IClientProviderOptions;
+        protected _isConnected: boolean;
+        protected _name: string;
+        protected _image: string;
+        protected _selectedAddress: string;
+        provider: any;
+        tonConnectUI: any;
+        onAccountChanged: (account: string) => void;
+        onChainChanged: (chainId: string) => void;
+        onConnect: (connectInfo: any) => void;
+        onDisconnect: (error: any) => void;
+        constructor(events?: IClientSideProviderEvents, options?: IClientProviderOptions);
+        get name(): string;
+        get displayName(): string;
+        get image(): string;
+        installed(): boolean;
+        get events(): IClientSideProviderEvents;
+        get options(): IClientProviderOptions;
+        get selectedAddress(): string;
+        protected initEvents(): void;
+        connect(eventPayload?: IConnectWalletEventPayload): Promise<void>;
+        disconnect(): Promise<void>;
+        isConnected(): any;
+        switchNetwork(chainId: number): Promise<boolean>;
+        encrypt(key: string): Promise<string>;
+        decrypt(data: string): Promise<string>;
+    }
+}
+/// <amd-module name="@scom/scom-payment-widget/wallets/evmWallet.ts" />
+declare module "@scom/scom-payment-widget/wallets/evmWallet.ts" {
+    import { Component } from "@ijstech/components";
+    import { IClientSideProvider } from "@ijstech/eth-wallet";
+    import { ITokenObject } from "@scom/scom-token-list";
+    import { IExtendedNetwork, INetworkConfig } from "@scom/scom-payment-widget/interface.ts";
+    export interface IWalletPlugin {
+        name: string;
+        packageName?: string;
+        provider?: IClientSideProvider;
+    }
+    class EventEmitter {
+        private events;
+        on(event: string, listener: Function): void;
+        off(event: string, listener: Function): void;
+        emit(event: string, data?: any): void;
+    }
+    export class EVMWallet extends EventEmitter {
+        private mdEVMWallet;
+        private mdNetwork;
+        private _wallets;
+        private _networks;
+        private rpcWalletEvents;
+        private rpcWalletId;
+        private defaultChainId;
+        private defaultWallets;
+        private networkMap;
+        get wallets(): IWalletPlugin[];
+        set wallets(value: IWalletPlugin[]);
+        get networks(): INetworkConfig[];
+        set networks(value: INetworkConfig[]);
+        constructor();
+        setData(data: {
+            wallets: IWalletPlugin[];
+            networks: INetworkConfig[];
+            defaultChainId: number;
+        }): void;
+        initWallet(): Promise<void>;
+        private removeRpcWalletEvents;
+        private initRpcWallet;
+        resetRpcWallet(): Promise<void>;
+        getWalletAddress(): string;
+        getRpcWallet(): import("@ijstech/eth-wallet").IRpcWallet;
+        connectWallet(modalContainer: Component): Promise<void>;
+        openNetworkModal(modalContainer: Component): Promise<void>;
+        isWalletConnected(): boolean;
+        isNetworkConnected(): boolean;
+        switchNetwork(): Promise<void>;
+        disconnectWallet(): Promise<void>;
+        getNetworkInfo(chainId?: number): IExtendedNetwork;
+        viewExplorerByAddress(address: string): void;
+        viewExplorerByTransactionHash(hash: string): void;
+        transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<string>;
+    }
+}
+/// <amd-module name="@scom/scom-payment-widget/wallets/tonWallet.ts" />
+declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
+    import { Component } from "@ijstech/components";
+    import { ITokenObject } from "@scom/scom-token-list";
+    import TonWalletProvider from "@scom/scom-payment-widget/wallets/tonProvider.ts";
+    export class TonWallet {
+        private provider;
+        private toncore;
+        private _isWalletConnected;
+        private _onTonWalletStatusChanged;
+        constructor(provider: TonWalletProvider, moduleDir: string, onTonWalletStatusChanged: (isConnected: boolean) => void);
+        isWalletConnected(): any;
+        isNetworkConnected(): any;
+        loadLib(moduleDir: string): Promise<unknown>;
+        connectWallet(): Promise<void>;
+        getNetworkInfo(): any;
+        openNetworkModal(modalContainer: Component): Promise<void>;
+        switchNetwork(): Promise<void>;
+        disconnectWallet(): Promise<void>;
+        sendTransaction(txData: any): Promise<any>;
+        constructPayloadForTokenTransfer(to: string, token: ITokenObject, amount: number): string;
+        getWalletAddress(): any;
+        viewExplorerByTransactionHash(hash: string): void;
+        getTonBalance(): Promise<import("@ijstech/eth-wallet").BigNumber>;
+        getJettonWalletAddress(jettonMasterAddress: string, userAddress: string): any;
+        transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<any>;
+    }
+}
+/// <amd-module name="@scom/scom-payment-widget/wallets/index.ts" />
+declare module "@scom/scom-payment-widget/wallets/index.ts" {
+    export * from "@scom/scom-payment-widget/wallets/evmWallet.ts";
+    export * from "@scom/scom-payment-widget/wallets/tonWallet.ts";
+}
 /// <amd-module name="@scom/scom-payment-widget/model.ts" />
 declare module "@scom/scom-payment-widget/model.ts" {
-    import { IExtendedNetwork, INetworkConfig, IPaymentActivity, IPaymentInfo, IPlaceOrder, IShippingInfo } from "@scom/scom-payment-widget/interface.ts";
+    import { IExtendedNetwork, INetworkConfig, IPaymentActivity, IPaymentInfo, IPlaceOrder, IShippingInfo, PaymentProvider } from "@scom/scom-payment-widget/interface.ts";
     import { ITokenObject } from '@scom/scom-token-list';
     import { Component } from '@ijstech/components';
     export interface IWalletModel {
-        initWallet(): Promise<void>;
         isWalletConnected(): boolean;
         isNetworkConnected(): boolean;
         getNetworkInfo(chainId?: number): IExtendedNetwork;
@@ -335,6 +455,7 @@ declare module "@scom/scom-payment-widget/model.ts" {
         onPaymentSuccess: (data: IPaymentActivity) => Promise<void>;
         placeMarketplaceOrder: (data: IPlaceOrder) => Promise<void>;
         private _walletModel;
+        private mdWallet;
         constructor();
         get walletModel(): IWalletModel;
         set walletModel(value: IWalletModel);
@@ -376,6 +497,9 @@ declare module "@scom/scom-payment-widget/model.ts" {
         set isCompleted(value: boolean);
         get placeOrder(): IPlaceOrder;
         get paymentActivity(): IPaymentActivity;
+        handleWalletConnected(): Promise<void>;
+        handleWalletChainChanged(): Promise<void>;
+        connectWallet(moduleDir: string, modalContainer: Component): Promise<PaymentProvider>;
         handlePlaceMarketplaceOrder(): Promise<void>;
         handlePaymentSuccess(): Promise<void>;
         processCompletedHandler(): void;
@@ -606,93 +730,6 @@ declare module "@scom/scom-payment-widget/components/paymentMethod.tsx" {
         render(): any;
     }
 }
-/// <amd-module name="@scom/scom-payment-widget/wallets/evmWallet.ts" />
-declare module "@scom/scom-payment-widget/wallets/evmWallet.ts" {
-    import { Component } from "@ijstech/components";
-    import { IClientSideProvider } from "@ijstech/eth-wallet";
-    import { ITokenObject } from "@scom/scom-token-list";
-    import { IExtendedNetwork, INetworkConfig } from "@scom/scom-payment-widget/interface.ts";
-    export interface IWalletPlugin {
-        name: string;
-        packageName?: string;
-        provider?: IClientSideProvider;
-    }
-    class EventEmitter {
-        private events;
-        on(event: string, listener: Function): void;
-        off(event: string, listener: Function): void;
-        emit(event: string, data?: any): void;
-    }
-    export class EVMWallet extends EventEmitter {
-        private mdEVMWallet;
-        private mdNetwork;
-        private _wallets;
-        private _networks;
-        private rpcWalletEvents;
-        private rpcWalletId;
-        private defaultChainId;
-        private defaultWallets;
-        private networkMap;
-        get wallets(): IWalletPlugin[];
-        set wallets(value: IWalletPlugin[]);
-        get networks(): INetworkConfig[];
-        set networks(value: INetworkConfig[]);
-        constructor();
-        setData(data: {
-            wallets: IWalletPlugin[];
-            networks: INetworkConfig[];
-            defaultChainId: number;
-        }): void;
-        initWallet(): Promise<void>;
-        private removeRpcWalletEvents;
-        private initRpcWallet;
-        resetRpcWallet(): Promise<void>;
-        getWalletAddress(): string;
-        getRpcWallet(): import("@ijstech/eth-wallet").IRpcWallet;
-        connectWallet(modalContainer: Component): Promise<void>;
-        openNetworkModal(modalContainer: Component): Promise<void>;
-        isWalletConnected(): boolean;
-        isNetworkConnected(): boolean;
-        switchNetwork(): Promise<void>;
-        disconnectWallet(): Promise<void>;
-        getNetworkInfo(chainId?: number): IExtendedNetwork;
-        viewExplorerByAddress(address: string): void;
-        viewExplorerByTransactionHash(hash: string): void;
-        transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<string>;
-    }
-}
-/// <amd-module name="@scom/scom-payment-widget/wallets/tonWallet.ts" />
-declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
-    import { Component } from "@ijstech/components";
-    import { ITokenObject } from "@scom/scom-token-list";
-    export class TonWallet {
-        private toncore;
-        private tonConnectUI;
-        private _isWalletConnected;
-        private _onTonWalletStatusChanged;
-        constructor(moduleDir: string, onTonWalletStatusChanged: (isConnected: boolean) => void);
-        isWalletConnected(): boolean;
-        isNetworkConnected(): boolean;
-        loadLib(moduleDir: string): Promise<unknown>;
-        initWallet(): Promise<void>;
-        connectWallet(): Promise<void>;
-        getNetworkInfo(): any;
-        openNetworkModal(modalContainer: Component): Promise<void>;
-        switchNetwork(): Promise<void>;
-        disconnectWallet(): Promise<void>;
-        sendTransaction(txData: any): Promise<any>;
-        constructPayloadForTokenTransfer(to: string, token: ITokenObject, amount: number): any;
-        getWalletAddress(): any;
-        viewExplorerByTransactionHash(hash: string): void;
-        getTonBalance(): Promise<import("@ijstech/eth-wallet").BigNumber>;
-        transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<any>;
-    }
-}
-/// <amd-module name="@scom/scom-payment-widget/wallets/index.ts" />
-declare module "@scom/scom-payment-widget/wallets/index.ts" {
-    export * from "@scom/scom-payment-widget/wallets/evmWallet.ts";
-    export * from "@scom/scom-payment-widget/wallets/tonWallet.ts";
-}
 /// <amd-module name="@scom/scom-payment-widget/components/statusPayment.tsx" />
 declare module "@scom/scom-payment-widget/components/statusPayment.tsx" {
     import { Module, Container, ControlElement } from '@ijstech/components';
@@ -825,7 +862,6 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private copyAmountTimer;
         private iconCopyAddress;
         private iconCopyAmount;
-        private provider;
         private pnlEVMWallet;
         private selectedToken;
         onBack: () => void;
@@ -836,10 +872,10 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         get tokens(): ITokenObject[];
         get wallets(): any[];
         get networks(): import("@scom/scom-payment-widget/interface.ts").INetworkConfig[];
-        onStartPayment(provider: PaymentProvider): Promise<void>;
-        private handleTonWalletStatusChanged;
-        private handleEVMWalletConnected;
-        private handleEVMWalletChainChanged;
+        get provider(): PaymentProvider.TonWallet | PaymentProvider.Metamask;
+        onStartPayment(): Promise<void>;
+        private handleWalletConnected;
+        private handleWalletChainChanged;
         private showFirstScreen;
         private updateAmount;
         private checkWalletStatus;
