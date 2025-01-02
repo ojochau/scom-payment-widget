@@ -357,9 +357,9 @@ export class WalletPayment extends Module {
                         this.onPaid({ status: 'failed', provider: this.provider, receipt: '', ownerAddress: address });
                         return;
                     }
+                    this.model.referenceId = receipt;
                     await this.model.handlePlaceMarketplaceOrder();
                     await this.model.handlePaymentSuccess();
-                    this.model.referenceId = receipt;
                     this.onPaid({ status: 'completed', provider: this.provider, receipt, ownerAddress: address });
                     this.updateBtnPay(false);
                 }
