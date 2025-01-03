@@ -414,7 +414,7 @@ declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
         viewExplorerByTransactionHash(hash: string): void;
         getTonBalance(): Promise<import("@ijstech/eth-wallet").BigNumber>;
         buildOwnerSlice(userAddress: string): string;
-        getJettonWalletAddress(jettonMasterAddress: string, userAddress: string): Promise<any>;
+        getJettonWalletAddress(jettonMasterAddress: string, userAddress: string): Promise<string>;
         getTransactionMessageHash(boc: string): any;
         transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<string>;
     }
