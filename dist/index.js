@@ -861,13 +861,14 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
                     result = await this.sendTransaction(transaction);
                 }
                 else {
-                    const payload = this.constructPayloadForTokenTransfer(to, token, amount);
-                    const jettonAddress = await this.getJettonWalletAddress(token.address, to);
+                    const senderJettonAddress = await this.getJettonWalletAddress(token.address, this.getWalletAddress());
+                    const recipientJettonAddress = await this.getJettonWalletAddress(token.address, to);
+                    const payload = this.constructPayloadForTokenTransfer(recipientJettonAddress, token, amount);
                     const transaction = {
                         validUntil: Math.floor(Date.now() / 1000) + 60,
                         messages: [
                             {
-                                address: jettonAddress,
+                                address: senderJettonAddress,
                                 amount: eth_wallet_2.Utils.toDecimals('0.1', 9),
                                 payload: payload
                             }

@@ -147,7 +147,7 @@ export class TonWallet {
         const cell = this.toncore.Cell.fromBase64(data.stack[0].value);
         const slice = cell.beginParse();
         const address = slice.loadAddress();
-        return address.toString();
+        return address.toString() as string;
     }
 
     getTransactionMessageHash(boc: string) {
@@ -181,14 +181,15 @@ export class TonWallet {
                 result = await this.sendTransaction(transaction);
             }
             else {
-                const payload = this.constructPayloadForTokenTransfer(to, token, amount);
-                const jettonAddress = await this.getJettonWalletAddress(token.address, to);
+                const senderJettonAddress = await this.getJettonWalletAddress(token.address, this.getWalletAddress());
+                const recipientJettonAddress = await this.getJettonWalletAddress(token.address, to);
+                const payload = this.constructPayloadForTokenTransfer(recipientJettonAddress, token, amount);
                 const transaction = {
                     validUntil: Math.floor(Date.now() / 1000) + 60, // 60 sec
                     messages: [
                         {
-                            address: jettonAddress,
-                            amount: Utils.toDecimals('0.1', 9),
+                            address: senderJettonAddress,
+                            amount: Utils.toDecimals('0.1', 9), //FIXME: need to estimate the fee
                             payload: payload
                         }
                     ]
