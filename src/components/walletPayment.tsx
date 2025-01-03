@@ -14,6 +14,12 @@ import { EVMWallet, TonWallet } from '../wallets';
 const path = application.currentModuleDir;
 const Theme = Styles.Theme.ThemeVars;
 
+enum Step {
+    ConnectWallet,
+    SelectToken,
+    Pay
+}
+
 interface ScomPaymentWidgetWalletPaymentElement extends ControlElement {
     model?: Model;
     onBack?: () => void;
@@ -38,7 +44,7 @@ export class WalletPayment extends Module {
     private btnTonWallet: Button;
     private pnlNetwork: StackLayout;
     private pnlWallet: StackLayout;
-    private pnlTokens: StackLayout;
+    private pnlPay: StackLayout;
     private pnlTokenItems: StackLayout;
     private pnlPayDetail: StackLayout;
     private imgToken: Image;
@@ -54,7 +60,7 @@ export class WalletPayment extends Module {
     private imgCurrentNetwork: Image;
     private lbCurrentNetwork: Label;
     private _model: Model;
-    private isToPay: boolean;
+    private currentStep: Step = Step.ConnectWallet;
     private copyAddressTimer: any;
     private copyAmountTimer: any;
     private iconCopyAddress: Icon;
@@ -75,7 +81,6 @@ export class WalletPayment extends Module {
 
     set model(value: Model) {
         this._model = value;
-        this.updateAmount();
     }
 
     get tokens() {
@@ -98,8 +103,8 @@ export class WalletPayment extends Module {
         if (!this.header) return;
         this.model.handleWalletConnected = this.handleWalletConnected.bind(this);
         this.model.handleWalletChainChanged = this.handleWalletChainChanged.bind(this);
-        this.showFirstScreen();
-        this.pnlWallet.visible = true;
+        this.goToStep(Step.ConnectWallet);
+        this.updateAmount();
     }
 
     private handleWalletConnected() {
@@ -107,20 +112,45 @@ export class WalletPayment extends Module {
     }
 
     private handleWalletChainChanged() {
-        this.showFirstScreen();
         this.checkWalletStatus();
     }
 
-    private showFirstScreen() {
-        this.header.visible = true;
-        this.pnlPayAmount.visible = false;
-        this.pnlTokenItems.visible = true;
-        this.pnlPayDetail.visible = false;
-        this.pnlWallet.visible = false;
-        this.pnlTokens.visible = false;
-        this.btnPay.visible = false;
-        this.btnBack.width = '100%';
-        this.isToPay = false;
+    private goToStep(step: Step) {
+        if (step === Step.ConnectWallet) {
+            this.header.visible = true;
+            this.pnlPayAmount.visible = false;
+            this.pnlTokenItems.visible = true;
+            this.pnlPayDetail.visible = false;
+            this.pnlWallet.visible = true;
+            this.pnlPay.visible = false;
+            this.btnPay.visible = false;
+            this.btnBack.width = '100%';
+            this.currentStep = Step.ConnectWallet;
+        }
+        else if (step === Step.SelectToken) {
+            this.header.visible = true;
+            this.pnlPayAmount.visible = false;
+            this.pnlTokenItems.visible = true;
+            this.pnlPayDetail.visible = false;
+            this.pnlWallet.visible = false;
+            this.pnlPay.visible = true;
+            this.btnPay.visible = false;
+            this.btnBack.width = '100%';
+            this.currentStep = Step.SelectToken;
+        }
+        else if (step === Step.Pay) {
+            this.header.visible = false;
+            this.pnlPayAmount.visible = true;
+            this.pnlTokenItems.visible = false;
+            this.pnlPayDetail.visible = true;
+            this.pnlWallet.visible = false;
+            this.pnlPay.visible = true;
+            this.btnPay.visible = true;
+            this.btnBack.width = 'calc(50% - 1rem)';
+            this.updatePaymentButtonVisibility();
+            this.updateBtnPay(false);
+            this.currentStep = Step.Pay;
+        }
     }
 
     private updateAmount() {
@@ -136,10 +166,12 @@ export class WalletPayment extends Module {
     private async checkWalletStatus() {
         const paymentProvider = this.provider;
         let isConnected = this.model.walletModel.isWalletConnected();
-        this.pnlWallet.visible = !isConnected;
         const provider = PaymentProviders.find(v => v.provider === paymentProvider);
         if (isConnected) {
-            if (this.isToPay) {
+            if (this.currentStep === Step.ConnectWallet) {
+                this.goToStep(Step.SelectToken);
+            }
+            else if (this.currentStep === Step.Pay) {
                 this.updatePaymentButtonVisibility();
             }
             const address = this.model.walletModel.getWalletAddress();
@@ -156,43 +188,43 @@ export class WalletPayment extends Module {
                     this.pnlNetwork.visible = false;
                 }
             }
-            if (paymentProvider === PaymentProvider.Metamask) {
-                await this.renderErcTokens();
-            } 
-            else if (paymentProvider === PaymentProvider.TonWallet) {
-                await this.renderTonToken();
-            }
+            await this.renderTokens(paymentProvider);
         } 
-        this.pnlTokens.visible = isConnected;
+        else {
+            this.goToStep(Step.ConnectWallet);
+        }
     }
 
-    // private async updateTokenBalances(tokens?: ITokenObject[]) {
-    //     const arr = (tokens || this.tokens).reduce((acc, token) => {
-    //         const { chainId } = token;
-    //         if (!acc[chainId]) {
-    //             acc[chainId] = [];
-    //         }
-    //         acc[chainId].push(token);
-    //         return acc;
-    //     }, {});
-    //     let promises: Promise<any>[] = [];
-    //     for (const chainId in arr) {
-    //         const tokens = arr[chainId];
-    //         promises.push(tokenStore.updateTokenBalancesByChainId(Number(chainId), tokens));
-    //     }
-    //     await Promise.all(promises);
-    // }
-
-    private async renderErcTokens() {
+    private async renderTokens(paymentProvider: PaymentProvider) {
+        const isTonWallet = paymentProvider === PaymentProvider.TonWallet;
         const network = this.model.walletModel.getNetworkInfo();
-        const chainId = network.chainId;
-        const tokens = this.tokens.filter(v => v.chainId === chainId);
-        // await this.updateTokenBalances(tokens);
+        const chainId = network?.chainId;
+        let tokens: ITokenObject[] = [];
+        if (isTonWallet) {
+            //FIXME: token list should be updated to include tokens for TonWallet
+            tokens = [
+                {
+                    chainId: undefined,
+                    name: 'Toncoin',
+                    symbol: 'TON',
+                    decimals: 18
+                },
+                {
+                    chainId: undefined,
+                    name: 'USDT',
+                    symbol: 'USDT',
+                    decimals: 6,
+                    address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs'
+                }
+            ];
+        }
+        else {
+            tokens = this.tokens.filter(v => v.chainId === chainId);
+        }
         const nodeItems: HTMLElement[] = [];
         for (const token of tokens) {
-            // const balances = tokenStore.getTokenBalancesByChainId(chainId) || {};
-            // const tokenBalance = balances[token.address?.toLowerCase() || token.symbol] || 0;
-            // const formattedBalance = FormatUtils.formatNumber(tokenBalance, { decimalFigures: 2 });
+            const tokenImgUrl = isTonWallet ? assets.fullPath('img/ton.png'): tokenAssets.tokenPath(token, chainId);
+            const networkName = isTonWallet ? 'Ton' : (network?.chainName || '');
             nodeItems.push(
                 <i-stack
                     direction="horizontal"
@@ -204,18 +236,15 @@ export class WalletPayment extends Module {
                     border={{ width: 1, style: 'solid', color: Theme.divider, radius: 8 }}
                     padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}
                     cursor="pointer"
-                    onClick={() => this.handleSelectToken(token)}
+                    onClick={() => this.handleSelectToken(token, isTonWallet)}
                 >
                     <i-stack direction="horizontal" alignItems="center" gap="0.75rem">
-                        <i-image width={20} height={20} minWidth={20} url={tokenAssets.tokenPath(token, chainId)} />
+                        <i-image width={20} height={20} minWidth={20} url={tokenImgUrl} />
                         <i-stack direction="vertical" gap="0.25rem">
                             <i-label caption={token.name || token.symbol} font={{ bold: true, color: Theme.text.primary }} />
-                            <i-label caption={network.chainName || ''} font={{ size: '0.75rem', color: Theme.text.primary }} />
+                            <i-label caption={networkName} font={{ size: '0.75rem', color: Theme.text.primary }} />
                         </i-stack>
                     </i-stack>
-                    {/* <i-stack direction="vertical" gap="0.25rem">
-                        <i-label caption={`${formattedBalance} ${token.symbol}`} font={{ bold: true, color: Theme.text.primary }} />
-                    </i-stack> */}
                 </i-stack>
             );
         }
@@ -223,52 +252,9 @@ export class WalletPayment extends Module {
         this.pnlTokenItems.append(...nodeItems);
     }
 
-    // private async getTonBalance() {
-    //     const tonWallet = this.model.walletModel as TonWallet;
-    //     const balance = await tonWallet.getTonBalance();
-    //     return balance.toFixed();
-    // }
-
-    private async renderTonToken() {
-        const tonToken = {
-            chainId: undefined,
-            name: 'Toncoin',
-            symbol: 'TON',
-            decimals: 18
-        }  
-        // const balance = await this.getTonBalance();
-        // const formattedBalance = FormatUtils.formatNumber(balance, { decimalFigures: 2 });
-        this.pnlTokenItems.clearInnerHTML();
-        this.pnlTokenItems.appendChild(<i-stack
-            direction="horizontal"
-            justifyContent="space-between"
-            alignItems="center"
-            wrap="wrap"
-            gap="0.5rem"
-            width="100%"
-            border={{ width: 1, style: 'solid', color: Theme.divider, radius: 8 }}
-            padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}
-            cursor="pointer"
-            onClick={() => this.handleSelectToken(tonToken, true)}
-        >
-            <i-stack direction="horizontal" alignItems="center" gap="0.75rem">
-                <i-image width={20} height={20} minWidth={20} url={assets.fullPath('img/ton.png')} />
-                <i-stack direction="vertical" gap="0.25rem">
-                    <i-label caption={tonToken.name} font={{ bold: true, color: Theme.text.primary }} />
-                    <i-label caption="Ton" font={{ size: '0.75rem', color: Theme.text.primary }} />
-                </i-stack>
-            </i-stack>
-            {/* <i-stack direction="vertical" gap="0.25rem">
-                <i-label caption={`${formattedBalance} ${tonToken.symbol}`} font={{ bold: true, color: Theme.text.primary }} />
-            </i-stack> */}
-        </i-stack>);
-    }
-
     private async handleConnectWallet() {
         const moduleDir = this['currentModuleDir'] || path;
         const provider = await this.model.connectWallet(moduleDir, this.pnlEVMWallet);
-        // console.log('provider', provider);
-        // this.provider = provider;
     }
 
     private handleShowNetworks() {
@@ -286,19 +272,19 @@ export class WalletPayment extends Module {
     }
 
     private handleSelectToken(token: ITokenObject, isTon?: boolean) {
-        this.header.visible = false;
-        this.pnlTokenItems.visible = false;
-        this.pnlPayAmount.visible = true;
-        this.pnlPayDetail.visible = true;
-        this.updatePaymentButtonVisibility();
-        this.updateBtnPay(false);
-        this.btnBack.width = 'calc(50% - 1rem)';
-        this.isToPay = true;
+        this.goToStep(Step.Pay);
         const tokenImg = isTon ? assets.fullPath('img/ton.png') : tokenAssets.tokenPath(token, token.chainId);
         this.imgToken.url = tokenImg;
         const tokenAddress = token.address === Utils.nullAddress ? undefined : token.address;
         this.model.payment.address = this.model.payment.cryptoPayoutOptions.find(option => {
-            if (isTon) return option.networkCode === "TON" && option.tokenAddress === tokenAddress;
+            if (isTon) {
+                if (tokenAddress) {
+                    return option.networkCode === "TON" && option.tokenAddress === tokenAddress;
+                }
+                else {
+                    return option.networkCode === "TON" && !option.tokenAddress;
+                }
+            }
             return option.chainId === token.chainId.toString() && option.tokenAddress == tokenAddress;
         })?.walletAddress || "";
         const { totalAmount, currency, toAddress } = this.model;
@@ -371,13 +357,10 @@ export class WalletPayment extends Module {
                         this.onPaid({ status: 'failed', provider: this.provider, receipt: '', ownerAddress: address });
                         return;
                     }
-                    await this.model.handlePlaceMarketplaceOrder();
                     this.model.referenceId = receipt;
-                    this.onPaid({ status: 'pending', provider: this.provider, receipt, ownerAddress: address });
-                },
-                async (receipt: any) => {
+                    await this.model.handlePlaceMarketplaceOrder();
                     await this.model.handlePaymentSuccess();
-                    this.onPaid({ status: 'completed', provider: this.provider, receipt: receipt.transactionHash, ownerAddress: address });
+                    this.onPaid({ status: 'completed', provider: this.provider, receipt, ownerAddress: address });
                     this.updateBtnPay(false);
                 }
             );
@@ -385,8 +368,12 @@ export class WalletPayment extends Module {
     }
 
     private handleBack() {
-        if (this.isToPay) {
-            this.showFirstScreen();
+        if (this.currentStep === Step.SelectToken) {
+            this.goToStep(Step.ConnectWallet);
+            return;
+        }
+        else if (this.currentStep === Step.Pay) {
+            this.goToStep(Step.SelectToken);
             return;
         }
         if (this.onBack) this.onBack();
@@ -452,7 +439,7 @@ export class WalletPayment extends Module {
                         onClick={this.handleBack}
                     />
                 </i-stack>
-                <i-stack id="pnlTokens" visible={false} direction="vertical" gap="1rem" justifyContent="center" alignItems="center" height="100%" width="100%">
+                <i-stack id="pnlPay" visible={false} direction="vertical" gap="1rem" justifyContent="center" alignItems="center" height="100%" width="100%">
                     <i-stack direction="horizontal" justifyContent="space-between" alignItems="center" gap="1rem" width="100%" wrap="wrap" margin={{ bottom: '0.5rem' }} padding={{ left: '1rem', right: '1rem' }}>
                         <i-stack
                             direction="horizontal"

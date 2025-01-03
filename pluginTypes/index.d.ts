@@ -413,8 +413,10 @@ declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
         getWalletAddress(): any;
         viewExplorerByTransactionHash(hash: string): void;
         getTonBalance(): Promise<import("@ijstech/eth-wallet").BigNumber>;
-        getJettonWalletAddress(jettonMasterAddress: string, userAddress: string): any;
-        transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<any>;
+        buildOwnerSlice(userAddress: string): string;
+        getJettonWalletAddress(jettonMasterAddress: string, userAddress: string): Promise<any>;
+        getTransactionMessageHash(boc: string): any;
+        transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<string>;
     }
 }
 /// <amd-module name="@scom/scom-payment-widget/wallets/index.ts" />
@@ -843,7 +845,7 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private btnTonWallet;
         private pnlNetwork;
         private pnlWallet;
-        private pnlTokens;
+        private pnlPay;
         private pnlTokenItems;
         private pnlPayDetail;
         private imgToken;
@@ -859,7 +861,7 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private imgCurrentNetwork;
         private lbCurrentNetwork;
         private _model;
-        private isToPay;
+        private currentStep;
         private copyAddressTimer;
         private copyAmountTimer;
         private iconCopyAddress;
@@ -878,11 +880,10 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         onStartPayment(): Promise<void>;
         private handleWalletConnected;
         private handleWalletChainChanged;
-        private showFirstScreen;
+        private goToStep;
         private updateAmount;
         private checkWalletStatus;
-        private renderErcTokens;
-        private renderTonToken;
+        private renderTokens;
         private handleConnectWallet;
         private handleShowNetworks;
         private updatePaymentButtonVisibility;
