@@ -36,26 +36,25 @@ declare global {
 
 @customElements('scom-payment-widget--wallet-payment')
 export class WalletPayment extends Module {
-    private pnlPayAmount: StackLayout;
+    // private pnlPayAmount: StackLayout;
     private header: PaymentHeader;
-    private lbPayItem: Label;
-    private lbPayAmount: Label;
-    private imgPayToken: Image;
+    // private lbPayItem: Label;
+    // private lbPayAmount: Label;
+    // private imgPayToken: Image;
     private btnTonWallet: Button;
     private pnlNetwork: StackLayout;
     private pnlWallet: StackLayout;
     private pnlPay: StackLayout;
+    private pnlCryptos: StackLayout;
     private pnlTokenItems: StackLayout;
     private pnlPayDetail: StackLayout;
-    private imgToken: Image;
     private lbToAddress: Label;
     private lbAmountToPay: Label;
-    private lbUSD: Label;
+    // private lbUSD: Label;
     private btnBack: Button;
     private btnSwitchNetwork: Button;
     private btnPay: Button;
     private lbWallet: Label;
-    private imgCurrentWallet: Image;
     private lbCurrentAddress: Label;
     private imgCurrentNetwork: Image;
     private lbCurrentNetwork: Label;
@@ -117,9 +116,9 @@ export class WalletPayment extends Module {
 
     private goToStep(step: Step) {
         if (step === Step.ConnectWallet) {
-            this.header.visible = true;
-            this.pnlPayAmount.visible = false;
-            this.pnlTokenItems.visible = true;
+            // this.header.visible = true;
+            // this.pnlPayAmount.visible = false;
+            this.pnlCryptos.visible = true;
             this.pnlPayDetail.visible = false;
             this.pnlWallet.visible = true;
             this.pnlPay.visible = false;
@@ -128,9 +127,9 @@ export class WalletPayment extends Module {
             this.currentStep = Step.ConnectWallet;
         }
         else if (step === Step.SelectToken) {
-            this.header.visible = true;
-            this.pnlPayAmount.visible = false;
-            this.pnlTokenItems.visible = true;
+            // this.header.visible = true;
+            // this.pnlPayAmount.visible = false;
+            this.pnlCryptos.visible = true;
             this.pnlPayDetail.visible = false;
             this.pnlWallet.visible = false;
             this.pnlPay.visible = true;
@@ -139,9 +138,9 @@ export class WalletPayment extends Module {
             this.currentStep = Step.SelectToken;
         }
         else if (step === Step.Pay) {
-            this.header.visible = false;
-            this.pnlPayAmount.visible = true;
-            this.pnlTokenItems.visible = false;
+            // this.header.visible = false;
+            // this.pnlPayAmount.visible = true;
+            this.pnlCryptos.visible = false;
             this.pnlPayDetail.visible = true;
             this.pnlWallet.visible = false;
             this.pnlPay.visible = true;
@@ -157,9 +156,9 @@ export class WalletPayment extends Module {
         if (this.header && this.model) {
             const { title, currency, totalAmount } = this.model;
             this.header.setHeader(title, currency, totalAmount);
-            if (this.lbPayItem.caption !== title) this.lbPayItem.caption = title;
-            const formattedAmount = `${FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false })} ${currency}`;
-            if (this.lbPayAmount.caption !== formattedAmount) this.lbPayAmount.caption = formattedAmount;
+            // if (this.lbPayItem.caption !== title) this.lbPayItem.caption = title;
+            // const formattedAmount = `${FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false })} ${currency}`;
+            // if (this.lbPayAmount.caption !== formattedAmount) this.lbPayAmount.caption = formattedAmount;
         }
     }
 
@@ -176,7 +175,6 @@ export class WalletPayment extends Module {
             }
             const address = this.model.walletModel.getWalletAddress();
             if (provider) {
-                this.imgCurrentWallet.url = assets.fullPath(`img/${provider.image}`);
                 this.lbCurrentAddress.caption = address.substr(0, 6) + '...' + address.substr(-4);
                 const network = this.model.walletModel.getNetworkInfo();
                 if (network) {
@@ -274,7 +272,6 @@ export class WalletPayment extends Module {
     private handleSelectToken(token: ITokenObject, isTon?: boolean) {
         this.goToStep(Step.Pay);
         const tokenImg = isTon ? assets.fullPath('img/ton.png') : tokenAssets.tokenPath(token, token.chainId);
-        this.imgToken.url = tokenImg;
         const tokenAddress = token.address === Utils.nullAddress ? undefined : token.address;
         this.model.payment.address = this.model.payment.cryptoPayoutOptions.find(option => {
             if (isTon) {
@@ -288,12 +285,13 @@ export class WalletPayment extends Module {
             return option.chainId === token.chainId.toString() && option.tokenAddress == tokenAddress;
         })?.walletAddress || "";
         const { totalAmount, currency, toAddress } = this.model;
-        this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);
+        // this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);
+        this.lbToAddress.caption = toAddress;
         const formattedAmount = FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false });
         this.lbAmountToPay.caption = `${formattedAmount} ${token.symbol}`;
-        this.lbUSD.caption = `${formattedAmount} ${currency || 'USD'}`;
-        this.lbUSD.visible = !isTon;
-        this.imgPayToken.url = tokenImg;
+        // this.lbUSD.caption = `${formattedAmount} ${currency || 'USD'}`;
+        // this.lbUSD.visible = !isTon;
+        // this.imgPayToken.url = tokenImg;
         this.selectedToken = token;
     }
 
@@ -400,7 +398,7 @@ export class WalletPayment extends Module {
                 margin={{ bottom: '1rem' }}
             >
                 <scom-payment-widget--header id="header" />
-                <i-stack
+                {/* <i-stack
                     id="pnlPayAmount"
                     visible={false}
                     direction="vertical"
@@ -420,7 +418,7 @@ export class WalletPayment extends Module {
                         <i-image id="imgPayToken" width={20} height={20} minWidth={20} display="flex" />
                         <i-label id="lbPayAmount" font={{ size: '1rem', color: Theme.text.primary, bold: true }} />
                     </i-stack>
-                </i-stack>
+                </i-stack> */}
             </i-stack>
             <i-stack direction="vertical" gap="1.5rem" width="100%" height="100%" alignItems="center" padding={{ top: '1rem', bottom: '1rem' }}>
                 <i-stack id="pnlWallet" visible={false} direction="vertical" gap="2rem" width="100%" height="100%" alignItems="center" justifyContent="center" padding={{ left: '1rem', right: '1rem' }}>
@@ -448,7 +446,7 @@ export class WalletPayment extends Module {
                             padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }}
                             border={{ style: 'solid', width: 1, color: Theme.divider, radius: 8 }}
                         >
-                            <i-image id="imgCurrentWallet" width={24} height={24} minWidth={24} />
+                            <i-icon name="wallet" width={24} height={24} fill={Theme.colors.primary.main} />
                             <i-label id="lbCurrentAddress" />
                             <i-stack
                                 direction="horizontal"
@@ -475,8 +473,11 @@ export class WalletPayment extends Module {
                             <i-label id="lbCurrentNetwork" />
                         </i-stack>
                     </i-stack>
-                    <i-stack id="pnlTokenItems" direction="vertical" gap="1rem" width="100%" height="100%" minHeight={100} maxHeight={240} overflow="auto" padding={{ left: '1rem', right: '1rem' }} />
-                    <i-stack id="pnlPayDetail" visible={false} direction="vertical" gap="0.25rem" width="100%" height="100%" alignItems="center" padding={{ left: '1rem', right: '1rem' }}>
+                    <i-stack id="pnlCryptos" direction="vertical" gap="1rem" width="100%" height="100%" padding={{ left: '1rem', right: '1rem' }} >
+                        <i-label font={{ size: '1rem', color: Theme.text.primary, bold: true }} caption='$select_crypto' />
+                        <i-stack id="pnlTokenItems" direction="vertical" gap="1rem" width="100%" height="100%" minHeight={100} maxHeight={240} overflow="auto" />
+                    </i-stack>
+                    <i-stack id="pnlPayDetail" visible={false} direction="vertical" gap="0.25rem" width="100%" height="100%" padding={{ left: '1rem', right: '1rem' }}>
                         <i-label caption="$paid_to_address" />
                         <i-stack
                             direction="horizontal"
@@ -494,7 +495,6 @@ export class WalletPayment extends Module {
                                 width="100%"
                                 padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }}
                             >
-                                <i-image id="imgToken" width={16} height={16} minWidth={16} display="flex" />
                                 <i-label id="lbToAddress" wordBreak="break-all" font={{ color: Theme.input.fontColor }} />
                             </i-stack>
                             <i-stack
@@ -511,6 +511,7 @@ export class WalletPayment extends Module {
                                 <i-icon id="iconCopyAddress" name="copy" width={16} height={16} cursor="pointer" fill={Theme.text.primary} />
                             </i-stack>
                         </i-stack>
+                        <i-label caption="$amount_to_pay" />
                         <i-stack
                             direction="horizontal"
                             alignItems="stretch"
@@ -520,16 +521,14 @@ export class WalletPayment extends Module {
                             overflow="hidden"
                         >
                             <i-stack
-                                direction="vertical"
+                                direction="horizontal"
                                 gap="0.5rem"
-                                justifyContent="center"
                                 alignItems="center"
                                 width="100%"
                                 padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }}
                             >
-                                <i-label caption="Amount to pay" font={{ size: '0.75rem', transform: 'uppercase', color: Theme.input.fontColor }} />
-                                <i-label id="lbAmountToPay" wordBreak="break-all" font={{ size: '0.875rem', color: Theme.colors.primary.main, bold: true }} />
-                                <i-label id="lbUSD" wordBreak="break-all" font={{ size: '0.75rem', color: Theme.colors.primary.main }} />
+                                <i-label id="lbAmountToPay" wordBreak="break-all" font={{ color: Theme.input.fontColor }} />
+                                {/* <i-label id="lbUSD" wordBreak="break-all" font={{ size: '0.75rem', color: Theme.colors.primary.main }} /> */}
                             </i-stack>
                             <i-stack
                                 direction="horizontal"
