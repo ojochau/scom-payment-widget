@@ -52,7 +52,7 @@ export class InvoiceCreation extends Module {
                         <i-label caption={product.name} font={{ bold: true }} />
                         <i-hstack gap="0.5rem" verticalAlignment="center" horizontalAlignment="space-between" wrap="wrap">
                             <i-label caption={this.i18n.get('$price')} font={{ color: Theme.text.hint }} />
-                            <i-label caption={`${FormatUtils.formatNumber(product.price, { decimalFigures: 2 })} ${currency}`} font={{ bold: true }} class={textUpperCaseStyle} />
+                            <i-label caption={`${FormatUtils.formatNumber(product.price, { decimalFigures: 6, hasTrailingZero: false })} ${currency}`} font={{ bold: true }} class={textUpperCaseStyle} />
                         </i-hstack>
                         <i-hstack gap="0.5rem" verticalAlignment="center" horizontalAlignment="space-between" wrap="wrap">
                             <i-label caption={this.i18n.get('$quantity')} font={{ color: Theme.text.hint }} />
@@ -86,7 +86,7 @@ export class InvoiceCreation extends Module {
             this.renderProducts();
         }
         if (this.lbAmount) {
-            this.lbAmount.caption = `${FormatUtils.formatNumber(totalAmount, { decimalFigures: 2 })} ${currency}`;
+            this.lbAmount.caption = `${FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false })} ${currency}`;
         }
         if (this.pnlPaymentId) {
             const _paymentId = paymentId || '';

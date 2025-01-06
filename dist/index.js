@@ -1217,7 +1217,7 @@ define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "
                         this.$render("i-label", { caption: product.name, font: { bold: true } }),
                         this.$render("i-hstack", { gap: "0.5rem", verticalAlignment: "center", horizontalAlignment: "space-between", wrap: "wrap" },
                             this.$render("i-label", { caption: this.i18n.get('$price'), font: { color: Theme.text.hint } }),
-                            this.$render("i-label", { caption: `${components_6.FormatUtils.formatNumber(product.price, { decimalFigures: 2 })} ${currency}`, font: { bold: true }, class: index_css_1.textUpperCaseStyle })),
+                            this.$render("i-label", { caption: `${components_6.FormatUtils.formatNumber(product.price, { decimalFigures: 6, hasTrailingZero: false })} ${currency}`, font: { bold: true }, class: index_css_1.textUpperCaseStyle })),
                         this.$render("i-hstack", { gap: "0.5rem", verticalAlignment: "center", horizontalAlignment: "space-between", wrap: "wrap" },
                             this.$render("i-label", { caption: this.i18n.get('$quantity'), font: { color: Theme.text.hint } }),
                             this.$render("i-label", { caption: components_6.FormatUtils.formatNumber(product.quantity, { hasTrailingZero: false }), font: { bold: true } }))));
@@ -1247,7 +1247,7 @@ define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "
                 this.renderProducts();
             }
             if (this.lbAmount) {
-                this.lbAmount.caption = `${components_6.FormatUtils.formatNumber(totalAmount, { decimalFigures: 2 })} ${currency}`;
+                this.lbAmount.caption = `${components_6.FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false })} ${currency}`;
             }
             if (this.pnlPaymentId) {
                 const _paymentId = paymentId || '';
@@ -1300,7 +1300,7 @@ define("@scom/scom-payment-widget/components/common/header.tsx", ["require", "ex
             if (this.lbTitle) {
                 if (this.lbTitle.caption !== title)
                     this.lbTitle.caption = title || '';
-                const formattedAmount = `${components_7.FormatUtils.formatNumber(amount, { decimalFigures: 2 })} ${currency?.toUpperCase() || 'USD'}`;
+                const formattedAmount = `${components_7.FormatUtils.formatNumber(amount, { decimalFigures: 6, hasTrailingZero: false })} ${currency?.toUpperCase() || 'USD'}`;
                 if (this.lbAmount.caption !== formattedAmount)
                     this.lbAmount.caption = formattedAmount;
             }
@@ -2051,7 +2051,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                 this.header.setHeader(title, currency, totalAmount);
                 if (this.lbPayItem.caption !== title)
                     this.lbPayItem.caption = title;
-                const formattedAmount = `${components_15.FormatUtils.formatNumber(totalAmount, { decimalFigures: 2 })} ${currency}`;
+                const formattedAmount = `${components_15.FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false })} ${currency}`;
                 if (this.lbPayAmount.caption !== formattedAmount)
                     this.lbPayAmount.caption = formattedAmount;
             }
@@ -2162,7 +2162,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             })?.walletAddress || "";
             const { totalAmount, currency, toAddress } = this.model;
             this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);
-            const formattedAmount = components_15.FormatUtils.formatNumber(totalAmount, { decimalFigures: 2 });
+            const formattedAmount = components_15.FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false });
             this.lbAmountToPay.caption = `${formattedAmount} ${token.symbol}`;
             this.lbUSD.caption = `${formattedAmount} ${currency || 'USD'}`;
             this.lbUSD.visible = !isTon;
