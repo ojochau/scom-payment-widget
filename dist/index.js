@@ -129,6 +129,7 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
     exports.default = {
         "en": {
             "pay": "Pay",
+            "select_crypto": "Select Cryptocurrency",
             "amount_to_pay": "Amount to pay",
             "payment": "Payment",
             "shipping_address": "Shipping address",
@@ -174,6 +175,7 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
         },
         "zh-hant": {
             "pay": "付款",
+            "select_crypto": "選擇加密貨幣",
             "amount_to_pay": "應付金額",
             "payment": "付款",
             "shipping_address": "收貨地址",
@@ -219,6 +221,7 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
         },
         "vi": {
             "pay": "Thanh toán",
+            "select_crypto": "Chọn tiền điện tử",
             "amount_to_pay": "Số tiền cần trả",
             "payment": "Thanh toán",
             "shipping_address": "Địa chỉ giao hàng",
@@ -620,6 +623,7 @@ define("@scom/scom-payment-widget/wallets/evmWallet.ts", ["require", "exports", 
                     }
                 });
                 modalContainer.append(this.mdEVMWallet);
+                await this.mdEVMWallet.ready();
             }
             // await this.mdEVMWallet.setData({
             //     networks: this.networks,
@@ -2010,9 +2014,9 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         }
         goToStep(step) {
             if (step === Step.ConnectWallet) {
-                this.header.visible = true;
-                this.pnlPayAmount.visible = false;
-                this.pnlTokenItems.visible = true;
+                // this.header.visible = true;
+                // this.pnlPayAmount.visible = false;
+                this.pnlCryptos.visible = true;
                 this.pnlPayDetail.visible = false;
                 this.pnlWallet.visible = true;
                 this.pnlPay.visible = false;
@@ -2021,9 +2025,9 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                 this.currentStep = Step.ConnectWallet;
             }
             else if (step === Step.SelectToken) {
-                this.header.visible = true;
-                this.pnlPayAmount.visible = false;
-                this.pnlTokenItems.visible = true;
+                // this.header.visible = true;
+                // this.pnlPayAmount.visible = false;
+                this.pnlCryptos.visible = true;
                 this.pnlPayDetail.visible = false;
                 this.pnlWallet.visible = false;
                 this.pnlPay.visible = true;
@@ -2032,9 +2036,9 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                 this.currentStep = Step.SelectToken;
             }
             else if (step === Step.Pay) {
-                this.header.visible = false;
-                this.pnlPayAmount.visible = true;
-                this.pnlTokenItems.visible = false;
+                // this.header.visible = false;
+                // this.pnlPayAmount.visible = true;
+                this.pnlCryptos.visible = false;
                 this.pnlPayDetail.visible = true;
                 this.pnlWallet.visible = false;
                 this.pnlPay.visible = true;
@@ -2049,11 +2053,9 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             if (this.header && this.model) {
                 const { title, currency, totalAmount } = this.model;
                 this.header.setHeader(title, currency, totalAmount);
-                if (this.lbPayItem.caption !== title)
-                    this.lbPayItem.caption = title;
-                const formattedAmount = `${components_15.FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false })} ${currency}`;
-                if (this.lbPayAmount.caption !== formattedAmount)
-                    this.lbPayAmount.caption = formattedAmount;
+                // if (this.lbPayItem.caption !== title) this.lbPayItem.caption = title;
+                // const formattedAmount = `${FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false })} ${currency}`;
+                // if (this.lbPayAmount.caption !== formattedAmount) this.lbPayAmount.caption = formattedAmount;
             }
         }
         async checkWalletStatus() {
@@ -2069,7 +2071,6 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                 }
                 const address = this.model.walletModel.getWalletAddress();
                 if (provider) {
-                    this.imgCurrentWallet.url = assets_3.default.fullPath(`img/${provider.image}`);
                     this.lbCurrentAddress.caption = address.substr(0, 6) + '...' + address.substr(-4);
                     const network = this.model.walletModel.getNetworkInfo();
                     if (network) {
@@ -2147,7 +2148,6 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         handleSelectToken(token, isTon) {
             this.goToStep(Step.Pay);
             const tokenImg = isTon ? assets_3.default.fullPath('img/ton.png') : scom_token_list_1.assets.tokenPath(token, token.chainId);
-            this.imgToken.url = tokenImg;
             const tokenAddress = token.address === eth_wallet_3.Utils.nullAddress ? undefined : token.address;
             this.model.payment.address = this.model.payment.cryptoPayoutOptions.find(option => {
                 if (isTon) {
@@ -2161,12 +2161,13 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                 return option.chainId === token.chainId.toString() && option.tokenAddress == tokenAddress;
             })?.walletAddress || "";
             const { totalAmount, currency, toAddress } = this.model;
-            this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);
+            // this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);
+            this.lbToAddress.caption = toAddress;
             const formattedAmount = components_15.FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false });
             this.lbAmountToPay.caption = `${formattedAmount} ${token.symbol}`;
-            this.lbUSD.caption = `${formattedAmount} ${currency || 'USD'}`;
-            this.lbUSD.visible = !isTon;
-            this.imgPayToken.url = tokenImg;
+            // this.lbUSD.caption = `${formattedAmount} ${currency || 'USD'}`;
+            // this.lbUSD.visible = !isTon;
+            // this.imgPayToken.url = tokenImg;
             this.selectedToken = token;
         }
         async handleCopyAddress() {
@@ -2257,12 +2258,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         render() {
             return this.$render("i-stack", { direction: "vertical", alignItems: "center", width: "100%" },
                 this.$render("i-stack", { direction: "vertical", alignItems: "center", width: "100%", minHeight: 60, margin: { bottom: '1rem' } },
-                    this.$render("scom-payment-widget--header", { id: "header" }),
-                    this.$render("i-stack", { id: "pnlPayAmount", visible: false, direction: "vertical", gap: "0.5rem", width: "100%", minHeight: 85, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, border: { bottom: { style: 'solid', width: 1, color: Theme.divider } } },
-                        this.$render("i-label", { id: "lbPayItem", font: { size: '1rem', color: Theme.text.primary, bold: true }, wordBreak: "break-word" }),
-                        this.$render("i-stack", { direction: "horizontal", gap: "0.25rem", alignItems: "center", width: "100%" },
-                            this.$render("i-image", { id: "imgPayToken", width: 20, height: 20, minWidth: 20, display: "flex" }),
-                            this.$render("i-label", { id: "lbPayAmount", font: { size: '1rem', color: Theme.text.primary, bold: true } })))),
+                    this.$render("scom-payment-widget--header", { id: "header" })),
                 this.$render("i-stack", { direction: "vertical", gap: "1.5rem", width: "100%", height: "100%", alignItems: "center", padding: { top: '1rem', bottom: '1rem' } },
                     this.$render("i-stack", { id: "pnlWallet", visible: false, direction: "vertical", gap: "2rem", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", padding: { left: '1rem', right: '1rem' } },
                         this.$render("i-icon", { name: "wallet", width: 64, height: 64, fill: Theme.colors.primary.main }),
@@ -2272,27 +2268,27 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                     this.$render("i-stack", { id: "pnlPay", visible: false, direction: "vertical", gap: "1rem", justifyContent: "center", alignItems: "center", height: "100%", width: "100%" },
                         this.$render("i-stack", { direction: "horizontal", justifyContent: "space-between", alignItems: "center", gap: "1rem", width: "100%", wrap: "wrap", margin: { bottom: '0.5rem' }, padding: { left: '1rem', right: '1rem' } },
                             this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", alignItems: "center", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }, border: { style: 'solid', width: 1, color: Theme.divider, radius: 8 } },
-                                this.$render("i-image", { id: "imgCurrentWallet", width: 24, height: 24, minWidth: 24 }),
+                                this.$render("i-icon", { name: "wallet", width: 24, height: 24, fill: Theme.colors.primary.main }),
                                 this.$render("i-label", { id: "lbCurrentAddress" }),
                                 this.$render("i-stack", { direction: "horizontal", padding: { top: '0.25rem', bottom: '0.25rem', left: '0.25rem', right: '0.25rem' }, gap: "0.375rem", cursor: "pointer", onClick: this.handleDisconnectWallet },
                                     this.$render("i-icon", { name: "power-off", width: 16, height: 16 }))),
                             this.$render("i-stack", { id: "pnlNetwork", direction: "horizontal", gap: "0.5rem", alignItems: "center", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }, border: { style: 'solid', width: 1, color: Theme.divider, radius: 8 }, cursor: "pointer", width: "fit-content", onClick: this.handleShowNetworks },
                                 this.$render("i-image", { id: "imgCurrentNetwork", width: 24, height: 24, minWidth: 24 }),
                                 this.$render("i-label", { id: "lbCurrentNetwork" }))),
-                        this.$render("i-stack", { id: "pnlTokenItems", direction: "vertical", gap: "1rem", width: "100%", height: "100%", minHeight: 100, maxHeight: 240, overflow: "auto", padding: { left: '1rem', right: '1rem' } }),
-                        this.$render("i-stack", { id: "pnlPayDetail", visible: false, direction: "vertical", gap: "0.25rem", width: "100%", height: "100%", alignItems: "center", padding: { left: '1rem', right: '1rem' } },
+                        this.$render("i-stack", { id: "pnlCryptos", direction: "vertical", gap: "1rem", width: "100%", height: "100%", padding: { left: '1rem', right: '1rem' } },
+                            this.$render("i-label", { font: { size: '1rem', color: Theme.text.primary, bold: true }, caption: '$select_crypto' }),
+                            this.$render("i-stack", { id: "pnlTokenItems", direction: "vertical", gap: "1rem", width: "100%", height: "100%", minHeight: 100, maxHeight: 240, overflow: "auto" })),
+                        this.$render("i-stack", { id: "pnlPayDetail", visible: false, direction: "vertical", gap: "0.25rem", width: "100%", height: "100%", padding: { left: '1rem', right: '1rem' } },
                             this.$render("i-label", { caption: "$paid_to_address" }),
                             this.$render("i-stack", { direction: "horizontal", alignItems: "stretch", width: "100%", margin: { bottom: '1rem' }, border: { radius: 8 }, background: { color: Theme.input.background }, overflow: "hidden" },
                                 this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", alignItems: "center", width: "100%", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' } },
-                                    this.$render("i-image", { id: "imgToken", width: 16, height: 16, minWidth: 16, display: "flex" }),
                                     this.$render("i-label", { id: "lbToAddress", wordBreak: "break-all", font: { color: Theme.input.fontColor } })),
                                 this.$render("i-stack", { direction: "horizontal", width: 32, minWidth: 32, alignItems: "center", justifyContent: "center", cursor: "pointer", margin: { left: 'auto' }, background: { color: Theme.colors.primary.main }, onClick: this.handleCopyAddress },
                                     this.$render("i-icon", { id: "iconCopyAddress", name: "copy", width: 16, height: 16, cursor: "pointer", fill: Theme.text.primary }))),
+                            this.$render("i-label", { caption: "$amount_to_pay" }),
                             this.$render("i-stack", { direction: "horizontal", alignItems: "stretch", width: "100%", border: { radius: 8 }, background: { color: Theme.input.background }, overflow: "hidden" },
-                                this.$render("i-stack", { direction: "vertical", gap: "0.5rem", justifyContent: "center", alignItems: "center", width: "100%", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' } },
-                                    this.$render("i-label", { caption: "Amount to pay", font: { size: '0.75rem', transform: 'uppercase', color: Theme.input.fontColor } }),
-                                    this.$render("i-label", { id: "lbAmountToPay", wordBreak: "break-all", font: { size: '0.875rem', color: Theme.colors.primary.main, bold: true } }),
-                                    this.$render("i-label", { id: "lbUSD", wordBreak: "break-all", font: { size: '0.75rem', color: Theme.colors.primary.main } })),
+                                this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", alignItems: "center", width: "100%", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' } },
+                                    this.$render("i-label", { id: "lbAmountToPay", wordBreak: "break-all", font: { color: Theme.input.fontColor } })),
                                 this.$render("i-stack", { direction: "horizontal", width: 32, minWidth: 32, alignItems: "center", justifyContent: "center", cursor: "pointer", margin: { left: 'auto' }, background: { color: Theme.colors.primary.main }, onClick: this.handleCopyAmount },
                                     this.$render("i-icon", { id: "iconCopyAmount", name: "copy", width: 16, height: 16, fill: Theme.text.primary })))),
                         this.$render("i-stack", { direction: "horizontal", width: "100%", alignItems: "center", justifyContent: "center", gap: "1rem", wrap: "wrap-reverse", padding: { left: '1rem', right: '1rem' } },

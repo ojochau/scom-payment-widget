@@ -133,6 +133,7 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
     const _default: {
         en: {
             pay: string;
+            select_crypto: string;
             amount_to_pay: string;
             payment: string;
             shipping_address: string;
@@ -178,6 +179,7 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
         };
         "zh-hant": {
             pay: string;
+            select_crypto: string;
             amount_to_pay: string;
             payment: string;
             shipping_address: string;
@@ -223,6 +225,7 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
         };
         vi: {
             pay: string;
+            select_crypto: string;
             amount_to_pay: string;
             payment: string;
             shipping_address: string;
@@ -837,26 +840,20 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         }
     }
     export class WalletPayment extends Module {
-        private pnlPayAmount;
         private header;
-        private lbPayItem;
-        private lbPayAmount;
-        private imgPayToken;
         private btnTonWallet;
         private pnlNetwork;
         private pnlWallet;
         private pnlPay;
+        private pnlCryptos;
         private pnlTokenItems;
         private pnlPayDetail;
-        private imgToken;
         private lbToAddress;
         private lbAmountToPay;
-        private lbUSD;
         private btnBack;
         private btnSwitchNetwork;
         private btnPay;
         private lbWallet;
-        private imgCurrentWallet;
         private lbCurrentAddress;
         private imgCurrentNetwork;
         private lbCurrentNetwork;

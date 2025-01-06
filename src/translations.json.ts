@@ -1,6 +1,7 @@
 export default {
   "en": {
     "pay": "Pay",
+    "select_crypto": "Select Cryptocurrency",
     "amount_to_pay": "Amount to pay",
     "payment": "Payment",
     "shipping_address": "Shipping address",
@@ -46,6 +47,7 @@ export default {
   },
   "zh-hant": {
     "pay": "付款",
+    "select_crypto": "選擇加密貨幣",
     "amount_to_pay": "應付金額",
     "payment": "付款",
     "shipping_address": "收貨地址",
@@ -91,6 +93,7 @@ export default {
   },
   "vi": {
     "pay": "Thanh toán",
+    "select_crypto": "Chọn tiền điện tử",
     "amount_to_pay": "Số tiền cần trả",
     "payment": "Thanh toán",
     "shipping_address": "Địa chỉ giao hàng",

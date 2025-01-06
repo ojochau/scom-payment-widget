@@ -163,6 +163,7 @@ export class EVMWallet extends EventEmitter {
                 }
             });
             modalContainer.append(this.mdEVMWallet);
+            await this.mdEVMWallet.ready();
         }
         // await this.mdEVMWallet.setData({
         //     networks: this.networks,
