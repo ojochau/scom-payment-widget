@@ -23,7 +23,7 @@ export class PaymentHeader extends Module {
   setHeader(title: string, currency: string, amount: number) {
     if (this.lbTitle) {
       if (this.lbTitle.caption !== title) this.lbTitle.caption = title || '';
-      const formattedAmount = `${FormatUtils.formatNumber(amount, { decimalFigures: 2 })} ${currency?.toUpperCase() || 'USD'}`;
+      const formattedAmount = `${FormatUtils.formatNumber(amount, { decimalFigures: 6, hasTrailingZero: false })} ${currency?.toUpperCase() || 'USD'}`;
       if (this.lbAmount.caption !== formattedAmount) this.lbAmount.caption = formattedAmount;
     }
   }

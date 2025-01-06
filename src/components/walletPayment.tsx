@@ -158,7 +158,7 @@ export class WalletPayment extends Module {
             const { title, currency, totalAmount } = this.model;
             this.header.setHeader(title, currency, totalAmount);
             if (this.lbPayItem.caption !== title) this.lbPayItem.caption = title;
-            const formattedAmount = `${FormatUtils.formatNumber(totalAmount, { decimalFigures: 2 })} ${currency}`;
+            const formattedAmount = `${FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false })} ${currency}`;
             if (this.lbPayAmount.caption !== formattedAmount) this.lbPayAmount.caption = formattedAmount;
         }
     }
@@ -289,7 +289,7 @@ export class WalletPayment extends Module {
         })?.walletAddress || "";
         const { totalAmount, currency, toAddress } = this.model;
         this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);
-        const formattedAmount = FormatUtils.formatNumber(totalAmount, { decimalFigures: 2 });
+        const formattedAmount = FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false });
         this.lbAmountToPay.caption = `${formattedAmount} ${token.symbol}`;
         this.lbUSD.caption = `${formattedAmount} ${currency || 'USD'}`;
         this.lbUSD.visible = !isTon;
