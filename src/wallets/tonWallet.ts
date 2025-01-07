@@ -2,6 +2,7 @@ import { Component, RequireJS } from "@ijstech/components";
 import { Utils } from "@ijstech/eth-wallet";
 import { ITokenObject } from "@scom/scom-token-list";
 import TonWalletProvider from "./tonProvider";
+import assets from '../assets';
 
 const JETTON_TRANSFER_OP = 0xf8a7ea5; // 32-bit
 
@@ -55,7 +56,17 @@ export class TonWallet {
     }
 
     getNetworkInfo() {
-        return null;
+        return {
+            chainId: 0,
+            chainName: 'TON',
+            nativeCurrency: {
+                name: 'TON',
+                symbol: 'TON',
+                decimals: 9
+            },
+            image: assets.fullPath('img/ton.png'),
+            rpcUrls: []
+        }
     }
 
     async openNetworkModal(modalContainer: Component) {
@@ -95,7 +106,9 @@ export class TonWallet {
     }
 
     getWalletAddress() {
-        return this.provider.tonConnectUI.account?.address;
+        const rawAddress = this.provider.tonConnectUI.account?.address;
+        const nonBounceableAddress = this.toncore.Address.parse(rawAddress).toString({ bounceable: false })
+        return nonBounceableAddress;
     }
 
     viewExplorerByTransactionHash(hash: string) {

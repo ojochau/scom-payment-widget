@@ -720,7 +720,19 @@ define("@scom/scom-payment-widget/wallets/evmWallet.ts", ["require", "exports", 
     }
     exports.EVMWallet = EVMWallet;
 });
-define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", "@ijstech/components", "@ijstech/eth-wallet"], function (require, exports, components_4, eth_wallet_2) {
+define("@scom/scom-payment-widget/assets.ts", ["require", "exports", "@ijstech/components"], function (require, exports, components_4) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    const moduleDir = components_4.application.currentModuleDir;
+    function fullPath(path) {
+        return `${moduleDir}/${path}`;
+    }
+    ;
+    exports.default = {
+        fullPath
+    };
+});
+define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", "@ijstech/components", "@ijstech/eth-wallet", "@scom/scom-payment-widget/assets.ts"], function (require, exports, components_5, eth_wallet_2, assets_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TonWallet = void 0;
@@ -741,13 +753,13 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
         async loadLib(moduleDir) {
             let self = this;
             return new Promise((resolve, reject) => {
-                components_4.RequireJS.config({
+                components_5.RequireJS.config({
                     baseUrl: `${moduleDir}/lib`,
                     paths: {
                         'ton-core': 'ton-core',
                     }
                 });
-                components_4.RequireJS.require(['ton-core'], function (TonCore) {
+                components_5.RequireJS.require(['ton-core'], function (TonCore) {
                     self.toncore = TonCore;
                     resolve(self.toncore);
                 });
@@ -762,7 +774,17 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
             }
         }
         getNetworkInfo() {
-            return null;
+            return {
+                chainId: 0,
+                chainName: 'TON',
+                nativeCurrency: {
+                    name: 'TON',
+                    symbol: 'TON',
+                    decimals: 9
+                },
+                image: assets_1.default.fullPath('img/ton.png'),
+                rpcUrls: []
+            };
         }
         async openNetworkModal(modalContainer) {
         }
@@ -790,7 +812,9 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
             return bodyCell.toBoc().toString('base64');
         }
         getWalletAddress() {
-            return this.provider.tonConnectUI.account?.address;
+            const rawAddress = this.provider.tonConnectUI.account?.address;
+            const nonBounceableAddress = this.toncore.Address.parse(rawAddress).toString({ bounceable: false });
+            return nonBounceableAddress;
         }
         viewExplorerByTransactionHash(hash) {
             window.open(`https://tonscan.org/transaction/${hash}`);
@@ -902,7 +926,7 @@ define("@scom/scom-payment-widget/wallets/index.ts", ["require", "exports", "@sc
     __exportStar(evmWallet_1, exports);
     __exportStar(tonWallet_1, exports);
 });
-define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/defaultData.ts", "@scom/scom-payment-widget/store.ts", "@ijstech/components", "@scom/scom-wallet-modal", "@scom/scom-payment-widget/wallets/tonProvider.ts", "@scom/scom-payment-widget/wallets/index.ts"], function (require, exports, interface_2, defaultData_1, store_1, components_5, scom_wallet_modal_2, tonProvider_1, wallets_1) {
+define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/defaultData.ts", "@scom/scom-payment-widget/store.ts", "@ijstech/components", "@scom/scom-wallet-modal", "@scom/scom-payment-widget/wallets/tonProvider.ts", "@scom/scom-payment-widget/wallets/index.ts"], function (require, exports, interface_2, defaultData_1, store_1, components_6, scom_wallet_modal_2, tonProvider_1, wallets_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Model = void 0;
@@ -1071,7 +1095,7 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
         get paymentActivity() {
             const { merchantId, stallId } = this.placeOrder;
             return {
-                id: components_5.IdUtils.generateUUID(),
+                id: components_6.IdUtils.generateUUID(),
                 recipient: merchantId,
                 amount: this.totalAmount.toString(),
                 currencyCode: this.currency,
@@ -1123,7 +1147,7 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
                             provider: tonWalletProvider
                         }
                     ];
-                    await components_5.application.loadPackage('@scom/scom-wallet-modal', '*');
+                    await components_6.application.loadPackage('@scom/scom-wallet-modal', '*');
                     this.mdWallet = new scom_wallet_modal_2.default(undefined, {
                         wallets: wallets,
                         networks: this.networks,
@@ -1148,7 +1172,7 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
         }
         async handlePlaceMarketplaceOrder() {
             if (this.placeMarketplaceOrder) {
-                this.orderId = components_5.IdUtils.generateUUID();
+                this.orderId = components_6.IdUtils.generateUUID();
                 await this.placeMarketplaceOrder(this.placeOrder);
             }
         }
@@ -1195,12 +1219,12 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
     }
     exports.Model = Model;
 });
-define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_6, index_css_1, translations_json_1) {
+define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_7, index_css_1, translations_json_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.InvoiceCreation = void 0;
-    const Theme = components_6.Styles.Theme.ThemeVars;
-    let InvoiceCreation = class InvoiceCreation extends components_6.Module {
+    const Theme = components_7.Styles.Theme.ThemeVars;
+    let InvoiceCreation = class InvoiceCreation extends components_7.Module {
         get model() {
             return this._model;
         }
@@ -1221,10 +1245,10 @@ define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "
                         this.$render("i-label", { caption: product.name, font: { bold: true } }),
                         this.$render("i-hstack", { gap: "0.5rem", verticalAlignment: "center", horizontalAlignment: "space-between", wrap: "wrap" },
                             this.$render("i-label", { caption: this.i18n.get('$price'), font: { color: Theme.text.hint } }),
-                            this.$render("i-label", { caption: `${components_6.FormatUtils.formatNumber(product.price, { decimalFigures: 6, hasTrailingZero: false })} ${currency}`, font: { bold: true }, class: index_css_1.textUpperCaseStyle })),
+                            this.$render("i-label", { caption: `${components_7.FormatUtils.formatNumber(product.price, { decimalFigures: 6, hasTrailingZero: false })} ${currency}`, font: { bold: true }, class: index_css_1.textUpperCaseStyle })),
                         this.$render("i-hstack", { gap: "0.5rem", verticalAlignment: "center", horizontalAlignment: "space-between", wrap: "wrap" },
                             this.$render("i-label", { caption: this.i18n.get('$quantity'), font: { color: Theme.text.hint } }),
-                            this.$render("i-label", { caption: components_6.FormatUtils.formatNumber(product.quantity, { hasTrailingZero: false }), font: { bold: true } }))));
+                            this.$render("i-label", { caption: components_7.FormatUtils.formatNumber(product.quantity, { hasTrailingZero: false }), font: { bold: true } }))));
                     nodeItems.push(element);
                 }
                 this.carouselSlider.items = nodeItems.map((item, idx) => {
@@ -1251,7 +1275,7 @@ define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "
                 this.renderProducts();
             }
             if (this.lbAmount) {
-                this.lbAmount.caption = `${components_6.FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false })} ${currency}`;
+                this.lbAmount.caption = `${components_7.FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false })} ${currency}`;
             }
             if (this.pnlPaymentId) {
                 const _paymentId = paymentId || '';
@@ -1290,21 +1314,21 @@ define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "
         }
     };
     InvoiceCreation = __decorate([
-        (0, components_6.customElements)('scom-payment-widget--invoice-creation')
+        (0, components_7.customElements)('scom-payment-widget--invoice-creation')
     ], InvoiceCreation);
     exports.InvoiceCreation = InvoiceCreation;
 });
-define("@scom/scom-payment-widget/components/common/header.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_7, index_css_2, translations_json_2) {
+define("@scom/scom-payment-widget/components/common/header.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_8, index_css_2, translations_json_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PaymentHeader = void 0;
-    const Theme = components_7.Styles.Theme.ThemeVars;
-    let PaymentHeader = class PaymentHeader extends components_7.Module {
+    const Theme = components_8.Styles.Theme.ThemeVars;
+    let PaymentHeader = class PaymentHeader extends components_8.Module {
         setHeader(title, currency, amount) {
             if (this.lbTitle) {
                 if (this.lbTitle.caption !== title)
                     this.lbTitle.caption = title || '';
-                const formattedAmount = `${components_7.FormatUtils.formatNumber(amount, { decimalFigures: 6, hasTrailingZero: false })} ${currency?.toUpperCase() || 'USD'}`;
+                const formattedAmount = `${components_8.FormatUtils.formatNumber(amount, { decimalFigures: 6, hasTrailingZero: false })} ${currency?.toUpperCase() || 'USD'}`;
                 if (this.lbAmount.caption !== formattedAmount)
                     this.lbAmount.caption = formattedAmount;
             }
@@ -1322,16 +1346,16 @@ define("@scom/scom-payment-widget/components/common/header.tsx", ["require", "ex
         }
     };
     PaymentHeader = __decorate([
-        (0, components_7.customElements)('scom-payment-widget--header')
+        (0, components_8.customElements)('scom-payment-widget--header')
     ], PaymentHeader);
     exports.PaymentHeader = PaymentHeader;
 });
-define("@scom/scom-payment-widget/components/common/styledInput.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_8, translations_json_3) {
+define("@scom/scom-payment-widget/components/common/styledInput.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_9, translations_json_3) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.StyledInput = void 0;
-    const Theme = components_8.Styles.Theme.ThemeVars;
-    let StyledInput = class StyledInput extends components_8.Module {
+    const Theme = components_9.Styles.Theme.ThemeVars;
+    let StyledInput = class StyledInput extends components_9.Module {
         get value() {
             return this.styledInput.value;
         }
@@ -1363,16 +1387,16 @@ define("@scom/scom-payment-widget/components/common/styledInput.tsx", ["require"
         }
     };
     StyledInput = __decorate([
-        (0, components_8.customElements)('scom-payment-widget--styled-input')
+        (0, components_9.customElements)('scom-payment-widget--styled-input')
     ], StyledInput);
     exports.StyledInput = StyledInput;
 });
-define("@scom/scom-payment-widget/components/common/styledComboBox.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_9, translations_json_4) {
+define("@scom/scom-payment-widget/components/common/styledComboBox.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_10, translations_json_4) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.StyledComboBox = void 0;
-    const Theme = components_9.Styles.Theme.ThemeVars;
-    let StyledComboBox = class StyledComboBox extends components_9.Module {
+    const Theme = components_10.Styles.Theme.ThemeVars;
+    let StyledComboBox = class StyledComboBox extends components_10.Module {
         get items() {
             return this.styledComboBox.items;
         }
@@ -1414,7 +1438,7 @@ define("@scom/scom-payment-widget/components/common/styledComboBox.tsx", ["requi
         }
     };
     StyledComboBox = __decorate([
-        (0, components_9.customElements)('scom-payment-widget--styled-combo-box')
+        (0, components_10.customElements)('scom-payment-widget--styled-combo-box')
     ], StyledComboBox);
     exports.StyledComboBox = StyledComboBox;
 });
@@ -1426,12 +1450,12 @@ define("@scom/scom-payment-widget/components/common/index.ts", ["require", "expo
     Object.defineProperty(exports, "StyledInput", { enumerable: true, get: function () { return styledInput_1.StyledInput; } });
     Object.defineProperty(exports, "StyledComboBox", { enumerable: true, get: function () { return styledComboBox_1.StyledComboBox; } });
 });
-define("@scom/scom-payment-widget/components/shippingInfo.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_10, index_css_3, translations_json_5) {
+define("@scom/scom-payment-widget/components/shippingInfo.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_11, index_css_3, translations_json_5) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ShippingInfo = void 0;
-    const Theme = components_10.Styles.Theme.ThemeVars;
-    let ShippingInfo = class ShippingInfo extends components_10.Module {
+    const Theme = components_11.Styles.Theme.ThemeVars;
+    let ShippingInfo = class ShippingInfo extends components_11.Module {
         get model() {
             return this._model;
         }
@@ -1523,23 +1547,11 @@ define("@scom/scom-payment-widget/components/shippingInfo.tsx", ["require", "exp
         }
     };
     ShippingInfo = __decorate([
-        (0, components_10.customElements)('scom-payment-widget--shipping-info')
+        (0, components_11.customElements)('scom-payment-widget--shipping-info')
     ], ShippingInfo);
     exports.ShippingInfo = ShippingInfo;
 });
-define("@scom/scom-payment-widget/assets.ts", ["require", "exports", "@ijstech/components"], function (require, exports, components_11) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    const moduleDir = components_11.application.currentModuleDir;
-    function fullPath(path) {
-        return `${moduleDir}/${path}`;
-    }
-    ;
-    exports.default = {
-        fullPath
-    };
-});
-define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_12, interface_3, assets_1, store_2, index_css_4, translations_json_6) {
+define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_12, interface_3, assets_2, store_2, index_css_4, translations_json_6) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PaymentMethod = void 0;
@@ -1583,7 +1595,7 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
             for (const item of providers) {
                 nodeItems.push(this.$render("i-stack", { direction: "horizontal", justifyContent: "center", gap: "0.5rem", width: "100%", minHeight: 40, border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, cursor: "pointer", onClick: () => this.handlePaymentProvider(item.provider) },
                     this.$render("i-stack", { direction: "horizontal", alignItems: "center", gap: "0.75rem", width: "calc(100% - 30px)" },
-                        this.$render("i-image", { width: 20, height: 20, url: assets_1.default.fullPath(`img/${item.image}`) }),
+                        this.$render("i-image", { width: 20, height: 20, url: assets_2.default.fullPath(`img/${item.image}`) }),
                         this.$render("i-label", { caption: item.provider, font: { size: '1rem', bold: true, color: Theme.text.primary } })),
                     this.$render("i-icon", { name: "arrow-right", width: 20, height: 20, fill: Theme.text.primary, margin: { left: 'auto', right: 'auto' } })));
             }
@@ -1689,7 +1701,7 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
         (0, components_12.customElements)('scom-payment-widget--payment-type')
     ], PaymentTypeModule);
 });
-define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_13, index_css_5, assets_2, store_3, translations_json_7) {
+define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_13, index_css_5, assets_3, store_3, translations_json_7) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.StatusPayment = void 0;
@@ -1732,9 +1744,9 @@ define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "ex
             else {
                 this.imgStatus.classList.remove(index_css_5.loadingImageStyle);
             }
-            this.imgStatus.url = assets_2.default.fullPath(`img/${isPending ? 'loading.svg' : isCompleted ? 'success.svg' : 'error.png'}`);
+            this.imgStatus.url = assets_3.default.fullPath(`img/${isPending ? 'loading.svg' : isCompleted ? 'success.svg' : 'error.png'}`);
             const currentProvider = store_3.PaymentProviders.find(v => v.provider === provider);
-            this.imgWallet.url = assets_2.default.fullPath(`img/${currentProvider.image}`);
+            this.imgWallet.url = assets_3.default.fullPath(`img/${currentProvider.image}`);
             this.lbAddress.caption = ownerAddress.substr(0, 6) + '...' + ownerAddress.substr(-4);
             this.btnClose.visible = !isPending;
         }
@@ -1755,7 +1767,7 @@ define("@scom/scom-payment-widget/components/statusPayment.tsx", ["require", "ex
                 this.$render("i-stack", { direction: "vertical", gap: "1rem", height: "100%", width: "100%" },
                     this.$render("i-stack", { direction: "horizontal", gap: "1rem", justifyContent: "space-between", alignItems: "center", width: "100%", minHeight: 40, padding: { left: '1rem', right: '1rem', bottom: '1rem' }, border: { bottom: { style: 'solid', width: 1, color: Theme.divider } } },
                         this.$render("i-label", { id: "lbHeaderStatus", font: { size: '0.875rem', color: Theme.colors.primary.main, transform: 'uppercase', bold: true } }),
-                        this.$render("i-image", { id: "imgHeaderStatus", class: index_css_5.loadingImageStyle, url: assets_2.default.fullPath('img/loading.svg'), width: 20, height: 20, minWidth: 20 })),
+                        this.$render("i-image", { id: "imgHeaderStatus", class: index_css_5.loadingImageStyle, url: assets_3.default.fullPath('img/loading.svg'), width: 20, height: 20, minWidth: 20 })),
                     this.$render("i-stack", { direction: "vertical", gap: "1rem", width: "100%", height: "100%", alignItems: "center", padding: { left: '1rem', right: '1rem' } },
                         this.$render("i-stack", { direction: "horizontal", justifyContent: "space-between", alignItems: "center", gap: "1rem", width: "100%", wrap: "wrap", margin: { bottom: '0.5rem' } },
                             this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", alignItems: "center", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }, border: { style: 'solid', width: 1, color: Theme.divider, radius: 8 } },
@@ -1963,7 +1975,7 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
     ], StripePayment);
     exports.StripePayment = StripePayment;
 });
-define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-token-list", "@scom/scom-payment-widget/store.ts", "@ijstech/eth-wallet", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts", "@scom/scom-payment-widget/wallets/index.ts"], function (require, exports, components_15, interface_4, assets_3, scom_token_list_1, store_6, eth_wallet_3, index_css_7, translations_json_9, wallets_2) {
+define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-token-list", "@scom/scom-payment-widget/store.ts", "@ijstech/eth-wallet", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts", "@scom/scom-payment-widget/wallets/index.ts"], function (require, exports, components_15, interface_4, scom_token_list_1, store_6, eth_wallet_3, index_css_7, translations_json_9, wallets_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.WalletPayment = void 0;
@@ -2094,30 +2106,15 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             const chainId = network?.chainId;
             let tokens = [];
             if (isTonWallet) {
-                //FIXME: token list should be updated to include tokens for TonWallet
-                tokens = [
-                    {
-                        chainId: undefined,
-                        name: 'Toncoin',
-                        symbol: 'TON',
-                        decimals: 18
-                    },
-                    {
-                        chainId: undefined,
-                        name: 'USDT',
-                        symbol: 'USDT',
-                        decimals: 6,
-                        address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs'
-                    }
-                ];
+                tokens = this.tokens.filter(v => v.networkCode === 'TON');
             }
             else {
                 tokens = this.tokens.filter(v => v.chainId === chainId);
             }
             const nodeItems = [];
             for (const token of tokens) {
-                const tokenImgUrl = isTonWallet ? assets_3.default.fullPath('img/ton.png') : scom_token_list_1.assets.tokenPath(token, chainId);
-                const networkName = isTonWallet ? 'Ton' : (network?.chainName || '');
+                const tokenImgUrl = scom_token_list_1.assets.tokenPath(token, chainId);
+                const networkName = network?.chainName || '';
                 nodeItems.push(this.$render("i-stack", { direction: "horizontal", justifyContent: "space-between", alignItems: "center", wrap: "wrap", gap: "0.5rem", width: "100%", border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, cursor: "pointer", onClick: () => this.handleSelectToken(token, isTonWallet) },
                     this.$render("i-stack", { direction: "horizontal", alignItems: "center", gap: "0.75rem" },
                         this.$render("i-image", { width: 20, height: 20, minWidth: 20, url: tokenImgUrl }),
@@ -2147,7 +2144,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         }
         handleSelectToken(token, isTon) {
             this.goToStep(Step.Pay);
-            const tokenImg = isTon ? assets_3.default.fullPath('img/ton.png') : scom_token_list_1.assets.tokenPath(token, token.chainId);
+            // const tokenImg = isTon ? assets.fullPath('img/ton.png') : tokenAssets.tokenPath(token, token.chainId);
             const tokenAddress = token.address === eth_wallet_3.Utils.nullAddress ? undefined : token.address;
             this.model.payment.address = this.model.payment.cryptoPayoutOptions.find(option => {
                 if (isTon) {
