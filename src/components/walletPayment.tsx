@@ -199,30 +199,15 @@ export class WalletPayment extends Module {
         const chainId = network?.chainId;
         let tokens: ITokenObject[] = [];
         if (isTonWallet) {
-            //FIXME: token list should be updated to include tokens for TonWallet
-            tokens = [
-                {
-                    chainId: undefined,
-                    name: 'Toncoin',
-                    symbol: 'TON',
-                    decimals: 18
-                },
-                {
-                    chainId: undefined,
-                    name: 'USDT',
-                    symbol: 'USDT',
-                    decimals: 6,
-                    address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs'
-                }
-            ];
+            tokens = this.tokens.filter(v => v.networkCode === 'TON');
         }
         else {
             tokens = this.tokens.filter(v => v.chainId === chainId);
         }
         const nodeItems: HTMLElement[] = [];
         for (const token of tokens) {
-            const tokenImgUrl = isTonWallet ? assets.fullPath('img/ton.png'): tokenAssets.tokenPath(token, chainId);
-            const networkName = isTonWallet ? 'Ton' : (network?.chainName || '');
+            const tokenImgUrl = tokenAssets.tokenPath(token, chainId);
+            const networkName = network?.chainName || '';
             nodeItems.push(
                 <i-stack
                     direction="horizontal"
@@ -271,7 +256,7 @@ export class WalletPayment extends Module {
 
     private handleSelectToken(token: ITokenObject, isTon?: boolean) {
         this.goToStep(Step.Pay);
-        const tokenImg = isTon ? assets.fullPath('img/ton.png') : tokenAssets.tokenPath(token, token.chainId);
+        // const tokenImg = isTon ? assets.fullPath('img/ton.png') : tokenAssets.tokenPath(token, token.chainId);
         const tokenAddress = token.address === Utils.nullAddress ? undefined : token.address;
         this.model.payment.address = this.model.payment.cryptoPayoutOptions.find(option => {
             if (isTon) {

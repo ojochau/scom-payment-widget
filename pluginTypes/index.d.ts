@@ -392,6 +392,14 @@ declare module "@scom/scom-payment-widget/wallets/evmWallet.ts" {
         transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<string>;
     }
 }
+/// <amd-module name="@scom/scom-payment-widget/assets.ts" />
+declare module "@scom/scom-payment-widget/assets.ts" {
+    function fullPath(path: string): string;
+    const _default_2: {
+        fullPath: typeof fullPath;
+    };
+    export default _default_2;
+}
 /// <amd-module name="@scom/scom-payment-widget/wallets/tonWallet.ts" />
 declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
     import { Component } from "@ijstech/components";
@@ -407,7 +415,17 @@ declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
         isNetworkConnected(): any;
         loadLib(moduleDir: string): Promise<unknown>;
         connectWallet(): Promise<void>;
-        getNetworkInfo(): any;
+        getNetworkInfo(): {
+            chainId: number;
+            chainName: string;
+            nativeCurrency: {
+                name: string;
+                symbol: string;
+                decimals: number;
+            };
+            image: string;
+            rpcUrls: any[];
+        };
         openNetworkModal(modalContainer: Component): Promise<void>;
         switchNetwork(): Promise<void>;
         disconnectWallet(): Promise<void>;
@@ -675,14 +693,6 @@ declare module "@scom/scom-payment-widget/components/shippingInfo.tsx" {
         init(): Promise<void>;
         render(): any;
     }
-}
-/// <amd-module name="@scom/scom-payment-widget/assets.ts" />
-declare module "@scom/scom-payment-widget/assets.ts" {
-    function fullPath(path: string): string;
-    const _default_2: {
-        fullPath: typeof fullPath;
-    };
-    export default _default_2;
 }
 /// <amd-module name="@scom/scom-payment-widget/components/paymentMethod.tsx" />
 declare module "@scom/scom-payment-widget/components/paymentMethod.tsx" {
