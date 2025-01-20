@@ -50,6 +50,7 @@ export class StripePayment extends Module {
     }
 
     onStartPayment() {
+        this.showButtonIcon(false);
         this.updateAmount();
     }
 
@@ -146,7 +147,7 @@ export class StripePayment extends Module {
                 }
             }
             this.showButtonIcon(false);
-        })
+        }).catch((e) => this.showButtonIcon(false));
     }
 
     private showButtonIcon(value: boolean) {
