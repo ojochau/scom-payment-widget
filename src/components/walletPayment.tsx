@@ -322,31 +322,35 @@ export class WalletPayment extends Module {
     private async handlePay() {
         if (this.onPaid) {
             this.updateBtnPay(true);
-            let address = this.model.walletModel.getWalletAddress();
-            if (this.provider === PaymentProvider.Metamask) {
-                const wallet = Wallet.getClientInstance();
-                this.model.networkCode = this.model.cryptoPayoutOptions.find(option => option.chainId === wallet.chainId.toString())?.networkCode;
-            } else if (this.provider === PaymentProvider.TonWallet) {
-                this.model.networkCode = 'TON';
-            }
-    
-            await this.model.walletModel.transferToken(
-                this.model.payment.address,
-                this.selectedToken,
-                this.model.totalAmount,
-                async (error: Error, receipt?: string) => {
-                    this.updateBtnPay(false);
-                    if (error) {
-                        this.onPaid({ status: 'failed', provider: this.provider, receipt: '', ownerAddress: address });
-                        return;
-                    }
-                    this.model.referenceId = receipt;
-                    await this.model.handlePlaceMarketplaceOrder();
-                    await this.model.handlePaymentSuccess();
-                    this.onPaid({ status: 'completed', provider: this.provider, receipt, ownerAddress: address });
-                    this.updateBtnPay(false);
+            try {
+                let address = this.model.walletModel.getWalletAddress();
+                if (this.provider === PaymentProvider.Metamask) {
+                    const wallet = Wallet.getClientInstance();
+                    this.model.networkCode = this.model.cryptoPayoutOptions.find(option => option.chainId === wallet.chainId.toString())?.networkCode;
+                } else if (this.provider === PaymentProvider.TonWallet) {
+                    this.model.networkCode = 'TON';
                 }
-            );
+        
+                await this.model.walletModel.transferToken(
+                    this.model.payment.address,
+                    this.selectedToken,
+                    this.model.totalAmount,
+                    async (error: Error, receipt?: string) => {
+                        this.updateBtnPay(false);
+                        if (error) {
+                            this.onPaid({ status: 'failed', provider: this.provider, receipt: '', ownerAddress: address });
+                            return;
+                        }
+                        this.model.referenceId = receipt;
+                        await this.model.handlePlaceMarketplaceOrder();
+                        await this.model.handlePaymentSuccess();
+                        this.onPaid({ status: 'completed', provider: this.provider, receipt, ownerAddress: address });
+                        this.updateBtnPay(false);
+                    }
+                );
+            } catch {
+                this.updateBtnPay(false);
+            }
         }
     }
 

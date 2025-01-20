@@ -1820,6 +1820,7 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
             return this._model;
         }
         onStartPayment() {
+            this.showButtonIcon(false);
             this.updateAmount();
         }
         updateAmount() {
@@ -1920,7 +1921,7 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                     }
                 }
                 this.showButtonIcon(false);
-            });
+            }).catch((e) => this.showButtonIcon(false));
         }
         showButtonIcon(value) {
             this.btnCheckout.rightIcon.spin = value;
@@ -2208,26 +2209,31 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         async handlePay() {
             if (this.onPaid) {
                 this.updateBtnPay(true);
-                let address = this.model.walletModel.getWalletAddress();
-                if (this.provider === interface_4.PaymentProvider.Metamask) {
-                    const wallet = eth_wallet_3.Wallet.getClientInstance();
-                    this.model.networkCode = this.model.cryptoPayoutOptions.find(option => option.chainId === wallet.chainId.toString())?.networkCode;
-                }
-                else if (this.provider === interface_4.PaymentProvider.TonWallet) {
-                    this.model.networkCode = 'TON';
-                }
-                await this.model.walletModel.transferToken(this.model.payment.address, this.selectedToken, this.model.totalAmount, async (error, receipt) => {
-                    this.updateBtnPay(false);
-                    if (error) {
-                        this.onPaid({ status: 'failed', provider: this.provider, receipt: '', ownerAddress: address });
-                        return;
+                try {
+                    let address = this.model.walletModel.getWalletAddress();
+                    if (this.provider === interface_4.PaymentProvider.Metamask) {
+                        const wallet = eth_wallet_3.Wallet.getClientInstance();
+                        this.model.networkCode = this.model.cryptoPayoutOptions.find(option => option.chainId === wallet.chainId.toString())?.networkCode;
                     }
-                    this.model.referenceId = receipt;
-                    await this.model.handlePlaceMarketplaceOrder();
-                    await this.model.handlePaymentSuccess();
-                    this.onPaid({ status: 'completed', provider: this.provider, receipt, ownerAddress: address });
+                    else if (this.provider === interface_4.PaymentProvider.TonWallet) {
+                        this.model.networkCode = 'TON';
+                    }
+                    await this.model.walletModel.transferToken(this.model.payment.address, this.selectedToken, this.model.totalAmount, async (error, receipt) => {
+                        this.updateBtnPay(false);
+                        if (error) {
+                            this.onPaid({ status: 'failed', provider: this.provider, receipt: '', ownerAddress: address });
+                            return;
+                        }
+                        this.model.referenceId = receipt;
+                        await this.model.handlePlaceMarketplaceOrder();
+                        await this.model.handlePaymentSuccess();
+                        this.onPaid({ status: 'completed', provider: this.provider, receipt, ownerAddress: address });
+                        this.updateBtnPay(false);
+                    });
+                }
+                catch {
                     this.updateBtnPay(false);
-                });
+                }
             }
         }
         handleBack() {
