@@ -2017,6 +2017,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         async onStartPayment() {
             if (!this.header)
                 return;
+            this.btnBack.enabled = true;
             this.model.handleWalletConnected = this.handleWalletConnected.bind(this);
             this.model.handleWalletChainChanged = this.handleWalletChainChanged.bind(this);
             this.goToStep(Step.ConnectWallet);
@@ -2205,6 +2206,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         updateBtnPay(value) {
             this.btnPay.rightIcon.spin = value;
             this.btnPay.rightIcon.visible = value;
+            this.btnBack.enabled = !value;
         }
         async handleSwitchNetwork() {
             await this.model.walletModel.switchNetwork();
