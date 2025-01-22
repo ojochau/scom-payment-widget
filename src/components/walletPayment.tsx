@@ -100,6 +100,7 @@ export class WalletPayment extends Module {
 
     async onStartPayment() {
         if (!this.header) return;
+        this.btnBack.enabled = true;
         this.model.handleWalletConnected = this.handleWalletConnected.bind(this);
         this.model.handleWalletChainChanged = this.handleWalletChainChanged.bind(this);
         this.goToStep(Step.ConnectWallet);
@@ -313,6 +314,7 @@ export class WalletPayment extends Module {
     private updateBtnPay(value: boolean) {
         this.btnPay.rightIcon.spin = value;
         this.btnPay.rightIcon.visible = value;
+        this.btnBack.enabled = !value;
     }
 
     private async handleSwitchNetwork() {
