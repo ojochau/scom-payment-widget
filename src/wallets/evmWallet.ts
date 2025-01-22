@@ -261,6 +261,9 @@ export class EVMWallet extends EventEmitter {
         let receipt: TransactionReceipt;
         if (!token.address) {
             receipt = await wallet.send(to, amount);
+            if (callback) {
+                callback(null, receipt?.transactionHash);
+            }
         }
         else {
             const erc20 = new Contracts.ERC20(wallet, token.address);
