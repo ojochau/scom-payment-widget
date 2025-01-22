@@ -706,6 +706,9 @@ define("@scom/scom-payment-widget/wallets/evmWallet.ts", ["require", "exports", 
             let receipt;
             if (!token.address) {
                 receipt = await wallet.send(to, amount);
+                if (callback) {
+                    callback(null, receipt?.transactionHash);
+                }
             }
             else {
                 const erc20 = new eth_wallet_1.Contracts.ERC20(wallet, token.address);
