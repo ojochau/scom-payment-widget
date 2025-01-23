@@ -1061,6 +1061,12 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
         set paymentMethod(value) {
             this._paymentMethod = value;
         }
+        get isOnTelegram() {
+            return this._isOnTelegram;
+        }
+        set isOnTelegram(value) {
+            this._isOnTelegram = value;
+        }
         get isCompleted() {
             return this._isCompleted;
         }
@@ -1152,7 +1158,7 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
                     ];
                     await components_6.application.loadPackage('@scom/scom-wallet-modal', '*');
                     this.mdWallet = new scom_wallet_modal_2.default(undefined, {
-                        wallets: wallets,
+                        wallets: this.isOnTelegram ? wallets.slice(2) : wallets,
                         networks: this.networks,
                         onCustomWalletSelected: async (provider) => {
                             console.log('onCustomWalletSelected', provider);
@@ -2636,6 +2642,12 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
         set tokens(value) {
             this.model.tokens = value;
         }
+        get isOnTelegram() {
+            return this.model.isOnTelegram;
+        }
+        set isOnTelegram(value) {
+            this.model.isOnTelegram = value;
+        }
         onStartPayment(payment) {
             this.initModel();
             if (payment)
@@ -2720,6 +2732,9 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             this.onPaymentSuccess = this.getAttribute('onPaymentSuccess', true) || this.onPaymentSuccess;
             this.initModel();
             this.handleWidgetUrl();
+            const isOnTelegram = this.getAttribute('isOnTelegram', true);
+            if (isOnTelegram != null)
+                this.model.isOnTelegram = isOnTelegram;
             const lazyLoad = this.getAttribute('lazyLoad', true, false);
             if (!lazyLoad) {
                 const payment = this.getAttribute('payment', true);

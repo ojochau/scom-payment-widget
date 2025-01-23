@@ -44,6 +44,7 @@ export class Model {
 	public placeMarketplaceOrder: (data: IPlaceOrder) => Promise<void>;
 	private _walletModel: IWalletModel;
 	private mdWallet: ScomWalletModal;
+	private _isOnTelegram: boolean;
 	constructor() { }
 
 	get walletModel() {
@@ -196,6 +197,14 @@ export class Model {
 		this._paymentMethod = value;
 	}
 
+	get isOnTelegram() {
+		return this._isOnTelegram;
+	}
+
+	set isOnTelegram(value: boolean) {
+		this._isOnTelegram = value;
+	}
+
 	get isCompleted() {
 		return this._isCompleted;
 	}
@@ -297,7 +306,7 @@ export class Model {
 				]
 				await application.loadPackage('@scom/scom-wallet-modal', '*');
 				this.mdWallet = new ScomWalletModal(undefined, {
-					wallets: wallets,
+					wallets: this.isOnTelegram ? wallets.slice(2) : wallets,
 					networks: this.networks,
 					onCustomWalletSelected: async (provider: IClientSideProvider) => {
 						console.log('onCustomWalletSelected', provider);
