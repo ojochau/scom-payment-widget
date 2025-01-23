@@ -81,3 +81,11 @@ export const halfWidthButtonStyle = Styles.style({
   width: 'calc(50% - 0.5rem)',
   minWidth: 90
 })
+
+export const textEllipsis = Styles.style({
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  display: '-webkit-box',
+  '-webkit-line-clamp': 1,
+  WebkitBoxOrient: 'vertical',
+})

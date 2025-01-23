@@ -48,7 +48,7 @@ define("@scom/scom-payment-widget/interface.ts", ["require", "exports"], functio
 define("@scom/scom-payment-widget/components/index.css.ts", ["require", "exports", "@ijstech/components"], function (require, exports, components_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.halfWidthButtonStyle = exports.fullWidthButtonStyle = exports.carouselSliderStyle = exports.alertStyle = exports.loadingImageStyle = exports.textUpperCaseStyle = exports.textCenterStyle = exports.elementStyle = void 0;
+    exports.textEllipsis = exports.halfWidthButtonStyle = exports.fullWidthButtonStyle = exports.carouselSliderStyle = exports.alertStyle = exports.loadingImageStyle = exports.textUpperCaseStyle = exports.textCenterStyle = exports.elementStyle = void 0;
     const Theme = components_1.Styles.Theme.ThemeVars;
     const spinnerAnim = components_1.Styles.keyframes({
         "0%": {
@@ -121,6 +121,13 @@ define("@scom/scom-payment-widget/components/index.css.ts", ["require", "exports
         width: 'calc(50% - 0.5rem)',
         minWidth: 90
     });
+    exports.textEllipsis = components_1.Styles.style({
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        display: '-webkit-box',
+        '-webkit-line-clamp': 1,
+        WebkitBoxOrient: 'vertical',
+    });
 });
 define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"], function (require, exports) {
     "use strict";
@@ -172,6 +179,16 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "payment_coming_soon": "This payment method is coming soon!",
             "the_stall_owner_has_not_set_up_payments_yet": "The stall owner has not set up payments yet!",
             "switch_network": "Switch Network",
+            "minute": "minute",
+            "minutes": "minutes",
+            "hour": "hour",
+            "hours": "hours",
+            "day": "day",
+            "days": "days",
+            "time": "Time",
+            "duration": "Duration",
+            "service": "Service",
+            "provider": "Provider",
         },
         "zh-hant": {
             "pay": "付款",
@@ -218,6 +235,16 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "payment_coming_soon": "這種付款方式即將推出！敬請期待！",
             "the_stall_owner_has_not_set_up_payments_yet": "攤位老闆還沒有設置付款方式！",
             "switch_network": "切換網絡",
+            "minute": "分鐘",
+            "minutes": "分鐘",
+            "hour": "小時",
+            "hours": "小時",
+            "day": "天",
+            "days": "天",
+            "time": "時間",
+            "duration": "持續時間",
+            "service": "服務",
+            "provider": "提供者",
         },
         "vi": {
             "pay": "Thanh toán",
@@ -264,6 +291,16 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "payment_coming_soon": "Phương thức thanh toán này sẽ có sớm!",
             "the_stall_owner_has_not_set_up_payments_yet": "Chủ quầy hàng chưa thiết lập phương thức thanh toán!",
             "switch_network": "Chuyển mạng",
+            "minute": "phút",
+            "minutes": "phút",
+            "hour": "giờ",
+            "hours": "giờ",
+            "day": "ngày",
+            "days": "ngày",
+            "time": "Thời gian",
+            "duration": "Thời gian",
+            "service": "Dịch vụ",
+            "provider": "Nhà cung cấp",
         }
     };
 });
@@ -1087,12 +1124,16 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
                 currency: this.currency,
                 totalAmount: this.totalAmount,
                 items: this.products.map(v => {
-                    return {
+                    let params = {
                         productName: v.name,
                         productId: v.id,
                         price: v.price,
                         quantity: v.quantity
                     };
+                    if (v.parentProductId) {
+                        params['parentProductId'] = v.parentProductId;
+                    }
+                    return params;
                 })
             };
             return {
@@ -1249,15 +1290,27 @@ define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "
                 const nodeItems = [];
                 const { products, currency } = this.model;
                 for (const product of products) {
-                    const element = (this.$render("i-vstack", { gap: "1rem", width: "100%" },
-                        product.images?.length ? this.$render("i-image", { url: product.images[0], width: "auto", maxWidth: "100%", height: 100, margin: { left: 'auto', right: 'auto' } }) : [],
+                    const element = (this.$render("i-vstack", { gap: "0.5rem", width: "100%" },
+                        product.images?.length ? this.$render("i-image", { url: product.images[0], width: "auto", maxWidth: "100%", height: 100, margin: { left: 'auto', right: 'auto', bottom: '0.5rem' } }) : [],
                         this.$render("i-label", { caption: product.name, font: { bold: true } }),
+                        product.serviceName ? this.$render("i-hstack", { gap: "0.5rem", verticalAlignment: "center", horizontalAlignment: "space-between" },
+                            this.$render("i-label", { caption: this.i18n.get('$service'), font: { color: Theme.text.hint } }),
+                            this.$render("i-label", { caption: product.serviceName, class: index_css_1.textEllipsis })) : [],
+                        product.providerName ? this.$render("i-hstack", { gap: "0.5rem", verticalAlignment: "center", horizontalAlignment: "space-between" },
+                            this.$render("i-label", { caption: this.i18n.get('$provider'), font: { color: Theme.text.hint } }),
+                            this.$render("i-label", { caption: product.providerName, class: index_css_1.textEllipsis })) : [],
+                        product.time ? this.$render("i-hstack", { gap: "0.5rem", verticalAlignment: "center", horizontalAlignment: "space-between", wrap: "wrap" },
+                            this.$render("i-label", { caption: this.i18n.get('$time'), font: { color: Theme.text.hint } }),
+                            this.$render("i-label", { caption: (0, components_7.moment)(product.time * 1000).format('DD MMM YYYY, hh:mm A'), margin: { left: 'auto' } })) : [],
+                        product.duration ? this.$render("i-hstack", { gap: "0.5rem", verticalAlignment: "center", horizontalAlignment: "space-between", wrap: "wrap" },
+                            this.$render("i-label", { caption: this.i18n.get('$duration'), font: { color: Theme.text.hint } }),
+                            this.$render("i-label", { caption: `${product.duration} ${this.getDurationUnit(product.durationUnit, product.duration)}`, margin: { left: 'auto' } })) : [],
                         this.$render("i-hstack", { gap: "0.5rem", verticalAlignment: "center", horizontalAlignment: "space-between", wrap: "wrap" },
                             this.$render("i-label", { caption: this.i18n.get('$price'), font: { color: Theme.text.hint } }),
-                            this.$render("i-label", { caption: `${components_7.FormatUtils.formatNumber(product.price, { decimalFigures: 6, hasTrailingZero: false })} ${currency}`, font: { bold: true }, class: index_css_1.textUpperCaseStyle })),
+                            this.$render("i-label", { caption: `${components_7.FormatUtils.formatNumber(product.price, { decimalFigures: 6, hasTrailingZero: false })} ${currency}`, class: index_css_1.textUpperCaseStyle, margin: { left: 'auto' } })),
                         this.$render("i-hstack", { gap: "0.5rem", verticalAlignment: "center", horizontalAlignment: "space-between", wrap: "wrap" },
                             this.$render("i-label", { caption: this.i18n.get('$quantity'), font: { color: Theme.text.hint } }),
-                            this.$render("i-label", { caption: components_7.FormatUtils.formatNumber(product.quantity, { hasTrailingZero: false }), font: { bold: true } }))));
+                            this.$render("i-label", { caption: components_7.FormatUtils.formatNumber(product.quantity, { hasTrailingZero: false }), margin: { left: 'auto' } }))));
                     nodeItems.push(element);
                 }
                 this.carouselSlider.items = nodeItems.map((item, idx) => {
@@ -1272,6 +1325,17 @@ define("@scom/scom-payment-widget/components/invoiceCreation.tsx", ["require", "
             else {
                 this.carouselSlider.visible = false;
             }
+        }
+        getDurationUnit(unit, value) {
+            switch (unit) {
+                case 'minutes':
+                    return this.i18n.get(value == 1 ? '$minute' : '$minutes');
+                case 'hours':
+                    return this.i18n.get(value == 1 ? '$hour' : '$hours');
+                case 'days':
+                    return this.i18n.get(value == 1 ? '$day' : '$days');
+            }
+            return '';
         }
         updateInfo() {
             const { totalAmount, currency, products, paymentId, title } = this.model;

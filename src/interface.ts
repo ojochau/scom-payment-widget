@@ -9,7 +9,7 @@ export enum ProductType {
   Bundle = "Bundle"
 }
 
-export interface IProduct {
+export interface IProduct extends IReservationProduct {
   id: string;
   name: string;
   description?: string;
@@ -22,6 +22,17 @@ export interface IProduct {
   stallUri?: string;
   shipping?: IStallShipping[];
   communityUri?: string;
+}
+
+interface IReservationProduct {
+  parentProductId?: string;
+  id: string;
+  time?: number;
+  providerName?: string;
+  serviceName?: string;
+  duration?: number;
+  durationUnit?: string;
+  capacity?: number;
 }
 
 interface IStallShipping {

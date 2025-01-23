@@ -1,5 +1,5 @@
-import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, StackLayout, CarouselSlider } from '@ijstech/components';
-import { carouselSliderStyle, textCenterStyle, textUpperCaseStyle, fullWidthButtonStyle } from './index.css';
+import { Module, Container, customElements, ControlElement, Styles, Label, FormatUtils, StackLayout, CarouselSlider, moment } from '@ijstech/components';
+import { carouselSliderStyle, textCenterStyle, textUpperCaseStyle, fullWidthButtonStyle, textEllipsis } from './index.css';
 import translations from '../translations.json';
 import { Model } from '../model';
 const Theme = Styles.Theme.ThemeVars;
@@ -47,16 +47,32 @@ export class InvoiceCreation extends Module {
             const { products, currency } = this.model;
             for (const product of products) {
                 const element = (
-                    <i-vstack gap="1rem" width="100%">
-                        {product.images?.length ? <i-image url={product.images[0]} width="auto" maxWidth="100%" height={100} margin={{ left: 'auto', right: 'auto' }} /> : []}
+                    <i-vstack gap="0.5rem" width="100%">
+                        {product.images?.length ? <i-image url={product.images[0]} width="auto" maxWidth="100%" height={100} margin={{ left: 'auto', right: 'auto', bottom: '0.5rem' }} /> : []}
                         <i-label caption={product.name} font={{ bold: true }} />
+                        {product.serviceName ? <i-hstack gap="0.5rem" verticalAlignment="center" horizontalAlignment="space-between">
+                            <i-label caption={this.i18n.get('$service')} font={{ color: Theme.text.hint }} />
+                            <i-label caption={product.serviceName} class={textEllipsis} />
+                        </i-hstack> : []}
+                        {product.providerName ? <i-hstack gap="0.5rem" verticalAlignment="center" horizontalAlignment="space-between">
+                            <i-label caption={this.i18n.get('$provider')} font={{ color: Theme.text.hint }} />
+                            <i-label caption={product.providerName} class={textEllipsis} />
+                        </i-hstack> : []}
+                        {product.time ? <i-hstack gap="0.5rem" verticalAlignment="center" horizontalAlignment="space-between" wrap="wrap">
+                            <i-label caption={this.i18n.get('$time')} font={{ color: Theme.text.hint }} />
+                            <i-label caption={moment(product.time * 1000).format('DD MMM YYYY, hh:mm A')} margin={{ left: 'auto' }} />
+                        </i-hstack> : []}
+                        {product.duration ? <i-hstack gap="0.5rem" verticalAlignment="center" horizontalAlignment="space-between" wrap="wrap">
+                            <i-label caption={this.i18n.get('$duration')} font={{ color: Theme.text.hint }} />
+                            <i-label caption={`${product.duration} ${this.getDurationUnit(product.durationUnit, product.duration)}`} margin={{ left: 'auto' }} />
+                        </i-hstack> : []}
                         <i-hstack gap="0.5rem" verticalAlignment="center" horizontalAlignment="space-between" wrap="wrap">
                             <i-label caption={this.i18n.get('$price')} font={{ color: Theme.text.hint }} />
-                            <i-label caption={`${FormatUtils.formatNumber(product.price, { decimalFigures: 6, hasTrailingZero: false })} ${currency}`} font={{ bold: true }} class={textUpperCaseStyle} />
+                            <i-label caption={`${FormatUtils.formatNumber(product.price, { decimalFigures: 6, hasTrailingZero: false })} ${currency}`} class={textUpperCaseStyle} margin={{ left: 'auto' }} />
                         </i-hstack>
                         <i-hstack gap="0.5rem" verticalAlignment="center" horizontalAlignment="space-between" wrap="wrap">
                             <i-label caption={this.i18n.get('$quantity')} font={{ color: Theme.text.hint }} />
-                            <i-label caption={FormatUtils.formatNumber(product.quantity, { hasTrailingZero: false })} font={{ bold: true }} />
+                            <i-label caption={FormatUtils.formatNumber(product.quantity, { hasTrailingZero: false })} margin={{ left: 'auto' }} />
                         </i-hstack>
                     </i-vstack>
                 );
@@ -73,6 +89,18 @@ export class InvoiceCreation extends Module {
         } else {
             this.carouselSlider.visible = false;
         }
+    }
+
+    private getDurationUnit(unit: string, value: number) {
+        switch (unit) {
+            case 'minutes':
+                return this.i18n.get(value == 1 ? '$minute' : '$minutes');
+            case 'hours':
+                return this.i18n.get(value == 1 ? '$hour' : '$hours');
+            case 'days':
+                return this.i18n.get(value == 1 ? '$day' : '$days');
+        }
+        return '';
     }
 
     private updateInfo() {
