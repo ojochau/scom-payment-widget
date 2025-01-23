@@ -22,6 +22,7 @@ interface ScomPaymentWidgetElement extends ControlElement {
 	baseStripeApi?: string;
 	returnUrl?: string;
 	mode?: Mode;
+	isOnTelegram?: boolean;
 	placeMarketplaceOrder?: (data: IPlaceOrder) => Promise<void>;
 	onPaymentSuccess?: (data: IPaymentActivity) => Promise<void>;
 }
@@ -130,6 +131,14 @@ export class ScomPaymentWidget extends Module {
 		this.model.tokens = value;
 	}
 
+	get isOnTelegram() {
+		return this.model.isOnTelegram;
+	}
+
+	set isOnTelegram(value: boolean) {
+		this.model.isOnTelegram = value;
+	}
+
 	onStartPayment(payment?: IPaymentInfo) {
 		this.initModel();
 		if (payment) this.payment = payment;
@@ -216,6 +225,8 @@ export class ScomPaymentWidget extends Module {
 		this.onPaymentSuccess = this.getAttribute('onPaymentSuccess', true) || this.onPaymentSuccess;
 		this.initModel();
 		this.handleWidgetUrl();
+		const isOnTelegram = this.getAttribute('isOnTelegram', true);
+		if (isOnTelegram != null) this.model.isOnTelegram = isOnTelegram;
 		const lazyLoad = this.getAttribute('lazyLoad', true, false);
 		if (!lazyLoad) {
 			const payment = this.getAttribute('payment', true);

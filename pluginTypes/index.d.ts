@@ -479,6 +479,7 @@ declare module "@scom/scom-payment-widget/model.ts" {
         placeMarketplaceOrder: (data: IPlaceOrder) => Promise<void>;
         private _walletModel;
         private mdWallet;
+        private _isOnTelegram;
         constructor();
         get walletModel(): IWalletModel;
         set walletModel(value: IWalletModel);
@@ -516,6 +517,8 @@ declare module "@scom/scom-payment-widget/model.ts" {
         set networkCode(value: string);
         get paymentMethod(): 'Stripe' | 'EVM';
         set paymentMethod(value: 'Stripe' | 'EVM');
+        get isOnTelegram(): boolean;
+        set isOnTelegram(value: boolean);
         get isCompleted(): boolean;
         set isCompleted(value: boolean);
         get placeOrder(): IPlaceOrder;
@@ -1002,6 +1005,7 @@ declare module "@scom/scom-payment-widget" {
         baseStripeApi?: string;
         returnUrl?: string;
         mode?: Mode;
+        isOnTelegram?: boolean;
         placeMarketplaceOrder?: (data: IPlaceOrder) => Promise<void>;
         onPaymentSuccess?: (data: IPaymentActivity) => Promise<void>;
     }
@@ -1043,6 +1047,8 @@ declare module "@scom/scom-payment-widget" {
         set networks(value: INetworkConfig[]);
         get tokens(): ITokenObject[];
         set tokens(value: ITokenObject[]);
+        get isOnTelegram(): boolean;
+        set isOnTelegram(value: boolean);
         onStartPayment(payment?: IPaymentInfo): void;
         private openPaymentModal;
         private handlePay;
