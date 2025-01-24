@@ -227,12 +227,16 @@ export class Model {
 			currency: this.currency,
 			totalAmount: this.totalAmount,
 			items: this.products.map(v => {
-				return {
+				let params = {
 					productName: v.name,
 					productId: v.id,
 					price: v.price as number,
 					quantity: v.quantity
 				}
+				if (v.parentProductId) {
+					params['parentProductId'] = v.parentProductId;
+				}
+				return params;
 			})
 		}
 		return {

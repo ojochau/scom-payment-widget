@@ -11,7 +11,7 @@ declare module "@scom/scom-payment-widget/interface.ts" {
         Membership = "Membership",
         Bundle = "Bundle"
     }
-    export interface IProduct {
+    export interface IProduct extends IReservationProduct {
         id: string;
         name: string;
         description?: string;
@@ -24,6 +24,16 @@ declare module "@scom/scom-payment-widget/interface.ts" {
         stallUri?: string;
         shipping?: IStallShipping[];
         communityUri?: string;
+    }
+    interface IReservationProduct {
+        parentProductId?: string;
+        id: string;
+        time?: number;
+        providerName?: string;
+        serviceName?: string;
+        duration?: number;
+        durationUnit?: string;
+        capacity?: number;
     }
     interface IStallShipping {
         id: string;
@@ -127,6 +137,7 @@ declare module "@scom/scom-payment-widget/components/index.css.ts" {
     export const carouselSliderStyle: string;
     export const fullWidthButtonStyle: string;
     export const halfWidthButtonStyle: string;
+    export const textEllipsis: string;
 }
 /// <amd-module name="@scom/scom-payment-widget/translations.json.ts" />
 declare module "@scom/scom-payment-widget/translations.json.ts" {
@@ -176,6 +187,16 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             payment_coming_soon: string;
             the_stall_owner_has_not_set_up_payments_yet: string;
             switch_network: string;
+            minute: string;
+            minutes: string;
+            hour: string;
+            hours: string;
+            day: string;
+            days: string;
+            time: string;
+            duration: string;
+            service: string;
+            provider: string;
         };
         "zh-hant": {
             pay: string;
@@ -222,6 +243,16 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             payment_coming_soon: string;
             the_stall_owner_has_not_set_up_payments_yet: string;
             switch_network: string;
+            minute: string;
+            minutes: string;
+            hour: string;
+            hours: string;
+            day: string;
+            days: string;
+            time: string;
+            duration: string;
+            service: string;
+            provider: string;
         };
         vi: {
             pay: string;
@@ -268,6 +299,16 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             payment_coming_soon: string;
             the_stall_owner_has_not_set_up_payments_yet: string;
             switch_network: string;
+            minute: string;
+            minutes: string;
+            hour: string;
+            hours: string;
+            day: string;
+            days: string;
+            time: string;
+            duration: string;
+            service: string;
+            provider: string;
         };
     };
     export default _default;
@@ -561,6 +602,7 @@ declare module "@scom/scom-payment-widget/components/invoiceCreation.tsx" {
         set model(value: Model);
         constructor(parent?: Container, options?: ScomPaymentWidgetInvoiceCreationElement);
         private renderProducts;
+        private getDurationUnit;
         private updateInfo;
         private handleContinue;
         init(): Promise<void>;
