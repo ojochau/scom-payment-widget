@@ -125,6 +125,7 @@ declare module "@scom/scom-payment-widget/interface.ts" {
     export interface IExtendedNetwork extends INetwork {
         explorerTxUrl?: string;
         explorerAddressUrl?: string;
+        networkCode?: string;
     }
 }
 /// <amd-module name="@scom/scom-payment-widget/components/index.css.ts" />
@@ -451,6 +452,7 @@ declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
         private toncore;
         private _isWalletConnected;
         private _onTonWalletStatusChanged;
+        private networkType;
         constructor(provider: TonWalletProvider, moduleDir: string, onTonWalletStatusChanged: (isConnected: boolean) => void);
         isWalletConnected(): any;
         isNetworkConnected(): any;
@@ -459,6 +461,7 @@ declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
         getNetworkInfo(): {
             chainId: number;
             chainName: string;
+            networkCode: string;
             nativeCurrency: {
                 name: string;
                 symbol: string;
@@ -467,6 +470,7 @@ declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
             image: string;
             rpcUrls: any[];
         };
+        private getTonCenterAPIEndpoint;
         openNetworkModal(modalContainer: Component): Promise<void>;
         switchNetwork(): Promise<void>;
         disconnectWallet(): Promise<void>;

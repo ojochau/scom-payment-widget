@@ -69,7 +69,7 @@ export class PaymentMethod extends Module {
         if (type === PaymentType.Crypto) {
             const cryptoOptions = this.model.payment?.cryptoPayoutOptions || [];
             if (!cryptoOptions.length) return [];
-            const hasTonWallet = cryptoOptions.find(opt => opt.networkCode === "TON") != null;
+            const hasTonWallet = cryptoOptions.find(opt => ['TON', 'TON-TESTNET'].includes(opt.networkCode)) != null;
             if (!hasTonWallet) {
                 return PaymentProviders.filter(v => v.type === type && v.provider !== PaymentProvider.TonWallet);
             } else if (cryptoOptions.length === 1) {

@@ -5,12 +5,14 @@ import TonWalletProvider from "./tonProvider";
 import assets from '../assets';
 
 const JETTON_TRANSFER_OP = 0xf8a7ea5; // 32-bit
+type NetworkType = 'mainnet' | 'testnet';
 
 export class TonWallet {
     private provider: TonWalletProvider;
     private toncore: any;
     private _isWalletConnected: boolean = false;
     private _onTonWalletStatusChanged: (isConnected: boolean) => void;
+    private networkType: NetworkType = 'testnet';
 
     constructor(
         provider: TonWalletProvider,
@@ -59,6 +61,7 @@ export class TonWallet {
         return {
             chainId: 0,
             chainName: 'TON',
+            networkCode: this.networkType === 'testnet' ? 'TON-TESTNET' : 'TON',
             nativeCurrency: {
                 name: 'TON',
                 symbol: 'TON',
@@ -66,6 +69,17 @@ export class TonWallet {
             },
             image: assets.fullPath('img/ton.png'),
             rpcUrls: []
+        }
+    }
+
+    private getTonCenterAPIEndpoint(): string {
+        switch (this.networkType) {
+            case 'mainnet':
+                return 'https://toncenter.com/api/v3';
+            case 'testnet':
+                return 'https://testnet.toncenter.com/api/v3';
+            default:
+                throw new Error('Unsupported network type');
         }
     }
 
@@ -112,7 +126,12 @@ export class TonWallet {
     }
 
     viewExplorerByTransactionHash(hash: string) {
-        window.open(`https://tonscan.org/transaction/${hash}`);
+        if (this.networkType === 'mainnet') {
+            window.open(`https://tonscan.org/transactions/${hash}`);
+        }
+        else {
+            window.open(`https://testnet.tonscan.org/transactions/${hash}`);
+        }
     }
 
     async getTonBalance() {
@@ -140,7 +159,8 @@ export class TonWallet {
 
     async getJettonWalletAddress(jettonMasterAddress: string, userAddress: string) {
         const base64Cell = this.buildOwnerSlice(userAddress);
-        const response = await fetch('https://toncenter.com/api/v3/runGetMethod', {
+        const apiEndpoint = this.getTonCenterAPIEndpoint();
+        const response = await fetch(`${apiEndpoint}/runGetMethod`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -160,7 +180,10 @@ export class TonWallet {
         const cell = this.toncore.Cell.fromBase64(data.stack[0].value);
         const slice = cell.beginParse();
         const address = slice.loadAddress();
-        return address.toString() as string;
+        return address.toString({
+            bounceable: true,
+            testOnly: this.networkType === 'testnet'
+        }) as string;
     }
 
     getTransactionMessageHash(boc: string) {
@@ -195,8 +218,7 @@ export class TonWallet {
             }
             else {
                 const senderJettonAddress = await this.getJettonWalletAddress(token.address, this.getWalletAddress());
-                const recipientJettonAddress = await this.getJettonWalletAddress(token.address, to);
-                const payload = this.constructPayloadForTokenTransfer(recipientJettonAddress, token, amount);
+                const payload = this.constructPayloadForTokenTransfer(to, token, amount);
                 const transaction = {
                     validUntil: Math.floor(Date.now() / 1000) + 60, // 60 sec
                     messages: [

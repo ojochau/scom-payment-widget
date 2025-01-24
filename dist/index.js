@@ -780,6 +780,7 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
     class TonWallet {
         constructor(provider, moduleDir, onTonWalletStatusChanged) {
             this._isWalletConnected = false;
+            this.networkType = 'testnet';
             this.provider = provider;
             this.loadLib(moduleDir);
             this._onTonWalletStatusChanged = onTonWalletStatusChanged;
@@ -817,6 +818,7 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
             return {
                 chainId: 0,
                 chainName: 'TON',
+                networkCode: this.networkType === 'testnet' ? 'TON-TESTNET' : 'TON',
                 nativeCurrency: {
                     name: 'TON',
                     symbol: 'TON',
@@ -825,6 +827,16 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
                 image: assets_1.default.fullPath('img/ton.png'),
                 rpcUrls: []
             };
+        }
+        getTonCenterAPIEndpoint() {
+            switch (this.networkType) {
+                case 'mainnet':
+                    return 'https://toncenter.com/api/v3';
+                case 'testnet':
+                    return 'https://testnet.toncenter.com/api/v3';
+                default:
+                    throw new Error('Unsupported network type');
+            }
         }
         async openNetworkModal(modalContainer) {
         }
@@ -857,7 +869,12 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
             return nonBounceableAddress;
         }
         viewExplorerByTransactionHash(hash) {
-            window.open(`https://tonscan.org/transaction/${hash}`);
+            if (this.networkType === 'mainnet') {
+                window.open(`https://tonscan.org/transactions/${hash}`);
+            }
+            else {
+                window.open(`https://testnet.tonscan.org/transactions/${hash}`);
+            }
         }
         async getTonBalance() {
             try {
@@ -883,7 +900,8 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
         }
         async getJettonWalletAddress(jettonMasterAddress, userAddress) {
             const base64Cell = this.buildOwnerSlice(userAddress);
-            const response = await fetch('https://toncenter.com/api/v3/runGetMethod', {
+            const apiEndpoint = this.getTonCenterAPIEndpoint();
+            const response = await fetch(`${apiEndpoint}/runGetMethod`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -903,7 +921,10 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
             const cell = this.toncore.Cell.fromBase64(data.stack[0].value);
             const slice = cell.beginParse();
             const address = slice.loadAddress();
-            return address.toString();
+            return address.toString({
+                bounceable: true,
+                testOnly: this.networkType === 'testnet'
+            });
         }
         getTransactionMessageHash(boc) {
             const cell = this.toncore.Cell.fromBase64(boc);
@@ -930,8 +951,7 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
                 }
                 else {
                     const senderJettonAddress = await this.getJettonWalletAddress(token.address, this.getWalletAddress());
-                    const recipientJettonAddress = await this.getJettonWalletAddress(token.address, to);
-                    const payload = this.constructPayloadForTokenTransfer(recipientJettonAddress, token, amount);
+                    const payload = this.constructPayloadForTokenTransfer(to, token, amount);
                     const transaction = {
                         validUntil: Math.floor(Date.now() / 1000) + 60,
                         messages: [
@@ -1651,7 +1671,7 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
                 const cryptoOptions = this.model.payment?.cryptoPayoutOptions || [];
                 if (!cryptoOptions.length)
                     return [];
-                const hasTonWallet = cryptoOptions.find(opt => opt.networkCode === "TON") != null;
+                const hasTonWallet = cryptoOptions.find(opt => ['TON', 'TON-TESTNET'].includes(opt.networkCode)) != null;
                 if (!hasTonWallet) {
                     return store_2.PaymentProviders.filter(v => v.type === type && v.provider !== interface_3.PaymentProvider.TonWallet);
                 }
@@ -2178,10 +2198,10 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         async renderTokens(paymentProvider) {
             const isTonWallet = paymentProvider === interface_4.PaymentProvider.TonWallet;
             const network = this.model.walletModel.getNetworkInfo();
-            const chainId = network?.chainId;
+            const chainId = network.chainId;
             let tokens = [];
             if (isTonWallet) {
-                tokens = this.tokens.filter(v => v.networkCode === 'TON');
+                tokens = this.tokens.filter(v => v.networkCode === network.networkCode);
             }
             else {
                 tokens = this.tokens.filter(v => v.chainId === chainId);
@@ -2223,11 +2243,12 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             const tokenAddress = token.address === eth_wallet_3.Utils.nullAddress ? undefined : token.address;
             this.model.payment.address = this.model.payment.cryptoPayoutOptions.find(option => {
                 if (isTon) {
+                    const networkInfo = this.model.walletModel.getNetworkInfo();
                     if (tokenAddress) {
-                        return option.networkCode === "TON" && option.tokenAddress === tokenAddress;
+                        return option.networkCode === networkInfo.networkCode && option.tokenAddress === tokenAddress;
                     }
                     else {
-                        return option.networkCode === "TON" && !option.tokenAddress;
+                        return option.networkCode === networkInfo.networkCode && !option.tokenAddress;
                     }
                 }
                 return option.chainId === token.chainId.toString() && option.tokenAddress == tokenAddress;
@@ -2291,7 +2312,8 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                         this.model.networkCode = this.model.cryptoPayoutOptions.find(option => option.chainId === wallet.chainId.toString())?.networkCode;
                     }
                     else if (this.provider === interface_4.PaymentProvider.TonWallet) {
-                        this.model.networkCode = 'TON';
+                        const networkInfo = this.model.walletModel.getNetworkInfo();
+                        this.model.networkCode = networkInfo.networkCode;
                     }
                     await this.model.walletModel.transferToken(this.model.payment.address, this.selectedToken, this.model.totalAmount, async (error, receipt) => {
                         this.updateBtnPay(false);

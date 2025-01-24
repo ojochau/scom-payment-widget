@@ -197,10 +197,10 @@ export class WalletPayment extends Module {
     private async renderTokens(paymentProvider: PaymentProvider) {
         const isTonWallet = paymentProvider === PaymentProvider.TonWallet;
         const network = this.model.walletModel.getNetworkInfo();
-        const chainId = network?.chainId;
+        const chainId = network.chainId;
         let tokens: ITokenObject[] = [];
         if (isTonWallet) {
-            tokens = this.tokens.filter(v => v.networkCode === 'TON');
+            tokens = this.tokens.filter(v => v.networkCode === network.networkCode);
         }
         else {
             tokens = this.tokens.filter(v => v.chainId === chainId);
@@ -261,11 +261,12 @@ export class WalletPayment extends Module {
         const tokenAddress = token.address === Utils.nullAddress ? undefined : token.address;
         this.model.payment.address = this.model.payment.cryptoPayoutOptions.find(option => {
             if (isTon) {
+                const networkInfo = this.model.walletModel.getNetworkInfo();
                 if (tokenAddress) {
-                    return option.networkCode === "TON" && option.tokenAddress === tokenAddress;
+                    return option.networkCode === networkInfo.networkCode && option.tokenAddress === tokenAddress;
                 }
                 else {
-                    return option.networkCode === "TON" && !option.tokenAddress;
+                    return option.networkCode === networkInfo.networkCode && !option.tokenAddress;
                 }
             }
             return option.chainId === token.chainId.toString() && option.tokenAddress == tokenAddress;
@@ -330,7 +331,8 @@ export class WalletPayment extends Module {
                     const wallet = Wallet.getClientInstance();
                     this.model.networkCode = this.model.cryptoPayoutOptions.find(option => option.chainId === wallet.chainId.toString())?.networkCode;
                 } else if (this.provider === PaymentProvider.TonWallet) {
-                    this.model.networkCode = 'TON';
+                    const networkInfo = this.model.walletModel.getNetworkInfo();
+                    this.model.networkCode = networkInfo.networkCode;
                 }
         
                 await this.model.walletModel.transferToken(
