@@ -65,6 +65,7 @@ declare module "@scom/scom-payment-widget/interface.ts" {
         productName?: string;
         quantity: number;
         price?: number;
+        reservationTime?: number;
     }
     export interface IShippingInfo {
         name?: string;
