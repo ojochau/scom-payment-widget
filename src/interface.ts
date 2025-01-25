@@ -138,4 +138,5 @@ export interface INetworkConfig {
 export interface IExtendedNetwork extends INetwork {
   explorerTxUrl?: string;
   explorerAddressUrl?: string;
+  networkCode?: string;
 };
