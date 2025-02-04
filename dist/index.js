@@ -526,7 +526,7 @@ define("@scom/scom-payment-widget/wallets/tonProvider.ts", ["require", "exports"
     }
     exports.default = TonWalletProvider;
 });
-define("@scom/scom-payment-widget/wallets/evmWallet.ts", ["require", "exports", "@scom/scom-wallet-modal", "@scom/scom-network-modal", "@ijstech/components", "@ijstech/eth-wallet", "@scom/scom-network-list"], function (require, exports, scom_wallet_modal_1, scom_network_modal_1, components_3, eth_wallet_1, scom_network_list_1) {
+define("@scom/scom-payment-widget/wallets/evmWallet.ts", ["require", "exports", "@scom/scom-network-modal", "@ijstech/components", "@ijstech/eth-wallet", "@scom/scom-network-list"], function (require, exports, scom_network_modal_1, components_3, eth_wallet_1, scom_network_list_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.EVMWallet = void 0;
@@ -649,25 +649,25 @@ define("@scom/scom-payment-widget/wallets/evmWallet.ts", ["require", "exports", 
         getRpcWallet() {
             return this.rpcWalletId ? eth_wallet_1.Wallet.getRpcWalletInstance(this.rpcWalletId) : null;
         }
-        async connectWallet(modalContainer) {
-            if (!this.mdEVMWallet) {
-                await components_3.application.loadPackage('@scom/scom-wallet-modal', '*');
-                this.mdEVMWallet = new scom_wallet_modal_1.default(undefined, {
-                    wallets: this.wallets,
-                    networks: this.networks,
-                    onCustomWalletSelected: async (wallet) => {
-                        console.log('onCustomWalletSelected', wallet);
-                    }
-                });
-                modalContainer.append(this.mdEVMWallet);
-                await this.mdEVMWallet.ready();
-            }
-            // await this.mdEVMWallet.setData({
-            //     networks: this.networks,
-            //     wallets: this.wallets
-            // })
-            this.mdEVMWallet.showModal();
-        }
+        // async connectWallet(modalContainer: Component) {
+        //     if (!this.mdEVMWallet) {
+        //         await application.loadPackage('@scom/scom-wallet-modal', '*');
+        //         this.mdEVMWallet = new ScomWalletModal(undefined, {
+        //             wallets: this.wallets,
+        //             networks: this.networks,
+        //             onCustomWalletSelected: async (wallet: IClientSideProvider) => {
+        //                 console.log('onCustomWalletSelected', wallet);
+        //             }
+        //         });
+        //         modalContainer.append(this.mdEVMWallet);
+        //         await this.mdEVMWallet.ready();
+        //     }
+        //     // await this.mdEVMWallet.setData({
+        //     //     networks: this.networks,
+        //     //     wallets: this.wallets
+        //     // })
+        //     this.mdEVMWallet.showModal();
+        // }
         async openNetworkModal(modalContainer) {
             if (!this.mdNetwork) {
                 await components_3.application.loadPackage('@scom/scom-network-modal', '*');
@@ -699,6 +699,18 @@ define("@scom/scom-payment-widget/wallets/evmWallet.ts", ["require", "exports", 
         async disconnectWallet() {
             const wallet = eth_wallet_1.Wallet.getClientInstance();
             await wallet.disconnect();
+        }
+        async getTokenBalance(token) {
+            let balance = '0';
+            const rpcWallet = this.getRpcWallet();
+            if (token.address) {
+                const erc20 = new eth_wallet_1.Contracts.ERC20(rpcWallet, token.address);
+                balance = (await erc20.balanceOf(rpcWallet.address)).toFixed();
+            }
+            else {
+                balance = eth_wallet_1.Utils.toDecimals(await rpcWallet.balance).toFixed();
+            }
+            return balance;
         }
         getNetworkInfo(chainId) {
             if (!chainId) {
@@ -806,14 +818,14 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
                 });
             });
         }
-        async connectWallet() {
-            try {
-                await this.provider.tonConnectUI.openModal();
-            }
-            catch (err) {
-                alert(err);
-            }
-        }
+        // async connectWallet() {
+        //     try {
+        //         await this.provider.tonConnectUI.openModal();
+        //     }
+        //     catch (err) {
+        //         alert(err)
+        //     }
+        // }
         getNetworkInfo() {
             return {
                 chainId: 0,
@@ -831,9 +843,9 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
         getTonCenterAPIEndpoint() {
             switch (this.networkType) {
                 case 'mainnet':
-                    return 'https://toncenter.com/api/v3';
+                    return 'https://toncenter.com/api';
                 case 'testnet':
-                    return 'https://testnet.toncenter.com/api/v3';
+                    return 'https://testnet.toncenter.com/api';
                 default:
                     throw new Error('Unsupported network type');
             }
@@ -848,13 +860,12 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
         async sendTransaction(txData) {
             return await this.provider.tonConnectUI.sendTransaction(txData);
         }
-        constructPayloadForTokenTransfer(to, token, amount) {
+        constructPayloadForTokenTransfer(to, amount) {
             const recipientAddress = this.toncore.Address.parse(to);
-            const jettonAmount = eth_wallet_2.Utils.toDecimals(amount, token.decimals);
             const bodyCell = this.toncore.beginCell()
                 .storeUint(JETTON_TRANSFER_OP, 32) // function ID
                 .storeUint(0, 64) // query_id (can be 0 or a custom value)
-                .storeCoins(jettonAmount) // amount in nano-jettons
+                .storeCoins(amount) // amount in nano-jettons
                 .storeAddress(recipientAddress) // destination
                 .storeAddress(null) // response_destination (set to NULL if you don't need callback)
                 .storeMaybeRef(null) // custom_payload (None)
@@ -878,18 +889,45 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
         }
         async getTonBalance() {
             try {
-                const address = this.provider.tonConnectUI.account;
-                const result = await fetch(`https://toncenter.com/api/v2/getAddressBalance?address=${address}`, {
+                const address = this.getWalletAddress();
+                const apiEndpoint = this.getTonCenterAPIEndpoint();
+                const result = await fetch(`${apiEndpoint}/v2/getAddressBalance?address=${address}`, {
                     method: 'GET',
                 });
                 const data = await result.json();
-                const balance = eth_wallet_2.Utils.fromDecimals(data.balance, 9);
+                const balance = data.result;
                 return balance;
             }
             catch (error) {
                 console.error('Error fetching balance:', error);
                 throw error;
             }
+        }
+        async getTokenBalance(token) {
+            if (!token.address) {
+                return await this.getTonBalance();
+            }
+            const senderJettonAddress = await this.getJettonWalletAddress(token.address, this.getWalletAddress());
+            const apiEndpoint = this.getTonCenterAPIEndpoint();
+            const response = await fetch(`${apiEndpoint}/v3/runGetMethod`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    address: senderJettonAddress,
+                    method: 'get_wallet_data',
+                    stack: [],
+                }),
+            });
+            const data = await response.json();
+            if (data.exit_code !== 0) {
+                return '0';
+            }
+            const balanceStack = data.stack?.[0];
+            const balanceStr = balanceStack.value;
+            const balance = BigInt(balanceStr).toString();
+            return balance;
         }
         buildOwnerSlice(userAddress) {
             const owner = this.toncore.Address.parse(userAddress);
@@ -901,7 +939,7 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
         async getJettonWalletAddress(jettonMasterAddress, userAddress) {
             const base64Cell = this.buildOwnerSlice(userAddress);
             const apiEndpoint = this.getTonCenterAPIEndpoint();
-            const response = await fetch(`${apiEndpoint}/runGetMethod`, {
+            const response = await fetch(`${apiEndpoint}/v3/runGetMethod`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -926,6 +964,22 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
                 testOnly: this.networkType === 'testnet'
             });
         }
+        async estimateNetworkFee(address, body) {
+            const apiEndpoint = this.getTonCenterAPIEndpoint();
+            const response = await fetch(`${apiEndpoint}/v3/estimateFee`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    address: address,
+                    body: body,
+                    ignore_chksig: false
+                })
+            });
+            const data = await response.json();
+            return data;
+        }
         getTransactionMessageHash(boc) {
             const cell = this.toncore.Cell.fromBase64(boc);
             const hashBytes = cell.hash();
@@ -942,7 +996,7 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
                         messages: [
                             {
                                 address: to,
-                                amount: eth_wallet_2.Utils.toDecimals(amount, 9),
+                                amount: eth_wallet_2.Utils.toDecimals(amount, 9).toFixed(),
                                 payload: ''
                             }
                         ]
@@ -951,13 +1005,17 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
                 }
                 else {
                     const senderJettonAddress = await this.getJettonWalletAddress(token.address, this.getWalletAddress());
-                    const payload = this.constructPayloadForTokenTransfer(to, token, amount);
+                    const jettonAmount = eth_wallet_2.Utils.toDecimals(amount, token.decimals).toFixed();
+                    const payload = this.constructPayloadForTokenTransfer(to, jettonAmount);
+                    // const networkFee = await this.estimateNetworkFee(this.getWalletAddress(), payload);
+                    // const sourceFees = networkFee.source_fees;
+                    // const totalFee = new BigNumber(sourceFees.fwd_fee).plus(sourceFees.gas_fee).plus(sourceFees.in_fwd_fee).plus(sourceFees.storage_fee);
                     const transaction = {
                         validUntil: Math.floor(Date.now() / 1000) + 60,
                         messages: [
                             {
                                 address: senderJettonAddress,
-                                amount: eth_wallet_2.Utils.toDecimals('0.1', 9),
+                                amount: eth_wallet_2.Utils.toDecimals('0.05', 9),
                                 payload: payload
                             }
                         ]
@@ -986,7 +1044,7 @@ define("@scom/scom-payment-widget/wallets/index.ts", ["require", "exports", "@sc
     __exportStar(evmWallet_1, exports);
     __exportStar(tonWallet_1, exports);
 });
-define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/defaultData.ts", "@scom/scom-payment-widget/store.ts", "@ijstech/components", "@scom/scom-wallet-modal", "@scom/scom-payment-widget/wallets/tonProvider.ts", "@scom/scom-payment-widget/wallets/index.ts"], function (require, exports, interface_2, defaultData_1, store_1, components_6, scom_wallet_modal_2, tonProvider_1, wallets_1) {
+define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/defaultData.ts", "@scom/scom-payment-widget/store.ts", "@ijstech/components", "@scom/scom-wallet-modal", "@scom/scom-payment-widget/wallets/tonProvider.ts", "@scom/scom-payment-widget/wallets/index.ts"], function (require, exports, interface_2, defaultData_1, store_1, components_6, scom_wallet_modal_1, tonProvider_1, wallets_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Model = void 0;
@@ -1221,7 +1279,7 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
                         }
                     ];
                     await components_6.application.loadPackage('@scom/scom-wallet-modal', '*');
-                    this.mdWallet = new scom_wallet_modal_2.default(undefined, {
+                    this.mdWallet = new scom_wallet_modal_1.default(undefined, {
                         wallets: this.isOnTelegram ? wallets.slice(2) : wallets,
                         networks: this.networks,
                         onCustomWalletSelected: async (provider) => {
@@ -1239,6 +1297,7 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
                         }
                     });
                     modalContainer.append(this.mdWallet);
+                    await this.mdWallet.ready();
                 }
                 this.mdWallet.showModal();
             });
@@ -2240,9 +2299,8 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                 this.btnSwitchNetwork.visible = true;
             }
         }
-        handleSelectToken(token, isTon) {
+        async handleSelectToken(token, isTon) {
             this.goToStep(Step.Pay);
-            // const tokenImg = isTon ? assets.fullPath('img/ton.png') : tokenAssets.tokenPath(token, token.chainId);
             const tokenAddress = token.address === eth_wallet_3.Utils.nullAddress ? undefined : token.address;
             this.model.payment.address = this.model.payment.cryptoPayoutOptions.find(option => {
                 if (isTon) {
@@ -2257,7 +2315,6 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                 return option.chainId === token.chainId.toString() && option.tokenAddress == tokenAddress;
             })?.walletAddress || "";
             const { totalAmount, currency, toAddress } = this.model;
-            // this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);
             this.lbToAddress.caption = toAddress;
             const formattedAmount = components_15.FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false });
             this.lbAmountToPay.caption = `${formattedAmount} ${token.symbol}`;
@@ -2265,6 +2322,13 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             // this.lbUSD.visible = !isTon;
             // this.imgPayToken.url = tokenImg;
             this.selectedToken = token;
+            const tokenBalance = await this.model.walletModel.getTokenBalance(token);
+            if (new eth_wallet_3.BigNumber(totalAmount).shiftedBy(token.decimals).gt(tokenBalance)) {
+                this.btnPay.enabled = false;
+            }
+            else {
+                this.btnPay.enabled = true;
+            }
         }
         async handleCopyAddress() {
             try {

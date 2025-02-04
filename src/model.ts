@@ -15,11 +15,12 @@ export interface IWalletModel {
 	isNetworkConnected(): boolean;
 	getNetworkInfo(chainId?: number): IExtendedNetwork;
 	openNetworkModal(modalContainer: Component): Promise<void>;
-	connectWallet(modalContainer?: Component): Promise<void>;
+	// connectWallet(modalContainer?: Component): Promise<void>;
 	switchNetwork(): Promise<void>;
 	disconnectWallet(): Promise<void>;
 	getWalletAddress(): string;
 	viewExplorerByTransactionHash(hash: string) : void;
+	getTokenBalance(token: ITokenObject): Promise<string>;
 	transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<any>;
 }
 
@@ -330,6 +331,7 @@ export class Model {
 					}
 				});
 				modalContainer.append(this.mdWallet);
+				await this.mdWallet.ready();
 			}
 			this.mdWallet.showModal();
 		});

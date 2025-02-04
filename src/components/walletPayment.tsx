@@ -4,7 +4,7 @@ import assets from '../assets';
 import configData from '../defaultData';
 import { ITokenObject, assets as tokenAssets, tokenStore } from '@scom/scom-token-list';
 import { PaymentProviders } from '../store';
-import { Utils, Wallet } from '@ijstech/eth-wallet';
+import { BigNumber, Utils, Wallet } from '@ijstech/eth-wallet';
 import { fullWidthButtonStyle, halfWidthButtonStyle } from './index.css';
 import { PaymentHeader } from './common/index';
 import translations from '../translations.json';
@@ -255,9 +255,8 @@ export class WalletPayment extends Module {
         }
     }
 
-    private handleSelectToken(token: ITokenObject, isTon?: boolean) {
+    private async handleSelectToken(token: ITokenObject, isTon?: boolean) {
         this.goToStep(Step.Pay);
-        // const tokenImg = isTon ? assets.fullPath('img/ton.png') : tokenAssets.tokenPath(token, token.chainId);
         const tokenAddress = token.address === Utils.nullAddress ? undefined : token.address;
         this.model.payment.address = this.model.payment.cryptoPayoutOptions.find(option => {
             if (isTon) {
@@ -272,7 +271,6 @@ export class WalletPayment extends Module {
             return option.chainId === token.chainId.toString() && option.tokenAddress == tokenAddress;
         })?.walletAddress || "";
         const { totalAmount, currency, toAddress } = this.model;
-        // this.lbToAddress.caption = toAddress.substr(0, 12) + '...' + toAddress.substr(-12);
         this.lbToAddress.caption = toAddress;
         const formattedAmount = FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false });
         this.lbAmountToPay.caption = `${formattedAmount} ${token.symbol}`;
@@ -280,6 +278,13 @@ export class WalletPayment extends Module {
         // this.lbUSD.visible = !isTon;
         // this.imgPayToken.url = tokenImg;
         this.selectedToken = token;
+        const tokenBalance = await this.model.walletModel.getTokenBalance(token); 
+        if (new BigNumber(totalAmount).shiftedBy(token.decimals).gt(tokenBalance)) {
+            this.btnPay.enabled = false;
+        }
+        else {
+            this.btnPay.enabled = true;
+        }
     }
 
     private async handleCopyAddress() {

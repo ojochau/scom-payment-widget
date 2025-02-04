@@ -423,12 +423,12 @@ declare module "@scom/scom-payment-widget/wallets/evmWallet.ts" {
         resetRpcWallet(): Promise<void>;
         getWalletAddress(): string;
         getRpcWallet(): import("@ijstech/eth-wallet").IRpcWallet;
-        connectWallet(modalContainer: Component): Promise<void>;
         openNetworkModal(modalContainer: Component): Promise<void>;
         isWalletConnected(): boolean;
         isNetworkConnected(): boolean;
         switchNetwork(): Promise<void>;
         disconnectWallet(): Promise<void>;
+        getTokenBalance(token: ITokenObject): Promise<string>;
         getNetworkInfo(chainId?: number): IExtendedNetwork;
         viewExplorerByAddress(address: string): void;
         viewExplorerByTransactionHash(hash: string): void;
@@ -458,7 +458,6 @@ declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
         isWalletConnected(): any;
         isNetworkConnected(): any;
         loadLib(moduleDir: string): Promise<unknown>;
-        connectWallet(): Promise<void>;
         getNetworkInfo(): {
             chainId: number;
             chainName: string;
@@ -476,12 +475,14 @@ declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
         switchNetwork(): Promise<void>;
         disconnectWallet(): Promise<void>;
         sendTransaction(txData: any): Promise<any>;
-        constructPayloadForTokenTransfer(to: string, token: ITokenObject, amount: number): string;
+        constructPayloadForTokenTransfer(to: string, amount: string): string;
         getWalletAddress(): any;
         viewExplorerByTransactionHash(hash: string): void;
-        getTonBalance(): Promise<import("@ijstech/eth-wallet").BigNumber>;
+        private getTonBalance;
+        getTokenBalance(token: ITokenObject): Promise<any>;
         buildOwnerSlice(userAddress: string): string;
         getJettonWalletAddress(jettonMasterAddress: string, userAddress: string): Promise<string>;
+        estimateNetworkFee(address: string, body: string): Promise<any>;
         getTransactionMessageHash(boc: string): any;
         transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<string>;
     }
@@ -501,11 +502,11 @@ declare module "@scom/scom-payment-widget/model.ts" {
         isNetworkConnected(): boolean;
         getNetworkInfo(chainId?: number): IExtendedNetwork;
         openNetworkModal(modalContainer: Component): Promise<void>;
-        connectWallet(modalContainer?: Component): Promise<void>;
         switchNetwork(): Promise<void>;
         disconnectWallet(): Promise<void>;
         getWalletAddress(): string;
         viewExplorerByTransactionHash(hash: string): void;
+        getTokenBalance(token: ITokenObject): Promise<string>;
         transferToken(to: string, token: ITokenObject, amount: number, callback?: (error: Error, receipt?: string) => Promise<void>, confirmationCallback?: (receipt: any) => Promise<void>): Promise<any>;
     }
     export class Model {

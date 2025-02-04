@@ -48,14 +48,14 @@ export class TonWallet {
         })
     }
 
-    async connectWallet() {
-        try {
-            await this.provider.tonConnectUI.openModal();
-        }
-        catch (err) {
-            alert(err)
-        }
-    }
+    // async connectWallet() {
+    //     try {
+    //         await this.provider.tonConnectUI.openModal();
+    //     }
+    //     catch (err) {
+    //         alert(err)
+    //     }
+    // }
 
     getNetworkInfo() {
         return {
@@ -75,9 +75,9 @@ export class TonWallet {
     private getTonCenterAPIEndpoint(): string {
         switch (this.networkType) {
             case 'mainnet':
-                return 'https://toncenter.com/api/v3';
+                return 'https://toncenter.com/api';
             case 'testnet':
-                return 'https://testnet.toncenter.com/api/v3';
+                return 'https://testnet.toncenter.com/api';
             default:
                 throw new Error('Unsupported network type');
         }
@@ -99,16 +99,14 @@ export class TonWallet {
 
     constructPayloadForTokenTransfer(
         to: string,
-        token: ITokenObject,
-        amount: number
+        amount: string
     ): string {
         const recipientAddress = this.toncore.Address.parse(to);
-        const jettonAmount = Utils.toDecimals(amount, token.decimals);
 
         const bodyCell = this.toncore.beginCell()
             .storeUint(JETTON_TRANSFER_OP, 32)  // function ID
             .storeUint(0, 64)                  // query_id (can be 0 or a custom value)
-            .storeCoins(jettonAmount)          // amount in nano-jettons
+            .storeCoins(amount)          // amount in nano-jettons
             .storeAddress(recipientAddress)    // destination
             .storeAddress(null)        // response_destination (set to NULL if you don't need callback)
             .storeMaybeRef(null)               // custom_payload (None)
@@ -134,19 +132,49 @@ export class TonWallet {
         }
     }
 
-    async getTonBalance() {
+    private async getTonBalance() {
         try {
-            const address = this.provider.tonConnectUI.account;
-            const result = await fetch(`https://toncenter.com/api/v2/getAddressBalance?address=${address}`, {
+            const address = this.getWalletAddress();
+            const apiEndpoint = this.getTonCenterAPIEndpoint();
+            const result = await fetch(`${apiEndpoint}/v2/getAddressBalance?address=${address}`, {
                 method: 'GET',
             });
             const data = await result.json();
-            const balance = Utils.fromDecimals(data.balance, 9);
+            const balance = data.result;
             return balance;
         } catch (error) {
             console.error('Error fetching balance:', error);
             throw error;
         }
+    }
+
+    async getTokenBalance(token: ITokenObject) {
+        if (!token.address) {
+            return await this.getTonBalance();
+        }
+        const senderJettonAddress = await this.getJettonWalletAddress(token.address, this.getWalletAddress());
+        const apiEndpoint = this.getTonCenterAPIEndpoint();
+        const response = await fetch(`${apiEndpoint}/v3/runGetMethod`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                address: senderJettonAddress,
+                method: 'get_wallet_data',
+                stack: [],
+            }),
+        });
+
+        const data = await response.json();
+        if (data.exit_code !== 0) {
+            return '0';
+        }
+        const balanceStack = data.stack?.[0];
+
+        const balanceStr: string = balanceStack.value
+        const balance = BigInt(balanceStr).toString();
+        return balance;
     }
 
     buildOwnerSlice(userAddress: string): string {
@@ -160,7 +188,7 @@ export class TonWallet {
     async getJettonWalletAddress(jettonMasterAddress: string, userAddress: string) {
         const base64Cell = this.buildOwnerSlice(userAddress);
         const apiEndpoint = this.getTonCenterAPIEndpoint();
-        const response = await fetch(`${apiEndpoint}/runGetMethod`, {
+        const response = await fetch(`${apiEndpoint}/v3/runGetMethod`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -186,6 +214,23 @@ export class TonWallet {
         }) as string;
     }
 
+    async estimateNetworkFee(address: string, body: string) {
+        const apiEndpoint = this.getTonCenterAPIEndpoint();
+        const response = await fetch(`${apiEndpoint}/v3/estimateFee`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                address: address,
+                body: body,
+                ignore_chksig: false
+            })
+        });
+        const data = await response.json();
+        return data;
+    }
+
     getTransactionMessageHash(boc: string) {
         const cell =  this.toncore.Cell.fromBase64(boc);
         const hashBytes = cell.hash();
@@ -209,7 +254,7 @@ export class TonWallet {
                     messages: [
                         {
                             address: to,
-                            amount: Utils.toDecimals(amount, 9),
+                            amount: Utils.toDecimals(amount, 9).toFixed() ,
                             payload: ''
                         }
                     ]
@@ -218,13 +263,17 @@ export class TonWallet {
             }
             else {
                 const senderJettonAddress = await this.getJettonWalletAddress(token.address, this.getWalletAddress());
-                const payload = this.constructPayloadForTokenTransfer(to, token, amount);
+                const jettonAmount = Utils.toDecimals(amount, token.decimals).toFixed();
+                const payload = this.constructPayloadForTokenTransfer(to, jettonAmount);
+                // const networkFee = await this.estimateNetworkFee(this.getWalletAddress(), payload);
+                // const sourceFees = networkFee.source_fees;
+                // const totalFee = new BigNumber(sourceFees.fwd_fee).plus(sourceFees.gas_fee).plus(sourceFees.in_fwd_fee).plus(sourceFees.storage_fee);
                 const transaction = {
                     validUntil: Math.floor(Date.now() / 1000) + 60, // 60 sec
                     messages: [
                         {
                             address: senderJettonAddress,
-                            amount: Utils.toDecimals('0.1', 9), //FIXME: need to estimate the fee
+                            amount: Utils.toDecimals('0.05', 9),
                             payload: payload
                         }
                     ]
