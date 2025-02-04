@@ -68,6 +68,7 @@ interface IOrderItem {
   productName?: string;
   quantity: number;
   price?: number;
+  reservationTime?: number;
 }
 
 export interface IShippingInfo {

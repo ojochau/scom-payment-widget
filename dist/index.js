@@ -1208,6 +1208,9 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
                         price: v.price,
                         quantity: v.quantity
                     };
+                    if (v.time) {
+                        params['reservationTime'] = v.time;
+                    }
                     if (v.parentProductId) {
                         params['parentProductId'] = v.parentProductId;
                     }
