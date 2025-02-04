@@ -152,25 +152,25 @@ export class EVMWallet extends EventEmitter {
         return this.rpcWalletId ? Wallet.getRpcWalletInstance(this.rpcWalletId) : null;
     }
 
-    async connectWallet(modalContainer: Component) {
-        if (!this.mdEVMWallet) {
-            await application.loadPackage('@scom/scom-wallet-modal', '*');
-            this.mdEVMWallet = new ScomWalletModal(undefined, {
-                wallets: this.wallets,
-                networks: this.networks,
-                onCustomWalletSelected: async (wallet: IClientSideProvider) => {
-                    console.log('onCustomWalletSelected', wallet);
-                }
-            });
-            modalContainer.append(this.mdEVMWallet);
-            await this.mdEVMWallet.ready();
-        }
-        // await this.mdEVMWallet.setData({
-        //     networks: this.networks,
-        //     wallets: this.wallets
-        // })
-        this.mdEVMWallet.showModal();
-    }
+    // async connectWallet(modalContainer: Component) {
+    //     if (!this.mdEVMWallet) {
+    //         await application.loadPackage('@scom/scom-wallet-modal', '*');
+    //         this.mdEVMWallet = new ScomWalletModal(undefined, {
+    //             wallets: this.wallets,
+    //             networks: this.networks,
+    //             onCustomWalletSelected: async (wallet: IClientSideProvider) => {
+    //                 console.log('onCustomWalletSelected', wallet);
+    //             }
+    //         });
+    //         modalContainer.append(this.mdEVMWallet);
+    //         await this.mdEVMWallet.ready();
+    //     }
+    //     // await this.mdEVMWallet.setData({
+    //     //     networks: this.networks,
+    //     //     wallets: this.wallets
+    //     // })
+    //     this.mdEVMWallet.showModal();
+    // }
 
     async openNetworkModal(modalContainer: Component) {
         if (!this.mdNetwork) {
@@ -207,6 +207,18 @@ export class EVMWallet extends EventEmitter {
     async disconnectWallet() {
         const wallet = Wallet.getClientInstance();
         await wallet.disconnect();
+    }
+
+    async getTokenBalance(token: ITokenObject) {
+        let balance = '0';
+        const rpcWallet = this.getRpcWallet();
+        if (token.address) {
+            const erc20 = new Contracts.ERC20(rpcWallet, token.address);
+            balance = (await erc20.balanceOf(rpcWallet.address)).toFixed();
+        } else {
+            balance = Utils.toDecimals(await rpcWallet.balance).toFixed();
+        }
+        return balance;
     }
 
     getNetworkInfo(chainId?: number) {
