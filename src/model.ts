@@ -239,6 +239,7 @@ export class Model {
 				}
 				if (v.parentProductId) {
 					params['parentProductId'] = v.parentProductId;
+					params['productId'] = v.parentProductId;
 				}
 				return params;
 			})

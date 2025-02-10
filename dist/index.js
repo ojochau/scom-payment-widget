@@ -1213,6 +1213,7 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
                     }
                     if (v.parentProductId) {
                         params['parentProductId'] = v.parentProductId;
+                        params['productId'] = v.parentProductId;
                     }
                     return params;
                 })
