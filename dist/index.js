@@ -463,17 +463,20 @@ define("@scom/scom-payment-widget/wallets/tonProvider.ts", ["require", "exports"
                         manifestUrl: 'https://ton.noto.fan/tonconnect/manifest.json',
                         buttonRootId: 'btnTonWallet'
                     });
-                    this.tonConnectUI.connectionRestored.then(async (restored) => {
-                        const account = this.tonConnectUI.account;
-                        this._isConnected = this.tonConnectUI.connected;
-                        this.onAccountChanged(account);
-                    });
-                    this.tonConnectUI.onStatusChange((walletAndwalletInfo) => {
-                        const account = this.tonConnectUI.account;
-                        this._isConnected = this.tonConnectUI.connected;
-                        this.onAccountChanged(account);
-                    });
                 }
+                this.tonConnectUI.connectionRestored.then(async (restored) => {
+                    const account = this.tonConnectUI.account;
+                    this._isConnected = this.tonConnectUI.connected;
+                    this.onAccountChanged(account);
+                });
+                if (this.unsubscribe) {
+                    this.unsubscribe();
+                }
+                this.unsubscribe = this.tonConnectUI.onStatusChange((walletAndwalletInfo) => {
+                    const account = this.tonConnectUI.account;
+                    this._isConnected = this.tonConnectUI.connected;
+                    this.onAccountChanged(account);
+                });
             }
             catch (err) {
                 // alert(err)
