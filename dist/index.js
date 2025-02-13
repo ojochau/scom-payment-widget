@@ -829,7 +829,7 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
         getNetworkInfo() {
             return {
                 chainId: 0,
-                chainName: 'TON',
+                chainName: this.networkType === 'testnet' ? 'TON Testnet' : 'TON',
                 networkCode: this.networkType === 'testnet' ? 'TON-TESTNET' : 'TON',
                 nativeCurrency: {
                     name: 'TON',
@@ -2323,13 +2323,13 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             // this.lbUSD.visible = !isTon;
             // this.imgPayToken.url = tokenImg;
             this.selectedToken = token;
-            const tokenBalance = await this.model.walletModel.getTokenBalance(token);
-            if (new eth_wallet_3.BigNumber(totalAmount).shiftedBy(token.decimals).gt(tokenBalance)) {
-                this.btnPay.enabled = false;
-            }
-            else {
-                this.btnPay.enabled = true;
-            }
+            // const tokenBalance = await this.model.walletModel.getTokenBalance(token); 
+            // if (new BigNumber(totalAmount).shiftedBy(token.decimals).gt(tokenBalance)) {
+            //     this.btnPay.enabled = false;
+            // }
+            // else {
+            //     this.btnPay.enabled = true;
+            // }
         }
         async handleCopyAddress() {
             try {
