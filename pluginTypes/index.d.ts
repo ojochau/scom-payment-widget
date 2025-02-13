@@ -363,6 +363,7 @@ declare module "@scom/scom-payment-widget/wallets/tonProvider.ts" {
         onChainChanged: (chainId: string) => void;
         onConnect: (connectInfo: any) => void;
         onDisconnect: (error: any) => void;
+        protected unsubscribe: () => void;
         constructor(events?: IClientSideProviderEvents, options?: IClientProviderOptions);
         get name(): string;
         get displayName(): string;

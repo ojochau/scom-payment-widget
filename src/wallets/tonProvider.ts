@@ -22,6 +22,7 @@ export default class TonWalletProvider implements IClientSideProvider {
     public onChainChanged: (chainId: string) => void;
     public onConnect: (connectInfo: any) => void;
     public onDisconnect: (error: any) => void;
+    protected unsubscribe: () => void;
 
     constructor(events?: IClientSideProviderEvents, options?: IClientProviderOptions) {
         this._events = events;
@@ -64,17 +65,20 @@ export default class TonWalletProvider implements IClientSideProvider {
                     manifestUrl: 'https://ton.noto.fan/tonconnect/manifest.json',
                     buttonRootId: 'btnTonWallet'
                 });
-                this.tonConnectUI.connectionRestored.then(async (restored: boolean) => {
-                    const account = this.tonConnectUI.account;
-                    this._isConnected = this.tonConnectUI.connected;
-                    this.onAccountChanged(account);
-                });
-                this.tonConnectUI.onStatusChange((walletAndwalletInfo) => {
-                    const account = this.tonConnectUI.account;
-                    this._isConnected = this.tonConnectUI.connected;
-                    this.onAccountChanged(account);
-                });
             }
+            this.tonConnectUI.connectionRestored.then(async (restored: boolean) => {
+                const account = this.tonConnectUI.account;
+                this._isConnected = this.tonConnectUI.connected;
+                this.onAccountChanged(account);
+            });
+            if (this.unsubscribe) {
+                this.unsubscribe();
+            }
+            this.unsubscribe = this.tonConnectUI.onStatusChange((walletAndwalletInfo) => {
+                const account = this.tonConnectUI.account;
+                this._isConnected = this.tonConnectUI.connected;
+                this.onAccountChanged(account);
+            });
         } catch (err) {
             // alert(err)
             console.log(err);
