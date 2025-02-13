@@ -1,7 +1,7 @@
 {
     "name": "@scom/scom-payment-widget",
     "type": "widget",
-    "version": "0.1.28",
+    "version": "0.1.29",
     "dependencies": [
         "@ijstech/components",
         "@ijstech/eth-wallet",
