@@ -60,7 +60,7 @@ export class TonWallet {
     getNetworkInfo() {
         return {
             chainId: 0,
-            chainName: 'TON',
+            chainName: this.networkType === 'testnet' ? 'TON Testnet' : 'TON',
             networkCode: this.networkType === 'testnet' ? 'TON-TESTNET' : 'TON',
             nativeCurrency: {
                 name: 'TON',

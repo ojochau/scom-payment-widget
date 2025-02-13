@@ -278,13 +278,13 @@ export class WalletPayment extends Module {
         // this.lbUSD.visible = !isTon;
         // this.imgPayToken.url = tokenImg;
         this.selectedToken = token;
-        const tokenBalance = await this.model.walletModel.getTokenBalance(token); 
-        if (new BigNumber(totalAmount).shiftedBy(token.decimals).gt(tokenBalance)) {
-            this.btnPay.enabled = false;
-        }
-        else {
-            this.btnPay.enabled = true;
-        }
+        // const tokenBalance = await this.model.walletModel.getTokenBalance(token); 
+        // if (new BigNumber(totalAmount).shiftedBy(token.decimals).gt(tokenBalance)) {
+        //     this.btnPay.enabled = false;
+        // }
+        // else {
+        //     this.btnPay.enabled = true;
+        // }
     }
 
     private async handleCopyAddress() {
