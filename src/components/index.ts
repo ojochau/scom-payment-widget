@@ -1,7 +1,7 @@
 import { PaymentModule } from './paymentModule';
 import { ShippingInfo } from './shippingInfo';
 import { InvoiceCreation } from './invoiceCreation';
-import { PaymentMethod } from './paymentMethod';
+import { PaymentMethodModule } from './paymentMethod';
 import { WalletPayment } from './walletPayment';
 import { StatusPayment } from './statusPayment';
 import { StripePayment } from './stripePayment';
@@ -11,7 +11,7 @@ export {
   PaymentModule,
   ShippingInfo,
   InvoiceCreation,
-  PaymentMethod,
+  PaymentMethodModule,
   WalletPayment,
   StripePayment,
   StatusPaymentTracking,

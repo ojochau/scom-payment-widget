@@ -90,8 +90,14 @@ declare module "@scom/scom-payment-widget/interface.ts" {
         stallId: string;
         order: IOrder;
     }
+    export enum PaymentMethod {
+        EVM = "EVM",
+        TON = "TON",
+        Stripe = "Stripe"
+    }
     export interface IPaymentActivity {
         id: string;
+        sender: string;
         recipient: string;
         amount: string;
         currencyCode: string;
@@ -100,7 +106,7 @@ declare module "@scom/scom-payment-widget/interface.ts" {
         stallName?: string;
         orderId?: string;
         referenceId?: string;
-        paymentMethod?: 'Stripe' | 'EVM';
+        paymentMethod?: PaymentMethod;
         createdAt?: number;
     }
     export enum PaymentType {
@@ -495,7 +501,7 @@ declare module "@scom/scom-payment-widget/wallets/index.ts" {
 }
 /// <amd-module name="@scom/scom-payment-widget/model.ts" />
 declare module "@scom/scom-payment-widget/model.ts" {
-    import { IExtendedNetwork, INetworkConfig, IPaymentActivity, IPaymentInfo, IPlaceOrder, IShippingInfo, PaymentProvider } from "@scom/scom-payment-widget/interface.ts";
+    import { IExtendedNetwork, INetworkConfig, IPaymentActivity, IPaymentInfo, IPlaceOrder, IShippingInfo, PaymentMethod, PaymentProvider } from "@scom/scom-payment-widget/interface.ts";
     import { ITokenObject } from '@scom/scom-token-list';
     import { Component } from '@ijstech/components';
     export interface IWalletModel {
@@ -563,8 +569,8 @@ declare module "@scom/scom-payment-widget/model.ts" {
         set referenceId(value: string);
         get networkCode(): string;
         set networkCode(value: string);
-        get paymentMethod(): 'Stripe' | 'EVM';
-        set paymentMethod(value: 'Stripe' | 'EVM');
+        get paymentMethod(): PaymentMethod;
+        set paymentMethod(value: PaymentMethod);
         get isOnTelegram(): boolean;
         set isOnTelegram(value: boolean);
         get isCompleted(): boolean;
@@ -771,7 +777,7 @@ declare module "@scom/scom-payment-widget/components/paymentMethod.tsx" {
             }
         }
     }
-    export class PaymentMethod extends Module {
+    export class PaymentMethodModule extends Module {
         private header;
         private lbPayMethod;
         private pnlPaymentType;
@@ -1028,12 +1034,12 @@ declare module "@scom/scom-payment-widget/components/index.ts" {
     import { PaymentModule } from "@scom/scom-payment-widget/components/paymentModule.tsx";
     import { ShippingInfo } from "@scom/scom-payment-widget/components/shippingInfo.tsx";
     import { InvoiceCreation } from "@scom/scom-payment-widget/components/invoiceCreation.tsx";
-    import { PaymentMethod } from "@scom/scom-payment-widget/components/paymentMethod.tsx";
+    import { PaymentMethodModule } from "@scom/scom-payment-widget/components/paymentMethod.tsx";
     import { WalletPayment } from "@scom/scom-payment-widget/components/walletPayment.tsx";
     import { StatusPayment } from "@scom/scom-payment-widget/components/statusPayment.tsx";
     import { StripePayment } from "@scom/scom-payment-widget/components/stripePayment.tsx";
     import { StatusPaymentTracking } from "@scom/scom-payment-widget/components/stripePaymentTracking.tsx";
-    export { PaymentModule, ShippingInfo, InvoiceCreation, PaymentMethod, WalletPayment, StripePayment, StatusPaymentTracking, StatusPayment };
+    export { PaymentModule, ShippingInfo, InvoiceCreation, PaymentMethodModule, WalletPayment, StripePayment, StatusPaymentTracking, StatusPayment };
 }
 /// <amd-module name="@scom/scom-payment-widget" />
 declare module "@scom/scom-payment-widget" {

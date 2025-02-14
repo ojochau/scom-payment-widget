@@ -21,7 +21,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 define("@scom/scom-payment-widget/interface.ts", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.PaymentProvider = exports.PaymentType = exports.ProductType = void 0;
+    exports.PaymentProvider = exports.PaymentType = exports.PaymentMethod = exports.ProductType = void 0;
     var ProductType;
     (function (ProductType) {
         ProductType["Physical"] = "Physical";
@@ -31,6 +31,12 @@ define("@scom/scom-payment-widget/interface.ts", ["require", "exports"], functio
         ProductType["Membership"] = "Membership";
         ProductType["Bundle"] = "Bundle";
     })(ProductType = exports.ProductType || (exports.ProductType = {}));
+    var PaymentMethod;
+    (function (PaymentMethod) {
+        PaymentMethod["EVM"] = "EVM";
+        PaymentMethod["TON"] = "TON";
+        PaymentMethod["Stripe"] = "Stripe";
+    })(PaymentMethod = exports.PaymentMethod || (exports.PaymentMethod = {}));
     var PaymentType;
     (function (PaymentType) {
         PaymentType["Fiat"] = "Fiat";
@@ -1231,6 +1237,7 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
             const { merchantId, stallId } = this.placeOrder;
             return {
                 id: components_6.IdUtils.generateUUID(),
+                sender: '',
                 recipient: merchantId,
                 amount: this.totalAmount.toString(),
                 currencyCode: this.currency,
@@ -1252,6 +1259,7 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
                     const tonWallet = new wallets_1.TonWallet(tonWalletProvider, moduleDir, this.handleWalletConnected.bind(this));
                     tonWalletProvider.onAccountChanged = (account) => {
                         this.mdWallet.hideModal();
+                        this.paymentMethod = interface_2.PaymentMethod.TON;
                         this.walletModel = tonWallet;
                         this.handleWalletConnected();
                     };
@@ -1291,10 +1299,12 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
                             let paymentProvider;
                             if (provider.name === 'tonwallet') {
                                 this.walletModel = tonWallet;
+                                this.paymentMethod = interface_2.PaymentMethod.TON;
                                 paymentProvider = interface_2.PaymentProvider.TonWallet;
                             }
                             else {
                                 this.walletModel = evmWallet;
+                                this.paymentMethod = interface_2.PaymentMethod.EVM;
                                 paymentProvider = interface_2.PaymentProvider.Metamask;
                             }
                             resolve(paymentProvider);
@@ -1713,9 +1723,9 @@ define("@scom/scom-payment-widget/components/shippingInfo.tsx", ["require", "exp
 define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_12, interface_3, assets_2, store_2, index_css_4, translations_json_6) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.PaymentMethod = void 0;
+    exports.PaymentMethodModule = void 0;
     const Theme = components_12.Styles.Theme.ThemeVars;
-    let PaymentMethod = class PaymentMethod extends components_12.Module {
+    let PaymentMethodModule = class PaymentMethodModule extends components_12.Module {
         get model() {
             return this._model;
         }
@@ -1763,11 +1773,10 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
         }
         handlePaymentType(type) {
             if (type === interface_3.PaymentType.Fiat) {
-                this.model.paymentMethod = 'Stripe';
+                this.model.paymentMethod = interface_3.PaymentMethod.Stripe;
                 this.handlePaymentProvider(interface_3.PaymentProvider.Stripe);
             }
             else if (type) {
-                this.model.paymentMethod = 'EVM';
                 this.handlePaymentProvider(interface_3.PaymentProvider.Metamask);
                 // this.renderMethodItems(type);
                 // this.pnlPaymentType.visible = false;
@@ -1819,10 +1828,10 @@ define("@scom/scom-payment-widget/components/paymentMethod.tsx", ["require", "ex
                 this.$render("i-alert", { id: "mdAlert", class: index_css_4.alertStyle }));
         }
     };
-    PaymentMethod = __decorate([
+    PaymentMethodModule = __decorate([
         (0, components_12.customElements)('scom-payment-widget--payment-method')
-    ], PaymentMethod);
-    exports.PaymentMethod = PaymentMethod;
+    ], PaymentMethodModule);
+    exports.PaymentMethodModule = PaymentMethodModule;
     let PaymentTypeModule = class PaymentTypeModule extends components_12.Module {
         get model() {
             return this._model;
@@ -2715,11 +2724,11 @@ define("@scom/scom-payment-widget/components/stripePaymentTracking.tsx", ["requi
 define("@scom/scom-payment-widget/components/index.ts", ["require", "exports", "@scom/scom-payment-widget/components/paymentModule.tsx", "@scom/scom-payment-widget/components/shippingInfo.tsx", "@scom/scom-payment-widget/components/invoiceCreation.tsx", "@scom/scom-payment-widget/components/paymentMethod.tsx", "@scom/scom-payment-widget/components/walletPayment.tsx", "@scom/scom-payment-widget/components/statusPayment.tsx", "@scom/scom-payment-widget/components/stripePayment.tsx", "@scom/scom-payment-widget/components/stripePaymentTracking.tsx"], function (require, exports, paymentModule_1, shippingInfo_1, invoiceCreation_1, paymentMethod_1, walletPayment_2, statusPayment_1, stripePayment_2, stripePaymentTracking_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.StatusPayment = exports.StatusPaymentTracking = exports.StripePayment = exports.WalletPayment = exports.PaymentMethod = exports.InvoiceCreation = exports.ShippingInfo = exports.PaymentModule = void 0;
+    exports.StatusPayment = exports.StatusPaymentTracking = exports.StripePayment = exports.WalletPayment = exports.PaymentMethodModule = exports.InvoiceCreation = exports.ShippingInfo = exports.PaymentModule = void 0;
     Object.defineProperty(exports, "PaymentModule", { enumerable: true, get: function () { return paymentModule_1.PaymentModule; } });
     Object.defineProperty(exports, "ShippingInfo", { enumerable: true, get: function () { return shippingInfo_1.ShippingInfo; } });
     Object.defineProperty(exports, "InvoiceCreation", { enumerable: true, get: function () { return invoiceCreation_1.InvoiceCreation; } });
-    Object.defineProperty(exports, "PaymentMethod", { enumerable: true, get: function () { return paymentMethod_1.PaymentMethod; } });
+    Object.defineProperty(exports, "PaymentMethodModule", { enumerable: true, get: function () { return paymentMethod_1.PaymentMethodModule; } });
     Object.defineProperty(exports, "WalletPayment", { enumerable: true, get: function () { return walletPayment_2.WalletPayment; } });
     Object.defineProperty(exports, "StatusPayment", { enumerable: true, get: function () { return statusPayment_1.StatusPayment; } });
     Object.defineProperty(exports, "StripePayment", { enumerable: true, get: function () { return stripePayment_2.StripePayment; } });

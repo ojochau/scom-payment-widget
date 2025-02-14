@@ -97,8 +97,15 @@ export interface IPlaceOrder {
   order: IOrder;
 }
 
+export enum PaymentMethod {
+  EVM = "EVM",
+	TON = "TON",
+  Stripe = "Stripe"
+}
+
 export interface IPaymentActivity {
   id: string;
+  sender: string;
   recipient: string;
   amount: string;
   currencyCode: string;
@@ -107,7 +114,7 @@ export interface IPaymentActivity {
   stallName?: string;
   orderId?: string;
   referenceId?: string;
-  paymentMethod?: 'Stripe' | 'EVM';
+  paymentMethod?: PaymentMethod;
   createdAt?: number;
 }
 
