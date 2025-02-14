@@ -890,10 +890,10 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
         }
         viewExplorerByTransactionHash(hash) {
             if (this.networkType === 'mainnet') {
-                window.open(`https://tonscan.org/transactions/${hash}`);
+                window.open(`https://tonscan.org/tx/${hash}`);
             }
             else {
-                window.open(`https://testnet.tonscan.org/transactions/${hash}`);
+                window.open(`https://testnet.tonscan.org/tx/${hash}`);
             }
         }
         async getTonBalance() {

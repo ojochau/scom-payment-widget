@@ -125,10 +125,10 @@ export class TonWallet {
 
     viewExplorerByTransactionHash(hash: string) {
         if (this.networkType === 'mainnet') {
-            window.open(`https://tonscan.org/transactions/${hash}`);
+            window.open(`https://tonscan.org/tx/${hash}`);
         }
         else {
-            window.open(`https://testnet.tonscan.org/transactions/${hash}`);
+            window.open(`https://testnet.tonscan.org/tx/${hash}`);
         }
     }
 
