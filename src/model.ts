@@ -1,4 +1,4 @@
-import { IExtendedNetwork, INetworkConfig, IOrder, IPaymentActivity, IPaymentInfo, IPlaceOrder, IShippingInfo, PaymentProvider, ProductType } from './interface';
+import { IExtendedNetwork, INetworkConfig, IOrder, IPaymentActivity, IPaymentInfo, IPlaceOrder, IShippingInfo, PaymentMethod, PaymentProvider, ProductType } from './interface';
 import { ITokenObject } from '@scom/scom-token-list';
 import configData from './defaultData';
 import { stripeCurrencies, stripeSpecialCurrencies, stripeZeroDecimalCurrencies } from './store';
@@ -33,7 +33,7 @@ export class Model {
 	private _tokens: ITokenObject[] = [];
 	private _referenceId: string;
 	private _networkCode: string;
-	private _paymentMethod: 'Stripe' | 'EVM';
+	private _paymentMethod: PaymentMethod;
 	private _isCompleted: boolean;
 	private orderId: string;
 	private shippingInfo: IShippingInfo = {
@@ -194,7 +194,7 @@ export class Model {
 		return this._paymentMethod;
 	}
 
-	set paymentMethod(value: 'Stripe' | 'EVM') {
+	set paymentMethod(value: PaymentMethod) {
 		this._paymentMethod = value;
 	}
 
@@ -255,6 +255,7 @@ export class Model {
 		const { merchantId, stallId } = this.placeOrder;
 		return {
 			id: IdUtils.generateUUID(),
+			sender: '',
 			recipient: merchantId,
 			amount: this.totalAmount.toString(),
 			currencyCode: this.currency,
@@ -283,6 +284,7 @@ export class Model {
 				);
 				tonWalletProvider.onAccountChanged = (account: string) => {
 					this.mdWallet.hideModal();
+					this.paymentMethod = PaymentMethod.TON;
 					this.walletModel = tonWallet;
 					this.handleWalletConnected();
 				}
@@ -322,10 +324,12 @@ export class Model {
 						let paymentProvider: PaymentProvider;
 						if (provider.name === 'tonwallet') {
 							this.walletModel = tonWallet;
+							this.paymentMethod = PaymentMethod.TON;
 							paymentProvider = PaymentProvider.TonWallet;
 						}
 						else {
 							this.walletModel = evmWallet;
+							this.paymentMethod = PaymentMethod.EVM;
 							paymentProvider = PaymentProvider.Metamask;
 						}
 						resolve(paymentProvider);

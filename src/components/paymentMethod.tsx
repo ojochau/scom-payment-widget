@@ -1,5 +1,5 @@
 import { Module, Container, customElements, ControlElement, Styles, Label, IconName, Control, StackLayout, Alert, Icon } from '@ijstech/components';
-import { PaymentProvider, PaymentType } from '../interface';
+import { PaymentMethod, PaymentProvider, PaymentType } from '../interface';
 import assets from '../assets';
 import { PaymentProviders } from '../store';
 import { alertStyle, fullWidthButtonStyle } from './index.css';
@@ -32,7 +32,7 @@ declare global {
 }
 
 @customElements('scom-payment-widget--payment-method')
-export class PaymentMethod extends Module {
+export class PaymentMethodModule extends Module {
     private header: PaymentHeader;
     private lbPayMethod: Label;
     private pnlPaymentType: StackLayout;
@@ -110,10 +110,9 @@ export class PaymentMethod extends Module {
 
     private handlePaymentType(type: PaymentType) {
         if (type === PaymentType.Fiat) {
-            this.model.paymentMethod = 'Stripe';
+            this.model.paymentMethod = PaymentMethod.Stripe;
             this.handlePaymentProvider(PaymentProvider.Stripe);
         } else if (type) {
-            this.model.paymentMethod = 'EVM';
             this.handlePaymentProvider(PaymentProvider.Metamask);
             // this.renderMethodItems(type);
             // this.pnlPaymentType.visible = false;

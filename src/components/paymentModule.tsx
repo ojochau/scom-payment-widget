@@ -2,7 +2,7 @@ import { Module, customElements, ControlElement, StackLayout } from '@ijstech/co
 import { IPaymentStatus, PaymentProvider } from '../interface';
 import { InvoiceCreation } from './invoiceCreation';
 import { ShippingInfo } from './shippingInfo';
-import { PaymentMethod } from './paymentMethod';
+import { PaymentMethodModule } from './paymentMethod';
 import { StatusPayment } from './statusPayment';
 import { StripePayment } from './stripePayment';
 import { WalletPayment } from './walletPayment';
@@ -26,7 +26,7 @@ export class PaymentModule extends Module {
     private pnlPaymentModule: StackLayout;
     private invoiceCreation: InvoiceCreation;
     private shippingInfo: ShippingInfo;
-    private paymentMethod: PaymentMethod;
+    private paymentMethod: PaymentMethodModule;
     private walletPayment: WalletPayment;
     private stripePayment: StripePayment;
     private statusPayment: StatusPayment;
