@@ -66,6 +66,7 @@ export class WalletPayment extends Module {
     private iconCopyAmount: Icon;
     private pnlEVMWallet: Panel;
     private selectedToken: ITokenObject;
+    private lbError: Label;
 
     public onBack: () => void;
     public onPaid: (paymentStatus: IPaymentStatus) => void;
@@ -278,13 +279,15 @@ export class WalletPayment extends Module {
         // this.lbUSD.visible = !isTon;
         // this.imgPayToken.url = tokenImg;
         this.selectedToken = token;
-        // const tokenBalance = await this.model.walletModel.getTokenBalance(token); 
-        // if (new BigNumber(totalAmount).shiftedBy(token.decimals).gt(tokenBalance)) {
-        //     this.btnPay.enabled = false;
-        // }
-        // else {
-        //     this.btnPay.enabled = true;
-        // }
+        const tokenBalance = await this.model.walletModel.getTokenBalance(token); 
+        if (new BigNumber(totalAmount).shiftedBy(token.decimals).gt(tokenBalance)) {
+            this.btnPay.enabled = false;
+            this.lbError.caption = '$insufficient_balance';
+        }
+        else {
+            this.btnPay.enabled = true;
+            this.lbError.caption = '';
+        }
     }
 
     private async handleCopyAddress() {
@@ -542,6 +545,7 @@ export class WalletPayment extends Module {
                                 <i-icon id="iconCopyAmount" name="copy" width={16} height={16} fill={Theme.text.primary} />
                             </i-stack>
                         </i-stack>
+                        <i-label id="lbError" font={{ color: Theme.colors.error.main }} />
                     </i-stack>
                     <i-stack direction="horizontal" width="100%" alignItems="center" justifyContent="center" gap="1rem" wrap="wrap-reverse" padding={{ left: '1rem', right: '1rem' }}>
                         <i-button

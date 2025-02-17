@@ -54,6 +54,7 @@ export default {
     "duration": "Duration",
     "service": "Service",
     "provider": "Provider",
+    "insufficient_balance": "Insufficient balance",
   },
   "zh-hant": {
     "pay": "付款",
@@ -110,6 +111,7 @@ export default {
     "duration": "持續時間",
     "service": "服務",
     "provider": "提供者",
+    "insufficient_balance": "餘額不足",
   },
   "vi": {
     "pay": "Thanh toán",
@@ -166,5 +168,6 @@ export default {
     "duration": "Thời gian",
     "service": "Dịch vụ",
     "provider": "Nhà cung cấp",
+    "insufficient_balance": "Số dư không đủ",
   }
 }

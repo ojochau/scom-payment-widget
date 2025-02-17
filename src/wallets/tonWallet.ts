@@ -1,4 +1,4 @@
-import { Component, RequireJS } from "@ijstech/components";
+import { Component, RequireJS, application } from "@ijstech/components";
 import { Utils } from "@ijstech/eth-wallet";
 import { ITokenObject } from "@scom/scom-token-list";
 import TonWalletProvider from "./tonProvider";
@@ -72,15 +72,9 @@ export class TonWallet {
         }
     }
 
-    private getTonCenterAPIEndpoint(): string {
-        switch (this.networkType) {
-            case 'mainnet':
-                return 'https://toncenter.com/api';
-            case 'testnet':
-                return 'https://testnet.toncenter.com/api';
-            default:
-                throw new Error('Unsupported network type');
-        }
+    private getTonAPIEndpoint(): string {
+        const publicIndexingRelay = application.store?.publicIndexingRelay;
+        return `${publicIndexingRelay}/ton`;
     }
 
     async openNetworkModal(modalContainer: Component) {
@@ -135,12 +129,19 @@ export class TonWallet {
     private async getTonBalance() {
         try {
             const address = this.getWalletAddress();
-            const apiEndpoint = this.getTonCenterAPIEndpoint();
-            const result = await fetch(`${apiEndpoint}/v2/getAddressBalance?address=${address}`, {
-                method: 'GET',
+            const apiEndpoint = this.getTonAPIEndpoint();
+            const response = await fetch(`${apiEndpoint}/getAddressBalance`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    network: this.networkType,
+                    address: address
+                })
             });
-            const data = await result.json();
-            const balance = data.result;
+            const result = await response.json();
+            const balance = result.data?.balance;
             return balance;
         } catch (error) {
             console.error('Error fetching balance:', error);
@@ -153,20 +154,23 @@ export class TonWallet {
             return await this.getTonBalance();
         }
         const senderJettonAddress = await this.getJettonWalletAddress(token.address, this.getWalletAddress());
-        const apiEndpoint = this.getTonCenterAPIEndpoint();
-        const response = await fetch(`${apiEndpoint}/v3/runGetMethod`, {
+        const apiEndpoint = this.getTonAPIEndpoint();
+        const response = await fetch(`${apiEndpoint}/runGetMethod`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                address: senderJettonAddress,
-                method: 'get_wallet_data',
-                stack: [],
-            }),
+                network: this.networkType,
+                params: {
+                    address: senderJettonAddress,
+                    method: 'get_wallet_data',
+                    stack: [],
+                }
+            })
         });
-
-        const data = await response.json();
+        const result = await response.json();
+        const data = result.data;
         if (data.exit_code !== 0) {
             return '0';
         }
@@ -187,24 +191,28 @@ export class TonWallet {
 
     async getJettonWalletAddress(jettonMasterAddress: string, userAddress: string) {
         const base64Cell = this.buildOwnerSlice(userAddress);
-        const apiEndpoint = this.getTonCenterAPIEndpoint();
-        const response = await fetch(`${apiEndpoint}/v3/runGetMethod`, {
+        const apiEndpoint = this.getTonAPIEndpoint();
+        const response = await fetch(`${apiEndpoint}/runGetMethod`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                address: jettonMasterAddress,
-                method: 'get_wallet_address',
-                stack: [
-                    {
-                        type: 'slice',
-                        value: base64Cell,
-                    },
-                ],
+                network: this.networkType,
+                params: {
+                    address: jettonMasterAddress,
+                    method: 'get_wallet_address',
+                    stack: [
+                        {
+                            type: 'slice',
+                            value: base64Cell,
+                        },
+                    ],
+                }
             })
         });
-        const data = await response.json();
+        const result = await response.json();
+        const data = result.data;
         const cell = this.toncore.Cell.fromBase64(data.stack[0].value);
         const slice = cell.beginParse();
         const address = slice.loadAddress();
@@ -215,19 +223,23 @@ export class TonWallet {
     }
 
     async estimateNetworkFee(address: string, body: string) {
-        const apiEndpoint = this.getTonCenterAPIEndpoint();
-        const response = await fetch(`${apiEndpoint}/v3/estimateFee`, {
+        const apiEndpoint = this.getTonAPIEndpoint();
+        const response = await fetch(`${apiEndpoint}/estimateFee`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                address: address,
-                body: body,
-                ignore_chksig: false
+                network: this.networkType,
+                params: {
+                    address: address,
+                    body: body,
+                    ignore_chksig: false
+                }
             })
         });
-        const data = await response.json();
+        const result = await response.json();
+        const data = result.data;
         return data;
     }
 
