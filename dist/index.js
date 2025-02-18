@@ -893,21 +893,57 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
                 window.open(`https://testnet.tonscan.org/tx/${hash}`);
             }
         }
+        async exponentialBackoffRetry(fn, // Function to retry
+        retries, // Maximum number of retries
+        delay, // Initial delay duration in milliseconds
+        maxDelay, // Maximum delay duration in milliseconds
+        factor, // Exponential backoff factor
+        stopCondition = () => true // Stop condition
+        ) {
+            let currentDelay = delay;
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const data = await fn();
+                    if (stopCondition(data)) {
+                        return data;
+                    }
+                    else {
+                        console.log(`Attempt ${i + 1} failed. Retrying in ${currentDelay}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, currentDelay));
+                        currentDelay = Math.min(maxDelay, currentDelay * factor);
+                    }
+                }
+                catch (error) {
+                    console.error('error', error);
+                    console.log(`Attempt ${i + 1} failed. Retrying in ${currentDelay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, currentDelay));
+                    currentDelay = Math.min(maxDelay, currentDelay * factor);
+                }
+            }
+            throw new Error(`Failed after ${retries} retries`);
+        }
         async getTonBalance() {
             try {
                 const address = this.getWalletAddress();
                 const apiEndpoint = this.getTonAPIEndpoint();
-                const response = await fetch(`${apiEndpoint}/getAddressBalance`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        network: this.networkType,
-                        address: address
-                    })
-                });
-                const result = await response.json();
+                const func = async () => {
+                    const response = await fetch(`${apiEndpoint}/getAddressBalance`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            network: this.networkType,
+                            address: address
+                        })
+                    });
+                    const result = await response.json();
+                    return result;
+                };
+                const stopCondition = (result) => {
+                    return result?.success;
+                };
+                const result = await this.exponentialBackoffRetry(func, 3, 1000, 10000, 2, stopCondition);
                 const balance = result.data?.balance;
                 return balance;
             }
@@ -922,21 +958,31 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
             }
             const senderJettonAddress = await this.getJettonWalletAddress(token.address, this.getWalletAddress());
             const apiEndpoint = this.getTonAPIEndpoint();
-            const response = await fetch(`${apiEndpoint}/runGetMethod`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    network: this.networkType,
-                    params: {
-                        address: senderJettonAddress,
-                        method: 'get_wallet_data',
-                        stack: [],
-                    }
-                })
-            });
-            const result = await response.json();
+            const func = async () => {
+                const response = await fetch(`${apiEndpoint}/runGetMethod`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        network: this.networkType,
+                        params: {
+                            address: senderJettonAddress,
+                            method: 'get_wallet_data',
+                            stack: [],
+                        }
+                    })
+                });
+                const result = await response.json();
+                return result;
+            };
+            const stopCondition = (result) => {
+                return result?.success;
+            };
+            const result = await this.exponentialBackoffRetry(func, 3, 1000, 10000, 2, stopCondition);
+            if (!result.success) {
+                return '0';
+            }
             const data = result.data;
             if (data.exit_code !== 0) {
                 return '0';
@@ -956,26 +1002,36 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
         async getJettonWalletAddress(jettonMasterAddress, userAddress) {
             const base64Cell = this.buildOwnerSlice(userAddress);
             const apiEndpoint = this.getTonAPIEndpoint();
-            const response = await fetch(`${apiEndpoint}/runGetMethod`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    network: this.networkType,
-                    params: {
-                        address: jettonMasterAddress,
-                        method: 'get_wallet_address',
-                        stack: [
-                            {
-                                type: 'slice',
-                                value: base64Cell,
-                            },
-                        ],
-                    }
-                })
-            });
-            const result = await response.json();
+            const func = async () => {
+                const response = await fetch(`${apiEndpoint}/runGetMethod`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        network: this.networkType,
+                        params: {
+                            address: jettonMasterAddress,
+                            method: 'get_wallet_address',
+                            stack: [
+                                {
+                                    type: 'slice',
+                                    value: base64Cell,
+                                },
+                            ],
+                        }
+                    })
+                });
+                const result = await response.json();
+                return result;
+            };
+            const stopCondition = (result) => {
+                return result?.success;
+            };
+            const result = await this.exponentialBackoffRetry(func, 3, 1000, 10000, 2, stopCondition);
+            if (!result.success) {
+                throw new Error('Failed to get jetton wallet address');
+            }
             const data = result.data;
             const cell = this.toncore.Cell.fromBase64(data.stack[0].value);
             const slice = cell.beginParse();
@@ -2199,6 +2255,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             if (!this.header)
                 return;
             this.btnBack.enabled = true;
+            this.lbError.caption = '';
             this.model.handleWalletConnected = this.handleWalletConnected.bind(this);
             this.model.handleWalletChainChanged = this.handleWalletChainChanged.bind(this);
             this.goToStep(Step.ConnectWallet);

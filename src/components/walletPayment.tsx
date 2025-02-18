@@ -102,6 +102,7 @@ export class WalletPayment extends Module {
     async onStartPayment() {
         if (!this.header) return;
         this.btnBack.enabled = true;
+        this.lbError.caption = '';
         this.model.handleWalletConnected = this.handleWalletConnected.bind(this);
         this.model.handleWalletChainChanged = this.handleWalletChainChanged.bind(this);
         this.goToStep(Step.ConnectWallet);
