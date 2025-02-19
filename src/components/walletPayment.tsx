@@ -248,12 +248,13 @@ export class WalletPayment extends Module {
     }
 
     private updatePaymentButtonVisibility() {
-        if (this.model.walletModel.isNetworkConnected()) {
+        if (this.model.walletModel.isNetworkConnected() || !this.model.walletModel.switchNetwork) {
             this.btnPay.visible = true;
             this.btnSwitchNetwork.visible = false;
-        } else {
-            this.btnPay.visible = false;
+        } 
+        else {
             this.btnSwitchNetwork.visible = true;
+            this.btnPay.visible = false;    
         }
     }
 

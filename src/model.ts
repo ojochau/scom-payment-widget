@@ -16,7 +16,7 @@ export interface IWalletModel {
 	getNetworkInfo(chainId?: number): IExtendedNetwork;
 	openNetworkModal(modalContainer: Component): Promise<void>;
 	// connectWallet(modalContainer?: Component): Promise<void>;
-	switchNetwork(): Promise<void>;
+	switchNetwork?(): Promise<void>;
 	disconnectWallet(): Promise<void>;
 	getWalletAddress(): string;
 	viewExplorerByTransactionHash(hash: string) : void;

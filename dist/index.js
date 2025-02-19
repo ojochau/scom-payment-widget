@@ -813,7 +813,13 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
             return this.provider.tonConnectUI.connected;
         }
         isNetworkConnected() {
-            return this.provider.tonConnectUI.connected;
+            if (this.provider.tonConnectUI.connected) {
+                this.provider.options;
+                const currentChainId = this.provider.tonConnectUI.account?.chain;
+                const networkInfo = this.getNetworkInfo();
+                return currentChainId === networkInfo.chainId.toString();
+            }
+            return false;
         }
         async loadLib(moduleDir) {
             let self = this;
@@ -839,8 +845,15 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
         //     }
         // }
         getNetworkInfo() {
+            let chainId;
+            if (this.networkType === 'mainnet') {
+                chainId = -239;
+            }
+            else {
+                chainId = -3;
+            }
             return {
-                chainId: 0,
+                chainId: chainId,
                 chainName: this.networkType === 'testnet' ? 'TON Testnet' : 'TON',
                 networkCode: this.networkType === 'testnet' ? 'TON-TESTNET' : 'TON',
                 nativeCurrency: {
@@ -857,8 +870,6 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
             return `${publicIndexingRelay}/ton`;
         }
         async openNetworkModal(modalContainer) {
-        }
-        async switchNetwork() {
         }
         async disconnectWallet() {
             await this.provider.disconnect();
@@ -882,7 +893,10 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
         }
         getWalletAddress() {
             const rawAddress = this.provider.tonConnectUI.account?.address;
-            const nonBounceableAddress = this.toncore.Address.parse(rawAddress).toString({ bounceable: false });
+            const nonBounceableAddress = this.toncore.Address.parse(rawAddress).toString({
+                bounceable: false,
+                testOnly: this.networkType === 'testnet'
+            });
             return nonBounceableAddress;
         }
         viewExplorerByTransactionHash(hash) {
@@ -1071,8 +1085,10 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
             let result;
             let messageHash;
             try {
+                const networkInfo = this.getNetworkInfo();
                 if (!token.address) {
                     const transaction = {
+                        network: networkInfo.chainId.toString(),
                         validUntil: Math.floor(Date.now() / 1000) + 60,
                         messages: [
                             {
@@ -1092,6 +1108,7 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
                     // const sourceFees = networkFee.source_fees;
                     // const totalFee = new BigNumber(sourceFees.fwd_fee).plus(sourceFees.gas_fee).plus(sourceFees.in_fwd_fee).plus(sourceFees.storage_fee);
                     const transaction = {
+                        network: networkInfo.chainId.toString(),
                         validUntil: Math.floor(Date.now() / 1000) + 60,
                         messages: [
                             {
@@ -2376,13 +2393,13 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             this.model.walletModel.openNetworkModal(this.pnlEVMWallet);
         }
         updatePaymentButtonVisibility() {
-            if (this.model.walletModel.isNetworkConnected()) {
+            if (this.model.walletModel.isNetworkConnected() || !this.model.walletModel.switchNetwork) {
                 this.btnPay.visible = true;
                 this.btnSwitchNetwork.visible = false;
             }
             else {
-                this.btnPay.visible = false;
                 this.btnSwitchNetwork.visible = true;
+                this.btnPay.visible = false;
             }
         }
         async handleSelectToken(token, isTon) {

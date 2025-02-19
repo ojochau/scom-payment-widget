@@ -466,10 +466,10 @@ declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
         private networkType;
         constructor(provider: TonWalletProvider, moduleDir: string, onTonWalletStatusChanged: (isConnected: boolean) => void);
         isWalletConnected(): any;
-        isNetworkConnected(): any;
+        isNetworkConnected(): boolean;
         loadLib(moduleDir: string): Promise<unknown>;
         getNetworkInfo(): {
-            chainId: number;
+            chainId: any;
             chainName: string;
             networkCode: string;
             nativeCurrency: {
@@ -482,7 +482,6 @@ declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
         };
         private getTonAPIEndpoint;
         openNetworkModal(modalContainer: Component): Promise<void>;
-        switchNetwork(): Promise<void>;
         disconnectWallet(): Promise<void>;
         sendTransaction(txData: any): Promise<any>;
         constructPayloadForTokenTransfer(to: string, amount: string): string;
@@ -518,7 +517,7 @@ declare module "@scom/scom-payment-widget/model.ts" {
         isNetworkConnected(): boolean;
         getNetworkInfo(chainId?: number): IExtendedNetwork;
         openNetworkModal(modalContainer: Component): Promise<void>;
-        switchNetwork(): Promise<void>;
+        switchNetwork?(): Promise<void>;
         disconnectWallet(): Promise<void>;
         getWalletAddress(): string;
         viewExplorerByTransactionHash(hash: string): void;
