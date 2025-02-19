@@ -195,6 +195,7 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "duration": "Duration",
             "service": "Service",
             "provider": "Provider",
+            "insufficient_balance": "Insufficient balance",
         },
         "zh-hant": {
             "pay": "付款",
@@ -251,6 +252,7 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "duration": "持續時間",
             "service": "服務",
             "provider": "提供者",
+            "insufficient_balance": "餘額不足",
         },
         "vi": {
             "pay": "Thanh toán",
@@ -307,6 +309,7 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "duration": "Thời gian",
             "service": "Dịch vụ",
             "provider": "Nhà cung cấp",
+            "insufficient_balance": "Số dư không đủ",
         }
     };
 });
@@ -849,15 +852,9 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
                 rpcUrls: []
             };
         }
-        getTonCenterAPIEndpoint() {
-            switch (this.networkType) {
-                case 'mainnet':
-                    return 'https://toncenter.com/api';
-                case 'testnet':
-                    return 'https://testnet.toncenter.com/api';
-                default:
-                    throw new Error('Unsupported network type');
-            }
+        getTonAPIEndpoint() {
+            const publicIndexingRelay = components_5.application.store?.publicIndexingRelay;
+            return `${publicIndexingRelay}/ton`;
         }
         async openNetworkModal(modalContainer) {
         }
@@ -896,15 +893,58 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
                 window.open(`https://testnet.tonscan.org/tx/${hash}`);
             }
         }
+        async exponentialBackoffRetry(fn, // Function to retry
+        retries, // Maximum number of retries
+        delay, // Initial delay duration in milliseconds
+        maxDelay, // Maximum delay duration in milliseconds
+        factor, // Exponential backoff factor
+        stopCondition = () => true // Stop condition
+        ) {
+            let currentDelay = delay;
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const data = await fn();
+                    if (stopCondition(data)) {
+                        return data;
+                    }
+                    else {
+                        console.log(`Attempt ${i + 1} failed. Retrying in ${currentDelay}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, currentDelay));
+                        currentDelay = Math.min(maxDelay, currentDelay * factor);
+                    }
+                }
+                catch (error) {
+                    console.error('error', error);
+                    console.log(`Attempt ${i + 1} failed. Retrying in ${currentDelay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, currentDelay));
+                    currentDelay = Math.min(maxDelay, currentDelay * factor);
+                }
+            }
+            throw new Error(`Failed after ${retries} retries`);
+        }
         async getTonBalance() {
             try {
                 const address = this.getWalletAddress();
-                const apiEndpoint = this.getTonCenterAPIEndpoint();
-                const result = await fetch(`${apiEndpoint}/v2/getAddressBalance?address=${address}`, {
-                    method: 'GET',
-                });
-                const data = await result.json();
-                const balance = data.result;
+                const apiEndpoint = this.getTonAPIEndpoint();
+                const func = async () => {
+                    const response = await fetch(`${apiEndpoint}/getAddressBalance`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            network: this.networkType,
+                            address: address
+                        })
+                    });
+                    const result = await response.json();
+                    return result;
+                };
+                const stopCondition = (result) => {
+                    return result?.success;
+                };
+                const result = await this.exponentialBackoffRetry(func, 3, 1000, 10000, 2, stopCondition);
+                const balance = result.data?.balance;
                 return balance;
             }
             catch (error) {
@@ -917,19 +957,33 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
                 return await this.getTonBalance();
             }
             const senderJettonAddress = await this.getJettonWalletAddress(token.address, this.getWalletAddress());
-            const apiEndpoint = this.getTonCenterAPIEndpoint();
-            const response = await fetch(`${apiEndpoint}/v3/runGetMethod`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    address: senderJettonAddress,
-                    method: 'get_wallet_data',
-                    stack: [],
-                }),
-            });
-            const data = await response.json();
+            const apiEndpoint = this.getTonAPIEndpoint();
+            const func = async () => {
+                const response = await fetch(`${apiEndpoint}/runGetMethod`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        network: this.networkType,
+                        params: {
+                            address: senderJettonAddress,
+                            method: 'get_wallet_data',
+                            stack: [],
+                        }
+                    })
+                });
+                const result = await response.json();
+                return result;
+            };
+            const stopCondition = (result) => {
+                return result?.success;
+            };
+            const result = await this.exponentialBackoffRetry(func, 3, 1000, 10000, 2, stopCondition);
+            if (!result.success) {
+                return '0';
+            }
+            const data = result.data;
             if (data.exit_code !== 0) {
                 return '0';
             }
@@ -947,24 +1001,38 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
         }
         async getJettonWalletAddress(jettonMasterAddress, userAddress) {
             const base64Cell = this.buildOwnerSlice(userAddress);
-            const apiEndpoint = this.getTonCenterAPIEndpoint();
-            const response = await fetch(`${apiEndpoint}/v3/runGetMethod`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    address: jettonMasterAddress,
-                    method: 'get_wallet_address',
-                    stack: [
-                        {
-                            type: 'slice',
-                            value: base64Cell,
-                        },
-                    ],
-                })
-            });
-            const data = await response.json();
+            const apiEndpoint = this.getTonAPIEndpoint();
+            const func = async () => {
+                const response = await fetch(`${apiEndpoint}/runGetMethod`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        network: this.networkType,
+                        params: {
+                            address: jettonMasterAddress,
+                            method: 'get_wallet_address',
+                            stack: [
+                                {
+                                    type: 'slice',
+                                    value: base64Cell,
+                                },
+                            ],
+                        }
+                    })
+                });
+                const result = await response.json();
+                return result;
+            };
+            const stopCondition = (result) => {
+                return result?.success;
+            };
+            const result = await this.exponentialBackoffRetry(func, 3, 1000, 10000, 2, stopCondition);
+            if (!result.success) {
+                throw new Error('Failed to get jetton wallet address');
+            }
+            const data = result.data;
             const cell = this.toncore.Cell.fromBase64(data.stack[0].value);
             const slice = cell.beginParse();
             const address = slice.loadAddress();
@@ -974,19 +1042,23 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
             });
         }
         async estimateNetworkFee(address, body) {
-            const apiEndpoint = this.getTonCenterAPIEndpoint();
-            const response = await fetch(`${apiEndpoint}/v3/estimateFee`, {
+            const apiEndpoint = this.getTonAPIEndpoint();
+            const response = await fetch(`${apiEndpoint}/estimateFee`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    address: address,
-                    body: body,
-                    ignore_chksig: false
+                    network: this.networkType,
+                    params: {
+                        address: address,
+                        body: body,
+                        ignore_chksig: false
+                    }
                 })
             });
-            const data = await response.json();
+            const result = await response.json();
+            const data = result.data;
             return data;
         }
         getTransactionMessageHash(boc) {
@@ -2183,6 +2255,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             if (!this.header)
                 return;
             this.btnBack.enabled = true;
+            this.lbError.caption = '';
             this.model.handleWalletConnected = this.handleWalletConnected.bind(this);
             this.model.handleWalletChainChanged = this.handleWalletChainChanged.bind(this);
             this.goToStep(Step.ConnectWallet);
@@ -2335,13 +2408,15 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             // this.lbUSD.visible = !isTon;
             // this.imgPayToken.url = tokenImg;
             this.selectedToken = token;
-            // const tokenBalance = await this.model.walletModel.getTokenBalance(token); 
-            // if (new BigNumber(totalAmount).shiftedBy(token.decimals).gt(tokenBalance)) {
-            //     this.btnPay.enabled = false;
-            // }
-            // else {
-            //     this.btnPay.enabled = true;
-            // }
+            const tokenBalance = await this.model.walletModel.getTokenBalance(token);
+            if (new eth_wallet_3.BigNumber(totalAmount).shiftedBy(token.decimals).gt(tokenBalance)) {
+                this.btnPay.enabled = false;
+                this.lbError.caption = '$insufficient_balance';
+            }
+            else {
+                this.btnPay.enabled = true;
+                this.lbError.caption = '';
+            }
         }
         async handleCopyAddress() {
             try {
@@ -2470,7 +2545,8 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                                 this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", alignItems: "center", width: "100%", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' } },
                                     this.$render("i-label", { id: "lbAmountToPay", wordBreak: "break-all", font: { color: Theme.input.fontColor } })),
                                 this.$render("i-stack", { direction: "horizontal", width: 32, minWidth: 32, alignItems: "center", justifyContent: "center", cursor: "pointer", margin: { left: 'auto' }, background: { color: Theme.colors.primary.main }, onClick: this.handleCopyAmount },
-                                    this.$render("i-icon", { id: "iconCopyAmount", name: "copy", width: 16, height: 16, fill: Theme.text.primary })))),
+                                    this.$render("i-icon", { id: "iconCopyAmount", name: "copy", width: 16, height: 16, fill: Theme.text.primary }))),
+                            this.$render("i-label", { id: "lbError", font: { color: Theme.colors.error.main } })),
                         this.$render("i-stack", { direction: "horizontal", width: "100%", alignItems: "center", justifyContent: "center", gap: "1rem", wrap: "wrap-reverse", padding: { left: '1rem', right: '1rem' } },
                             this.$render("i-button", { id: "btnBack", caption: "$back", minWidth: 90, background: { color: Theme.colors.secondary.main }, class: index_css_7.fullWidthButtonStyle, onClick: this.handleBack }),
                             this.$render("i-button", { id: "btnSwitchNetwork", visible: false, caption: "$switch_network", background: { color: Theme.colors.primary.main }, class: index_css_7.halfWidthButtonStyle, onClick: this.handleSwitchNetwork }),

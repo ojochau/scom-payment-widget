@@ -205,6 +205,7 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             duration: string;
             service: string;
             provider: string;
+            insufficient_balance: string;
         };
         "zh-hant": {
             pay: string;
@@ -261,6 +262,7 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             duration: string;
             service: string;
             provider: string;
+            insufficient_balance: string;
         };
         vi: {
             pay: string;
@@ -317,6 +319,7 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             duration: string;
             service: string;
             provider: string;
+            insufficient_balance: string;
         };
     };
     export default _default;
@@ -477,7 +480,7 @@ declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
             image: string;
             rpcUrls: any[];
         };
-        private getTonCenterAPIEndpoint;
+        private getTonAPIEndpoint;
         openNetworkModal(modalContainer: Component): Promise<void>;
         switchNetwork(): Promise<void>;
         disconnectWallet(): Promise<void>;
@@ -485,6 +488,12 @@ declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
         constructPayloadForTokenTransfer(to: string, amount: string): string;
         getWalletAddress(): any;
         viewExplorerByTransactionHash(hash: string): void;
+        exponentialBackoffRetry<T>(fn: () => Promise<T>, // Function to retry
+        retries: number, // Maximum number of retries
+        delay: number, // Initial delay duration in milliseconds
+        maxDelay: number, // Maximum delay duration in milliseconds
+        factor: number, // Exponential backoff factor
+        stopCondition?: (data: T) => boolean): Promise<T>;
         private getTonBalance;
         getTokenBalance(token: ITokenObject): Promise<any>;
         buildOwnerSlice(userAddress: string): string;
@@ -933,6 +942,7 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private iconCopyAmount;
         private pnlEVMWallet;
         private selectedToken;
+        private lbError;
         onBack: () => void;
         onPaid: (paymentStatus: IPaymentStatus) => void;
         constructor(parent?: Container, options?: ScomPaymentWidgetWalletPaymentElement);
