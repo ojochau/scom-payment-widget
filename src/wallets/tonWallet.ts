@@ -29,7 +29,13 @@ export class TonWallet {
     }
 
     isNetworkConnected() {
-        return this.provider.tonConnectUI.connected;
+        if (this.provider.tonConnectUI.connected) {
+            this.provider.options
+            const currentChainId = this.provider.tonConnectUI.account?.chain;
+            const networkInfo = this.getNetworkInfo();
+            return currentChainId === networkInfo.chainId.toString();
+        }
+        return false;
     }
 
     async loadLib(moduleDir: string) {
@@ -58,8 +64,15 @@ export class TonWallet {
     // }
 
     getNetworkInfo() {
+        let chainId;
+        if (this.networkType === 'mainnet') {
+            chainId = -239;
+        }
+        else {
+            chainId = -3;
+        }
         return {
-            chainId: 0,
+            chainId: chainId,
             chainName: this.networkType === 'testnet' ? 'TON Testnet' : 'TON',
             networkCode: this.networkType === 'testnet' ? 'TON-TESTNET' : 'TON',
             nativeCurrency: {
@@ -78,9 +91,6 @@ export class TonWallet {
     }
 
     async openNetworkModal(modalContainer: Component) {
-    }
-
-    async switchNetwork() {
     }
 
     async disconnectWallet() {
@@ -113,7 +123,10 @@ export class TonWallet {
 
     getWalletAddress() {
         const rawAddress = this.provider.tonConnectUI.account?.address;
-        const nonBounceableAddress = this.toncore.Address.parse(rawAddress).toString({ bounceable: false })
+        const nonBounceableAddress = this.toncore.Address.parse(rawAddress).toString({
+            bounceable: false,
+            testOnly: this.networkType === 'testnet'
+        }) 
         return nonBounceableAddress;
     }
 
@@ -339,8 +352,10 @@ export class TonWallet {
         let result: any;
         let messageHash: string;
         try {
+            const networkInfo = this.getNetworkInfo();
             if (!token.address) {
                 const transaction = {
+                    network: networkInfo.chainId.toString(),
                     validUntil: Math.floor(Date.now() / 1000) + 60, // 60 sec
                     messages: [
                         {
@@ -360,6 +375,7 @@ export class TonWallet {
                 // const sourceFees = networkFee.source_fees;
                 // const totalFee = new BigNumber(sourceFees.fwd_fee).plus(sourceFees.gas_fee).plus(sourceFees.in_fwd_fee).plus(sourceFees.storage_fee);
                 const transaction = {
+                    network: networkInfo.chainId.toString(),
                     validUntil: Math.floor(Date.now() / 1000) + 60, // 60 sec
                     messages: [
                         {
