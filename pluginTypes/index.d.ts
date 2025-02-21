@@ -368,7 +368,7 @@ declare module "@scom/scom-payment-widget/wallets/tonProvider.ts" {
         protected _selectedAddress: string;
         provider: any;
         tonConnectUI: any;
-        onAccountChanged: (account: string) => void;
+        onAccountChanged: (account: any) => void;
         onChainChanged: (chainId: string) => void;
         onConnect: (connectInfo: any) => void;
         onDisconnect: (error: any) => void;
@@ -468,6 +468,7 @@ declare module "@scom/scom-payment-widget/wallets/tonWallet.ts" {
         isWalletConnected(): any;
         isNetworkConnected(): boolean;
         loadLib(moduleDir: string): Promise<unknown>;
+        switchNetwork(): Promise<void>;
         getNetworkInfo(): {
             chainId: any;
             chainName: string;

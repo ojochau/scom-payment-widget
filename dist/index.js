@@ -814,7 +814,6 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
         }
         isNetworkConnected() {
             if (this.provider.tonConnectUI.connected) {
-                this.provider.options;
                 const currentChainId = this.provider.tonConnectUI.account?.chain;
                 const networkInfo = this.getNetworkInfo();
                 return currentChainId === networkInfo.chainId.toString();
@@ -844,6 +843,18 @@ define("@scom/scom-payment-widget/wallets/tonWallet.ts", ["require", "exports", 
         //         alert(err)
         //     }
         // }
+        async switchNetwork() {
+            const account = this.provider.tonConnectUI?.account;
+            if (!account) {
+                return;
+            }
+            if (account.chain === '-239') {
+                this.networkType = 'mainnet';
+            }
+            else {
+                this.networkType = 'testnet';
+            }
+        }
         getNetworkInfo() {
             let chainId;
             if (this.networkType === 'mainnet') {
@@ -1346,10 +1357,11 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
                 if (!this.mdWallet) {
                     const tonWalletProvider = new tonProvider_1.default(null, { name: 'tonwallet' });
                     const tonWallet = new wallets_1.TonWallet(tonWalletProvider, moduleDir, this.handleWalletConnected.bind(this));
-                    tonWalletProvider.onAccountChanged = (account) => {
+                    tonWalletProvider.onAccountChanged = async (account) => {
                         this.mdWallet.hideModal();
                         this.paymentMethod = interface_2.PaymentMethod.TON;
                         this.walletModel = tonWallet;
+                        await this.walletModel.switchNetwork();
                         this.handleWalletConnected();
                     };
                     const evmWallet = new wallets_1.EVMWallet();

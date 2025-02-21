@@ -1,5 +1,5 @@
 import ScomWalletModal from "@scom/scom-wallet-modal";
-import ScomNetworkMoal from "@scom/scom-network-modal";
+import ScomNetworkModal from "@scom/scom-network-modal";
 import {
     application,
     Component
@@ -38,7 +38,7 @@ class EventEmitter {
 
 export class EVMWallet extends EventEmitter {
     private mdEVMWallet: ScomWalletModal;
-    private mdNetwork: ScomNetworkMoal;
+    private mdNetwork: ScomNetworkModal;
     private _wallets: IWalletPlugin[];
     private _networks: INetworkConfig[];
     private rpcWalletEvents: IEventBusRegistry[] = [];
@@ -175,7 +175,7 @@ export class EVMWallet extends EventEmitter {
     async openNetworkModal(modalContainer: Component) {
         if (!this.mdNetwork) {
             await application.loadPackage('@scom/scom-network-modal', '*');
-            this.mdNetwork = new ScomNetworkMoal(undefined, {
+            this.mdNetwork = new ScomNetworkModal(undefined, {
                 networks: this.networks,
                 rpcWalletId: this.rpcWalletId,
                 switchNetworkOnSelect: true

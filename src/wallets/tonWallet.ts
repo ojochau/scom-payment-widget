@@ -30,7 +30,6 @@ export class TonWallet {
 
     isNetworkConnected() {
         if (this.provider.tonConnectUI.connected) {
-            this.provider.options
             const currentChainId = this.provider.tonConnectUI.account?.chain;
             const networkInfo = this.getNetworkInfo();
             return currentChainId === networkInfo.chainId.toString();
@@ -62,6 +61,19 @@ export class TonWallet {
     //         alert(err)
     //     }
     // }
+
+    async switchNetwork() {
+        const account = this.provider.tonConnectUI?.account;
+        if (!account) {
+            return;
+        }
+        if (account.chain === '-239') {
+            this.networkType = 'mainnet';
+        }
+        else {
+            this.networkType = 'testnet';
+        }
+    }
 
     getNetworkInfo() {
         let chainId;
