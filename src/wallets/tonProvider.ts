@@ -18,7 +18,7 @@ export default class TonWalletProvider implements IClientSideProvider {
     protected _selectedAddress: string;
     public provider: any;
     public tonConnectUI: any;
-    public onAccountChanged: (account: string) => void;
+    public onAccountChanged: (account: any) => void;
     public onChainChanged: (chainId: string) => void;
     public onConnect: (connectInfo: any) => void;
     public onDisconnect: (error: any) => void;

@@ -282,10 +282,11 @@ export class Model {
 					moduleDir, 
 					this.handleWalletConnected.bind(this)
 				);
-				tonWalletProvider.onAccountChanged = (account: string) => {
+				tonWalletProvider.onAccountChanged = async (account: any) => {
 					this.mdWallet.hideModal();
 					this.paymentMethod = PaymentMethod.TON;
 					this.walletModel = tonWallet;
+					await this.walletModel.switchNetwork();
 					this.handleWalletConnected();
 				}
 				const evmWallet = new EVMWallet();
