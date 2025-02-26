@@ -27,6 +27,7 @@ export class StatusPayment extends Module {
     private provider: PaymentProvider;
     private lbHeaderStatus: Label;
     private imgHeaderStatus: Image;
+    private pnlAddress: StackLayout;
     private lbStatus: Label;
     private imgStatus: Image;
     private lbAddress: Label;
@@ -63,6 +64,7 @@ export class StatusPayment extends Module {
         this.receipt = receipt;
         this.status = status;
         this.provider = provider;
+        this.pnlAddress.visible = receipt != null || provider != null;
         const isPending = status === 'pending';
         const isCompleted = status === 'completed';
         this.pnlViewTransaction.visible = isPending || isCompleted;
@@ -77,9 +79,13 @@ export class StatusPayment extends Module {
             this.imgStatus.classList.remove(loadingImageStyle);
         }
         this.imgStatus.url = assets.fullPath(`img/${isPending ? 'loading.svg' : isCompleted ? 'success.svg' : 'error.png'}`);
-        const currentProvider = PaymentProviders.find(v => v.provider === provider);
-        this.imgWallet.url = assets.fullPath(`img/${currentProvider.image}`);
-        this.lbAddress.caption = ownerAddress.substr(0, 6) + '...' + ownerAddress.substr(-4);
+        if (provider) {
+            const currentProvider = PaymentProviders.find(v => v.provider === provider);
+            this.imgWallet.url = assets.fullPath(`img/${currentProvider.image}`);
+        }
+        if (ownerAddress) {
+            this.lbAddress.caption = ownerAddress.substr(0, 6) + '...' + ownerAddress.substr(-4);
+        }
         this.btnClose.visible = !isPending;
     }
 
@@ -114,7 +120,7 @@ export class StatusPayment extends Module {
                     <i-image id="imgHeaderStatus" class={loadingImageStyle} url={assets.fullPath('img/loading.svg')} width={20} height={20} minWidth={20} />
                 </i-stack>
                 <i-stack direction="vertical" gap="1rem" width="100%" height="100%" alignItems="center" padding={{ left: '1rem', right: '1rem' }}>
-                    <i-stack direction="horizontal" justifyContent="space-between" alignItems="center" gap="1rem" width="100%" wrap="wrap" margin={{ bottom: '0.5rem' }}>
+                    <i-stack id="pnlAddress" direction="horizontal" justifyContent="space-between" alignItems="center" gap="1rem" width="100%" wrap="wrap" margin={{ bottom: '0.5rem' }}>
                         <i-stack
                             direction="horizontal"
                             gap="0.5rem"

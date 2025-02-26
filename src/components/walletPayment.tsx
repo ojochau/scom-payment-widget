@@ -345,6 +345,7 @@ export class WalletPayment extends Module {
                     this.model.networkCode = networkInfo.networkCode;
                 }
         
+                this.model.rewardsPoint = undefined;
                 await this.model.walletModel.transferToken(
                     this.model.payment.address,
                     this.selectedToken,

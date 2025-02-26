@@ -38,6 +38,7 @@ export class PaymentMethodModule extends Module {
     private pnlPaymentType: StackLayout;
     private pnlFiatPayment: PaymentTypeModule;
     private pnlCryptoPayment: PaymentTypeModule;
+    private pnlRewardsPointsPayment: PaymentTypeModule;
     private pnlPaymentMethod: StackLayout;
     private pnlMethodItems: StackLayout;
     private mdAlert: Alert;
@@ -65,54 +66,14 @@ export class PaymentMethodModule extends Module {
         }
     }
 
-    private getPaymentProviders(type: PaymentType) {
-        if (type === PaymentType.Crypto) {
-            const cryptoOptions = this.model.payment?.cryptoPayoutOptions || [];
-            if (!cryptoOptions.length) return [];
-            const hasTonWallet = cryptoOptions.find(opt => ['TON', 'TON-TESTNET'].includes(opt.networkCode)) != null;
-            if (!hasTonWallet) {
-                return PaymentProviders.filter(v => v.type === type && v.provider !== PaymentProvider.TonWallet);
-            } else if (cryptoOptions.length === 1) {
-                return PaymentProviders.filter(v => v.provider === PaymentProvider.TonWallet);
-            }
-        }
-        return PaymentProviders.filter(v => v.type === type);
-    }
-
-    private renderMethodItems(type: PaymentType) {
-        this.lbPayMethod.caption = this.i18n.get(type === PaymentType.Fiat ? '$select_payment_gateway' : '$select_your_wallet');
-        const providers = this.getPaymentProviders(type);
-        const nodeItems: HTMLElement[] = [];
-        for (const item of providers) {
-            nodeItems.push(
-                <i-stack
-                    direction="horizontal"
-                    justifyContent="center"
-                    gap="0.5rem"
-                    width="100%"
-                    minHeight={40}
-                    border={{ width: 1, style: 'solid', color: Theme.divider, radius: 8 }}
-                    padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}
-                    cursor="pointer"
-                    onClick={() => this.handlePaymentProvider(item.provider)}
-                >
-                    <i-stack direction="horizontal" alignItems="center" gap="0.75rem" width="calc(100% - 30px)">
-                        <i-image width={20} height={20} url={assets.fullPath(`img/${item.image}`)} />
-                        <i-label caption={item.provider} font={{ size: '1rem', bold: true, color: Theme.text.primary }} />
-                    </i-stack>
-                    <i-icon name="arrow-right" width={20} height={20} fill={Theme.text.primary} margin={{ left: 'auto', right: 'auto' }} />
-                </i-stack>
-            );
-        }
-        this.pnlMethodItems.clearInnerHTML();
-        this.pnlMethodItems.append(...nodeItems);
-    }
-
     private handlePaymentType(type: PaymentType) {
         if (type === PaymentType.Fiat) {
             this.model.paymentMethod = PaymentMethod.Stripe;
             this.handlePaymentProvider(PaymentProvider.Stripe);
-        } else if (type) {
+        } else if (type === PaymentType.RewardsPoints) {
+            this.model.paymentMethod = PaymentMethod.RewardsPoints;
+            this.handlePaymentProvider();
+        } else {
             this.handlePaymentProvider(PaymentProvider.Metamask);
             // this.renderMethodItems(type);
             // this.pnlPaymentType.visible = false;
@@ -120,7 +81,7 @@ export class PaymentMethodModule extends Module {
         }
     }
 
-    private handlePaymentProvider(provider: PaymentProvider) {
+    private handlePaymentProvider(provider?: PaymentProvider) {
         if (this.onSelectedPaymentProvider) this.onSelectedPaymentProvider(provider);
     }
 
@@ -135,17 +96,16 @@ export class PaymentMethodModule extends Module {
     updateUI() {
         this.pnlPaymentType.visible = true;
         this.pnlPaymentMethod.visible = false;
-        const { cryptoPayoutOptions, stripeAccountId, hasPayment } = this.model;
+        const { cryptoPayoutOptions, stripeAccountId, oneOffRewardsPointsOptions, hasPayment } = this.model;
         this.pnlCryptoPayment.visible = cryptoPayoutOptions.length > 0;
         this.pnlFiatPayment.visible = !!stripeAccountId;
+        this.pnlRewardsPointsPayment.visible = oneOffRewardsPointsOptions.length > 0;
         this.lbPayMethod.caption = this.i18n.get(hasPayment ? '$how_will_you_pay' : '$the_stall_owner_has_not_set_up_payments_yet');
     }
 
     async init() {
         this.i18n.init({ ...translations });
         super.init();
-        this.getPaymentProviders = this.getPaymentProviders.bind(this);
-        this.renderMethodItems = this.renderMethodItems.bind(this);
         this.onBack = this.getAttribute('onBack', true) || this.onBack;
         this.onSelectedPaymentProvider = this.getAttribute('onSelectedPaymentProvider', true) || this.onSelectedPaymentProvider;
         const model = this.getAttribute('model', true);
@@ -174,6 +134,15 @@ export class PaymentMethodModule extends Module {
                         type={PaymentType.Crypto}
                         title="$web3_wallet"
                         iconName="wallet"
+                        visible={false}
+                        onSelectPaymentType={this.handlePaymentType}
+                    ></scom-payment-widget--payment-type>
+                    <scom-payment-widget--payment-type
+                        id="pnlRewardsPointsPayment"
+                        width="100%"
+                        type={PaymentType.RewardsPoints}
+                        title="$rewards_points"
+                        iconName="star"
                         visible={false}
                         onSelectPaymentType={this.handlePaymentType}
                     ></scom-payment-widget--payment-type>

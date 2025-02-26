@@ -1,4 +1,4 @@
-import { IExtendedNetwork, INetworkConfig, IOrder, IPaymentActivity, IPaymentInfo, IPlaceOrder, IShippingInfo, PaymentMethod, PaymentProvider, ProductType } from './interface';
+import { IExtendedNetwork, INetworkConfig, IOrder, IPaymentActivity, IPaymentInfo, IPlaceOrder, IRewardsPoints, IShippingInfo, PaymentMethod, PaymentProvider, ProductType } from './interface';
 import { ITokenObject } from '@scom/scom-token-list';
 import configData from './defaultData';
 import { stripeCurrencies, stripeSpecialCurrencies, stripeZeroDecimalCurrencies } from './store';
@@ -33,6 +33,7 @@ export class Model {
 	private _tokens: ITokenObject[] = [];
 	private _referenceId: string;
 	private _networkCode: string;
+	private _rewardsPoint: IRewardsPoints;
 	private _paymentMethod: PaymentMethod;
 	private _isCompleted: boolean;
 	private orderId: string;
@@ -43,6 +44,7 @@ export class Model {
 	};
 	public onPaymentSuccess: (data: IPaymentActivity) => Promise<void>;
 	public placeMarketplaceOrder: (data: IPlaceOrder) => Promise<void>;
+	public fetchRewardsPointBalance: (creatorId: string, communityId: string) => Promise<number>;
 	private _walletModel: IWalletModel;
 	private mdWallet: ScomWalletModal;
 	private _isOnTelegram: boolean;
@@ -126,8 +128,28 @@ export class Model {
 		return this.payment?.stripeAccountId
 	}
 
+	get rewardsPointsOptions() {
+		return this.payment?.rewardsPointsOptions || [];
+	}
+
+	get oneOffRewardsPointsOptions() {
+		const amount = this.totalAmount;
+		return this.payment?.rewardsPointsOptions?.filter(option => {
+			if (!option.upperBoundary) return true;
+			return Math.ceil(amount * option.exchangeRate) > option.upperBoundary;
+		}) || [];
+	}
+
+	get rewardsPoint() {
+		return this._rewardsPoint;
+	}
+
+	set rewardsPoint(value: IRewardsPoints) {
+		this._rewardsPoint = value;
+	}
+
 	get hasPayment() {
-		return this.cryptoPayoutOptions.length > 0 || !!this.stripeAccountId;
+		return this.cryptoPayoutOptions.length > 0 || !!this.stripeAccountId || this.oneOffRewardsPointsOptions.length > 0;
 	}
 
 	get isShippingInfoShown() {
@@ -242,7 +264,8 @@ export class Model {
 					params['productId'] = v.parentProductId;
 				}
 				return params;
-			})
+			}),
+			rewardsPoints: this.rewardsPoint
 		}
 		return {
 			merchantId,

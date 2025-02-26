@@ -1,6 +1,6 @@
 import { Module, Container, customElements, ControlElement, Styles, Button, StackLayout } from '@ijstech/components';
 import { PaymentModule } from './components';
-import { INetworkConfig, IPaymentActivity, IPaymentInfo, IPlaceOrder, ProductType, IProduct } from './interface';
+import { INetworkConfig, IPaymentActivity, IPaymentInfo, IPlaceOrder, ProductType, IProduct, ICryptoPayoutOption, IRewardsPointsOption } from './interface';
 import { ITokenObject } from "@scom/scom-token-list";
 import configData from './defaultData';
 import { StatusPaymentTracking } from './components/index';
@@ -9,7 +9,7 @@ import { Model } from './model';
 import { IWalletPlugin } from '@scom/scom-wallet-modal';
 const Theme = Styles.Theme.ThemeVars;
 
-export { IProduct, ProductType, IPlaceOrder, IPaymentActivity };
+export { IProduct, ProductType, IPlaceOrder, IPaymentActivity, ICryptoPayoutOption, IRewardsPointsOption };
 type Mode = 'payment' | 'status';
 interface ScomPaymentWidgetElement extends ControlElement {
 	lazyLoad?: boolean;
@@ -25,6 +25,7 @@ interface ScomPaymentWidgetElement extends ControlElement {
 	isOnTelegram?: boolean;
 	placeMarketplaceOrder?: (data: IPlaceOrder) => Promise<void>;
 	onPaymentSuccess?: (data: IPaymentActivity) => Promise<void>;
+	fetchRewardsPointBalance?: (creatorId: string, communityId: string) => Promise<number>;
 }
 
 declare global {
@@ -48,6 +49,7 @@ export class ScomPaymentWidget extends Module {
 	private isUrl: boolean;
 	placeMarketplaceOrder: (data: IPlaceOrder) => Promise<void>;
 	onPaymentSuccess: (data: IPaymentActivity) => Promise<void>;
+	fetchRewardsPointBalance: (creatorId: string, communityId: string) => Promise<number>;
 
 	constructor(parent?: Container, options?: ScomPaymentWidgetElement) {
 		super(parent, options);
@@ -215,6 +217,9 @@ export class ScomPaymentWidget extends Module {
 		if (this.onPaymentSuccess) {
 			this.model.onPaymentSuccess = this.onPaymentSuccess.bind(this);
 		}
+		if (this.fetchRewardsPointBalance) {
+			this.model.fetchRewardsPointBalance = this.fetchRewardsPointBalance.bind(this);
+		}
 	}
 
 	async init() {
@@ -223,6 +228,7 @@ export class ScomPaymentWidget extends Module {
 		this.openPaymentModal = this.openPaymentModal.bind(this);
 		this.placeMarketplaceOrder = this.getAttribute('placeMarketplaceOrder', true) || this.placeMarketplaceOrder;
 		this.onPaymentSuccess = this.getAttribute('onPaymentSuccess', true) || this.onPaymentSuccess;
+		this.fetchRewardsPointBalance = this.getAttribute('fetchRewardsPointBalance', true) || this.fetchRewardsPointBalance;
 		this.initModel();
 		this.handleWidgetUrl();
 		const isOnTelegram = this.getAttribute('isOnTelegram', true);
