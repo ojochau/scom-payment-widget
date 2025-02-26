@@ -1321,7 +1321,7 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
                         params['reservationTime'] = v.time;
                     }
                     if (v.parentProductId) {
-                        params['parentProductId'] = v.parentProductId;
+                        params['variantId'] = v.id;
                         params['productId'] = v.parentProductId;
                     }
                     return params;
