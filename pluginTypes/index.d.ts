@@ -223,6 +223,9 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             insufficient_balance: string;
             rewards_points: string;
             select_rewards_point: string;
+            pay_with_rewards_points: string;
+            points: string;
+            you_can_use: string;
         };
         "zh-hant": {
             pay: string;
@@ -282,6 +285,9 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             insufficient_balance: string;
             rewards_points: string;
             select_rewards_point: string;
+            pay_with_rewards_points: string;
+            points: string;
+            you_can_use: string;
         };
         vi: {
             pay: string;
@@ -341,6 +347,9 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             insufficient_balance: string;
             rewards_points: string;
             select_rewards_point: string;
+            pay_with_rewards_points: string;
+            points: string;
+            you_can_use: string;
         };
     };
     export default _default;
@@ -925,6 +934,78 @@ declare module "@scom/scom-payment-widget/components/stripePayment.tsx" {
         render(): any;
     }
 }
+/// <amd-module name="@scom/scom-payment-widget/components/rewardsPointsList.tsx" />
+declare module "@scom/scom-payment-widget/components/rewardsPointsList.tsx" {
+    import { Module, ControlElement } from '@ijstech/components';
+    import { IRewardsPointsOption } from "@scom/scom-payment-widget/interface.ts";
+    interface ScomPaymentWidgetRewardsPointsListElement extends ControlElement {
+        data?: IRewardsPointsOption[];
+        onSelectedRewardsPoint?: (rewardsPoint: IRewardsPointsOption) => void;
+    }
+    global {
+        namespace JSX {
+            interface IntrinsicElements {
+                ['scom-payment-widget--rewards-points-list']: ScomPaymentWidgetRewardsPointsListElement;
+            }
+        }
+    }
+    export class RewardsPointsList extends Module {
+        private pnlOptions;
+        onSelectedRewardsPoint: (rewardsPoint: IRewardsPointsOption) => void;
+        setData(rewardsPoints: IRewardsPointsOption[]): void;
+        private renderRewardsPoints;
+        private handleSelectRewardsPoint;
+        init(): void;
+        render(): any;
+    }
+}
+/// <amd-module name="@scom/scom-payment-widget/components/rewardsPointsModule.tsx" />
+declare module "@scom/scom-payment-widget/components/rewardsPointsModule.tsx" {
+    import { Module, ControlElement } from '@ijstech/components';
+    import { Model } from "@scom/scom-payment-widget/model.ts";
+    import { IRewardsPointsOption } from "@scom/scom-payment-widget/interface.ts";
+    interface ScomPaymentWidgetRewardsPointsElement extends ControlElement {
+        model?: Model;
+    }
+    global {
+        namespace JSX {
+            interface IntrinsicElements {
+                ['scom-payment-widget--rewards-points-module']: ScomPaymentWidgetRewardsPointsElement;
+            }
+        }
+    }
+    export class RewardsPointsModule extends Module {
+        private pnlRewardsPointsList;
+        private rewardsPointsList;
+        private chkPayWithPoints;
+        private pnlRewardsPoints;
+        private lblCommunity;
+        private lblCommunityCreator;
+        private pnlInput;
+        private edtPoints;
+        private lblExchangeRate;
+        private _model;
+        private selectedRewardsPoint;
+        private balance;
+        get model(): Model;
+        set model(value: Model);
+        setData(rewardsPoint: IRewardsPointsOption): Promise<void>;
+        getData(): {
+            points: number;
+            creatorId: string;
+            communityId: string;
+            exchangeRate: number;
+            upperBoundary?: number;
+            payWithPoints: boolean;
+        };
+        clear(): void;
+        private handleSelectRewardsPoint;
+        private handleRewardsPointClick;
+        private handleCheckboxChanged;
+        init(): void;
+        render(): void;
+    }
+}
 /// <amd-module name="@scom/scom-payment-widget/components/walletPayment.tsx" />
 declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
     import { Module, Container, ControlElement } from '@ijstech/components';
@@ -970,6 +1051,7 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private pnlEVMWallet;
         private selectedToken;
         private lbError;
+        private rewardsPointsModule;
         onBack: () => void;
         onPaid: (paymentStatus: IPaymentStatus) => void;
         constructor(parent?: Container, options?: ScomPaymentWidgetWalletPaymentElement);
@@ -998,31 +1080,6 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private handlePay;
         private handleBack;
         init(): Promise<void>;
-        render(): any;
-    }
-}
-/// <amd-module name="@scom/scom-payment-widget/components/rewardsPointsList.tsx" />
-declare module "@scom/scom-payment-widget/components/rewardsPointsList.tsx" {
-    import { Module, ControlElement } from '@ijstech/components';
-    import { IRewardsPointsOption } from "@scom/scom-payment-widget/interface.ts";
-    interface ScomPaymentWidgetRewardsPointsListElement extends ControlElement {
-        data?: IRewardsPointsOption[];
-        onSelectedRewardsPoint?: (rewardsPoint: IRewardsPointsOption) => void;
-    }
-    global {
-        namespace JSX {
-            interface IntrinsicElements {
-                ['scom-payment-widget--rewards-points-list']: ScomPaymentWidgetRewardsPointsListElement;
-            }
-        }
-    }
-    export class RewardsPointsList extends Module {
-        private pnlOptions;
-        onSelectedRewardsPoint: (rewardsPoint: IRewardsPointsOption) => void;
-        setData(rewardsPoints: IRewardsPointsOption[]): void;
-        private renderRewardsPoints;
-        private handleSelectRewardsPoint;
-        init(): void;
         render(): any;
     }
 }

@@ -200,6 +200,9 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "insufficient_balance": "Insufficient balance",
             "rewards_points": "Rewards Points",
             "select_rewards_point": "Select Rewards Point",
+            "pay_with_rewards_points": "Pay with Rewards Points",
+            "points": "Point(s)",
+            "you_can_use": "You can use up to {{value}} points.",
         },
         "zh-hant": {
             "pay": "付款",
@@ -259,6 +262,9 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "insufficient_balance": "餘額不足",
             "rewards_points": "社群積分",
             "select_rewards_point": "選擇社群積分",
+            "pay_with_rewards_points": "使用積分付款",
+            "points": "積分",
+            "you_can_use": "您最多可以使用 {{value}} 點積分。",
         },
         "vi": {
             "pay": "Thanh toán",
@@ -318,6 +324,9 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "insufficient_balance": "Số dư không đủ",
             "rewards_points": "Điểm cộng đồng",
             "select_rewards_point": "Chọn điểm cộng đồng",
+            "pay_with_rewards_points": "Thanh toán bằng điểm thưởng",
+            "points": "Điểm",
+            "you_can_use": "Bạn có thể sử dụng tối đa {{value}} điểm.",
         }
     };
 });
@@ -2252,19 +2261,142 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
     ], StripePayment);
     exports.StripePayment = StripePayment;
 });
-define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-token-list", "@scom/scom-payment-widget/store.ts", "@ijstech/eth-wallet", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts", "@scom/scom-payment-widget/wallets/index.ts"], function (require, exports, components_15, interface_4, scom_token_list_1, store_5, eth_wallet_3, index_css_7, translations_json_9, wallets_2) {
+define("@scom/scom-payment-widget/components/rewardsPointsList.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_15, translations_json_9) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.RewardsPointsList = void 0;
+    const Theme = components_15.Styles.Theme.ThemeVars;
+    let RewardsPointsList = class RewardsPointsList extends components_15.Module {
+        setData(rewardsPoints) {
+            this.renderRewardsPoints(rewardsPoints);
+        }
+        renderRewardsPoints(rewardsPoints) {
+            const nodeItems = [];
+            for (const option of rewardsPoints) {
+                nodeItems.push(this.$render("i-stack", { direction: "vertical", width: "100%", border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, gap: "0.25rem", cursor: "pointer", onClick: () => this.handleSelectRewardsPoint(option) },
+                    this.$render("i-label", { caption: option.communityId, font: { bold: true, color: Theme.text.primary } }),
+                    this.$render("i-label", { caption: option.creatorId, font: { size: '0.75rem', color: Theme.text.primary }, textOverflow: "ellipsis" })));
+            }
+            this.pnlOptions.clearInnerHTML();
+            this.pnlOptions.append(...nodeItems);
+        }
+        handleSelectRewardsPoint(rewardsPoint) {
+            if (this.onSelectedRewardsPoint)
+                this.onSelectedRewardsPoint(rewardsPoint);
+        }
+        init() {
+            this.i18n.init({ ...translations_json_9.default });
+            super.init();
+            const data = this.getAttribute('data', true);
+            if (data)
+                this.setData(data);
+        }
+        render() {
+            return (this.$render("i-stack", { id: "pnlOptions", direction: "vertical", gap: "1rem", width: "100%", height: "100%", minHeight: 100, maxHeight: 300, overflow: "auto" }));
+        }
+    };
+    RewardsPointsList = __decorate([
+        (0, components_15.customElements)('scom-payment-widget--rewards-points-list')
+    ], RewardsPointsList);
+    exports.RewardsPointsList = RewardsPointsList;
+});
+define("@scom/scom-payment-widget/components/rewardsPointsModule.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_16, translations_json_10) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.RewardsPointsModule = void 0;
+    const Theme = components_16.Styles.Theme.ThemeVars;
+    let RewardsPointsModule = class RewardsPointsModule extends components_16.Module {
+        get model() {
+            return this._model;
+        }
+        set model(value) {
+            this._model = value;
+        }
+        async setData(rewardsPoint) {
+            this.selectedRewardsPoint = rewardsPoint;
+            this.lblCommunity.caption = rewardsPoint.communityId;
+            this.lblCommunityCreator.caption = rewardsPoint.creatorId;
+            this.pnlInput.visible = true;
+            this.edtPoints.value = "";
+            this.lblExchangeRate.caption = `${rewardsPoint.exchangeRate} point(s) = 1 ${this.model.currency}${rewardsPoint.upperBoundary ? ', upper boundary: ' + rewardsPoint.upperBoundary : ''}`;
+            this.balance = await this.model.fetchRewardsPointBalance(rewardsPoint.creatorId, rewardsPoint.communityId);
+            this.edtPoints.enabled = this.balance > 0;
+        }
+        getData() {
+            return {
+                payWithPoints: this.chkPayWithPoints.checked,
+                ...this.selectedRewardsPoint,
+                points: Number(this.edtPoints.value)
+            };
+        }
+        clear() {
+            this.pnlRewardsPointsList.visible = false;
+            this.chkPayWithPoints.checked = false;
+            this.pnlRewardsPoints.visible = false;
+            this.lblCommunity.caption = this.i18n.get("$select_rewards_point");
+            this.lblCommunityCreator.caption = "";
+            this.pnlInput.visible = false;
+            this.edtPoints.enabled = false;
+            this.edtPoints.value = "";
+            this.lblExchangeRate.caption = "";
+            this.selectedRewardsPoint = undefined;
+        }
+        handleSelectRewardsPoint(rewardsPoint) {
+            this.chkPayWithPoints.visible = true;
+            this.pnlRewardsPoints.visible = true;
+            this.pnlRewardsPointsList.visible = false;
+            this.setData(rewardsPoint);
+        }
+        handleRewardsPointClick() {
+            this.chkPayWithPoints.visible = false;
+            this.pnlRewardsPoints.visible = false;
+            this.pnlRewardsPointsList.visible = true;
+        }
+        handleCheckboxChanged() {
+            this.pnlRewardsPoints.visible = this.chkPayWithPoints.checked;
+        }
+        init() {
+            this.i18n.init({ ...translations_json_10.default });
+            super.init();
+            const model = this.getAttribute('model', true);
+            if (model)
+                this.model = model;
+            this.rewardsPointsList.setData(this.model.rewardsPointsOptions);
+        }
+        render() {
+            this.$render("i-stack", { direction: "vertical", width: "100%", height: "100%", gap: "0.25rem" },
+                this.$render("i-stack", { id: "pnlRewardsPointsList", direction: "vertical", width: "100%", gap: "1rem", visible: false },
+                    this.$render("i-label", { font: { size: '1rem', color: Theme.text.primary, bold: true }, caption: '$select_rewards_point' }),
+                    this.$render("scom-payment-widget--rewards-points-list", { id: "rewardsPointsList", width: "100%", onSelectedRewardsPoint: this.handleSelectRewardsPoint })),
+                this.$render("i-checkbox", { id: "chkPayWithPoints", height: "auto", caption: "$pay_with_rewards_points", onChanged: this.handleCheckboxChanged }),
+                this.$render("i-stack", { id: "pnlRewardsPoints", direction: "vertical", width: "100%", height: "100%", margin: { top: '0.25rem' }, gap: "0.25rem", visible: false },
+                    this.$render("i-stack", { direction: "vertical", width: "100%", border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, gap: "0.25rem", cursor: "pointer", onClick: this.handleRewardsPointClick },
+                        this.$render("i-label", { id: "lblCommunity", caption: "$select_rewards_point", font: { bold: true, color: Theme.text.primary } }),
+                        this.$render("i-label", { id: "lblCommunityCreator", font: { size: '0.75rem', color: Theme.text.primary }, textOverflow: "ellipsis" })),
+                    this.$render("i-stack", { id: "pnlInput", direction: "vertical", width: "100%", margin: { top: '0.25rem' }, gap: "0.25rem" },
+                        this.$render("i-label", { caption: "$points" }),
+                        this.$render("i-input", { id: "edtPoints", width: "100%", height: 36, padding: { left: '0.5rem', right: '0.5rem' }, border: { radius: 5, width: 1, style: 'solid', color: 'transparent' }, inputType: "number", enabled: false }),
+                        this.$render("i-label", { id: "lblExchangeRate", font: { size: '0.875rem', color: Theme.text.secondary } }))));
+        }
+    };
+    RewardsPointsModule = __decorate([
+        (0, components_16.customElements)('scom-payment-widget--rewards-points-module')
+    ], RewardsPointsModule);
+    exports.RewardsPointsModule = RewardsPointsModule;
+});
+define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-token-list", "@scom/scom-payment-widget/store.ts", "@ijstech/eth-wallet", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts", "@scom/scom-payment-widget/wallets/index.ts"], function (require, exports, components_17, interface_4, scom_token_list_1, store_5, eth_wallet_3, index_css_7, translations_json_11, wallets_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.WalletPayment = void 0;
-    const path = components_15.application.currentModuleDir;
-    const Theme = components_15.Styles.Theme.ThemeVars;
+    const path = components_17.application.currentModuleDir;
+    const Theme = components_17.Styles.Theme.ThemeVars;
     var Step;
     (function (Step) {
         Step[Step["ConnectWallet"] = 0] = "ConnectWallet";
         Step[Step["SelectToken"] = 1] = "SelectToken";
         Step[Step["Pay"] = 2] = "Pay";
     })(Step || (Step = {}));
-    let WalletPayment = class WalletPayment extends components_15.Module {
+    let WalletPayment = class WalletPayment extends components_17.Module {
         constructor(parent, options) {
             super(parent, options);
             this.currentStep = Step.ConnectWallet;
@@ -2294,6 +2426,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             this.lbError.caption = '';
             this.model.handleWalletConnected = this.handleWalletConnected.bind(this);
             this.model.handleWalletChainChanged = this.handleWalletChainChanged.bind(this);
+            this.rewardsPointsModule.clear();
             this.goToStep(Step.ConnectWallet);
             this.updateAmount();
         }
@@ -2438,11 +2571,12 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             })?.walletAddress || "";
             const { totalAmount, currency, toAddress } = this.model;
             this.lbToAddress.caption = toAddress;
-            const formattedAmount = components_15.FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false });
+            const formattedAmount = components_17.FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false });
             this.lbAmountToPay.caption = `${formattedAmount} ${token.symbol}`;
             // this.lbUSD.caption = `${formattedAmount} ${currency || 'USD'}`;
             // this.lbUSD.visible = !isTon;
             // this.imgPayToken.url = tokenImg;
+            this.rewardsPointsModule.visible = this.model.rewardsPointsOptions.length > 0;
             this.selectedToken = token;
             const tokenBalance = await this.model.walletModel.getTokenBalance(token);
             if (new eth_wallet_3.BigNumber(totalAmount).shiftedBy(token.decimals).gt(tokenBalance)) {
@@ -2456,7 +2590,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         }
         async handleCopyAddress() {
             try {
-                await components_15.application.copyToClipboard(this.model.toAddress);
+                await components_17.application.copyToClipboard(this.model.toAddress);
                 this.iconCopyAddress.name = 'check';
                 this.iconCopyAddress.fill = Theme.colors.success.main;
                 if (this.copyAddressTimer)
@@ -2473,7 +2607,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         }
         async handleCopyAmount() {
             try {
-                await components_15.application.copyToClipboard(this.model.totalAmount.toString());
+                await components_17.application.copyToClipboard(this.model.totalAmount.toString());
                 this.iconCopyAmount.name = 'check';
                 this.iconCopyAmount.fill = Theme.colors.success.main;
                 if (this.copyAmountTimer)
@@ -2494,6 +2628,15 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             await this.model.walletModel.switchNetwork();
         }
         async handlePay() {
+            const rewardsPointData = this.rewardsPointsModule.getData();
+            const payWithPoints = rewardsPointData.payWithPoints && rewardsPointData.points > 0;
+            if (payWithPoints) {
+                const balance = await this.model.fetchRewardsPointBalance(rewardsPointData.creatorId, rewardsPointData.communityId);
+                if (rewardsPointData.points > balance || rewardsPointData.upperBoundary > balance) {
+                    this.lbError.caption = rewardsPointData.points > balance ? '$insufficient_balance' : this.i18n.get('$you_can_use', { value: rewardsPointData.upperBoundary.toString() });
+                    return;
+                }
+            }
             if (this.onPaid) {
                 this.updateBtnPay(true);
                 try {
@@ -2506,8 +2649,20 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                         const networkInfo = this.model.walletModel.getNetworkInfo();
                         this.model.networkCode = networkInfo.networkCode;
                     }
-                    this.model.rewardsPoint = undefined;
-                    await this.model.walletModel.transferToken(this.model.payment.address, this.selectedToken, this.model.totalAmount, async (error, receipt) => {
+                    let totalAmount;
+                    if (payWithPoints) {
+                        this.model.rewardsPoint = {
+                            creatorId: rewardsPointData.creatorId,
+                            communityId: rewardsPointData.communityId,
+                            points: rewardsPointData.points
+                        };
+                        totalAmount = Math.max(this.model.totalAmount - rewardsPointData.points / rewardsPointData.exchangeRate, 0);
+                    }
+                    else {
+                        this.model.rewardsPoint = undefined;
+                        totalAmount = this.model.totalAmount;
+                    }
+                    await this.model.walletModel.transferToken(this.model.payment.address, this.selectedToken, totalAmount, async (error, receipt) => {
                         this.updateBtnPay(false);
                         if (error) {
                             this.onPaid({ status: 'failed', provider: this.provider, receipt: '', ownerAddress: address });
@@ -2538,7 +2693,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                 this.onBack();
         }
         async init() {
-            this.i18n.init({ ...translations_json_9.default });
+            this.i18n.init({ ...translations_json_11.default });
             super.init();
             this.onBack = this.getAttribute('onBack', true) || this.onBack;
             this.onPaid = this.getAttribute('onPaid', true) || this.onPaid;
@@ -2583,7 +2738,8 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                                     this.$render("i-label", { id: "lbAmountToPay", wordBreak: "break-all", font: { color: Theme.input.fontColor } })),
                                 this.$render("i-stack", { direction: "horizontal", width: 32, minWidth: 32, alignItems: "center", justifyContent: "center", cursor: "pointer", margin: { left: 'auto' }, background: { color: Theme.colors.primary.main }, onClick: this.handleCopyAmount },
                                     this.$render("i-icon", { id: "iconCopyAmount", name: "copy", width: 16, height: 16, fill: Theme.text.primary }))),
-                            this.$render("i-label", { id: "lbError", font: { color: Theme.colors.error.main } })),
+                            this.$render("i-label", { id: "lbError", font: { color: Theme.colors.error.main } }),
+                            this.$render("scom-payment-widget--rewards-points-module", { id: "rewardsPointsModule", margin: { top: '1rem' }, model: this.model, visible: false })),
                         this.$render("i-stack", { direction: "horizontal", width: "100%", alignItems: "center", justifyContent: "center", gap: "1rem", wrap: "wrap-reverse", padding: { left: '1rem', right: '1rem' } },
                             this.$render("i-button", { id: "btnBack", caption: "$back", minWidth: 90, background: { color: Theme.colors.secondary.main }, class: index_css_7.fullWidthButtonStyle, onClick: this.handleBack }),
                             this.$render("i-button", { id: "btnSwitchNetwork", visible: false, caption: "$switch_network", background: { color: Theme.colors.primary.main }, class: index_css_7.halfWidthButtonStyle, onClick: this.handleSwitchNetwork }),
@@ -2593,60 +2749,21 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         }
     };
     WalletPayment = __decorate([
-        (0, components_15.customElements)('scom-payment-widget--wallet-payment')
+        (0, components_17.customElements)('scom-payment-widget--wallet-payment')
     ], WalletPayment);
     exports.WalletPayment = WalletPayment;
 });
-define("@scom/scom-payment-widget/components/rewardsPointsList.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_16, translations_json_10) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.RewardsPointsList = void 0;
-    const Theme = components_16.Styles.Theme.ThemeVars;
-    let RewardsPointsList = class RewardsPointsList extends components_16.Module {
-        setData(rewardsPoints) {
-            this.renderRewardsPoints(rewardsPoints);
-        }
-        renderRewardsPoints(rewardsPoints) {
-            const nodeItems = [];
-            for (const option of rewardsPoints) {
-                nodeItems.push(this.$render("i-stack", { direction: "vertical", width: "100%", border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, gap: "0.25rem", cursor: "pointer", onClick: () => this.handleSelectRewardsPoint(option) },
-                    this.$render("i-label", { caption: option.communityId, font: { bold: true, color: Theme.text.primary } }),
-                    this.$render("i-label", { caption: option.creatorId, font: { size: '0.75rem', color: Theme.text.primary }, textOverflow: "ellipsis" })));
-            }
-            this.pnlOptions.clearInnerHTML();
-            this.pnlOptions.append(...nodeItems);
-        }
-        handleSelectRewardsPoint(rewardsPoint) {
-            if (this.onSelectedRewardsPoint)
-                this.onSelectedRewardsPoint(rewardsPoint);
-        }
-        init() {
-            this.i18n.init({ ...translations_json_10.default });
-            super.init();
-            const data = this.getAttribute('data', true);
-            if (data)
-                this.setData(data);
-        }
-        render() {
-            return (this.$render("i-stack", { id: "pnlOptions", direction: "vertical", gap: "1rem", width: "100%", height: "100%", minHeight: 100, maxHeight: 300, overflow: "auto" }));
-        }
-    };
-    RewardsPointsList = __decorate([
-        (0, components_16.customElements)('scom-payment-widget--rewards-points-list')
-    ], RewardsPointsList);
-    exports.RewardsPointsList = RewardsPointsList;
-});
-define("@scom/scom-payment-widget/components/rewardsPointsPayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_17, index_css_8, translations_json_11) {
+define("@scom/scom-payment-widget/components/rewardsPointsPayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_18, index_css_8, translations_json_12) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.RewardsPointsPayment = void 0;
-    const Theme = components_17.Styles.Theme.ThemeVars;
+    const Theme = components_18.Styles.Theme.ThemeVars;
     var Step;
     (function (Step) {
         Step[Step["SelectRewardsPoints"] = 0] = "SelectRewardsPoints";
         Step[Step["Pay"] = 1] = "Pay";
     })(Step || (Step = {}));
-    let RewardsPointsPayment = class RewardsPointsPayment extends components_17.Module {
+    let RewardsPointsPayment = class RewardsPointsPayment extends components_18.Module {
         constructor() {
             super(...arguments);
             this.currentStep = Step.SelectRewardsPoints;
@@ -2687,7 +2804,7 @@ define("@scom/scom-payment-widget/components/rewardsPointsPayment.tsx", ["requir
         async handleSelectRewardsPoint(rewardsPoint) {
             this.selectedRewardsPoint = rewardsPoint;
             const totalAmount = Math.ceil(this.model.totalAmount * rewardsPoint.exchangeRate);
-            const formattedAmount = components_17.FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false });
+            const formattedAmount = components_18.FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false });
             this.lbAmountToPay.caption = `${formattedAmount} POINTS`;
             this.goToStep(Step.Pay);
             this.btnPay.enabled = false;
@@ -2703,7 +2820,7 @@ define("@scom/scom-payment-widget/components/rewardsPointsPayment.tsx", ["requir
         }
         async handleCopyAmount() {
             try {
-                await components_17.application.copyToClipboard(this.model.totalAmount.toString());
+                await components_18.application.copyToClipboard(this.model.totalAmount.toString());
                 this.iconCopyAmount.name = 'check';
                 this.iconCopyAmount.fill = Theme.colors.success.main;
                 if (this.copyAmountTimer)
@@ -2750,7 +2867,7 @@ define("@scom/scom-payment-widget/components/rewardsPointsPayment.tsx", ["requir
             }
         }
         init() {
-            this.i18n.init({ ...translations_json_11.default });
+            this.i18n.init({ ...translations_json_12.default });
             super.init();
             this.onBack = this.getAttribute('onBack', true) || this.onBack;
             this.onPaid = this.getAttribute('onPaid', true) || this.onPaid;
@@ -2776,15 +2893,15 @@ define("@scom/scom-payment-widget/components/rewardsPointsPayment.tsx", ["requir
         }
     };
     RewardsPointsPayment = __decorate([
-        (0, components_17.customElements)('scom-payment-widget--rewards-points-payment')
+        (0, components_18.customElements)('scom-payment-widget--rewards-points-payment')
     ], RewardsPointsPayment);
     exports.RewardsPointsPayment = RewardsPointsPayment;
 });
-define("@scom/scom-payment-widget/components/paymentModule.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/components/stripePayment.tsx", "@scom/scom-payment-widget/components/walletPayment.tsx", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/components/rewardsPointsPayment.tsx"], function (require, exports, components_18, interface_5, stripePayment_1, walletPayment_1, index_css_9, rewardsPointsPayment_1) {
+define("@scom/scom-payment-widget/components/paymentModule.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/components/stripePayment.tsx", "@scom/scom-payment-widget/components/walletPayment.tsx", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/components/rewardsPointsPayment.tsx"], function (require, exports, components_19, interface_5, stripePayment_1, walletPayment_1, index_css_9, rewardsPointsPayment_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PaymentModule = void 0;
-    let PaymentModule = class PaymentModule extends components_18.Module {
+    let PaymentModule = class PaymentModule extends components_19.Module {
         get model() {
             return this._model;
         }
@@ -2911,16 +3028,16 @@ define("@scom/scom-payment-widget/components/paymentModule.tsx", ["require", "ex
         }
     };
     PaymentModule = __decorate([
-        (0, components_18.customElements)('scom-payment-widget--payment-module')
+        (0, components_19.customElements)('scom-payment-widget--payment-module')
     ], PaymentModule);
     exports.PaymentModule = PaymentModule;
 });
-define("@scom/scom-payment-widget/components/stripePaymentTracking.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/utils.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_19, index_css_10, assets_3, store_6, utils_2, translations_json_12) {
+define("@scom/scom-payment-widget/components/stripePaymentTracking.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/assets.ts", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/utils.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_20, index_css_10, assets_3, store_6, utils_2, translations_json_13) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.StatusPaymentTracking = void 0;
-    const Theme = components_19.Styles.Theme.ThemeVars;
-    let StatusPaymentTracking = class StatusPaymentTracking extends components_19.Module {
+    const Theme = components_20.Styles.Theme.ThemeVars;
+    let StatusPaymentTracking = class StatusPaymentTracking extends components_20.Module {
         get baseStripeApi() {
             return this._baseStripeApi;
         }
@@ -3012,7 +3129,7 @@ define("@scom/scom-payment-widget/components/stripePaymentTracking.tsx", ["requi
             window.history.replaceState({}, '', window.location.origin + window.location.pathname + newHash);
         }
         async init() {
-            this.i18n.init({ ...translations_json_12.default });
+            this.i18n.init({ ...translations_json_13.default });
             super.init();
             const baseStripeApi = this.getAttribute('baseStripeApi', true);
             if (baseStripeApi)
@@ -3035,7 +3152,7 @@ define("@scom/scom-payment-widget/components/stripePaymentTracking.tsx", ["requi
         }
     };
     StatusPaymentTracking = __decorate([
-        (0, components_19.customElements)('scom-payment-widget--stripe-payment-tracking')
+        (0, components_20.customElements)('scom-payment-widget--stripe-payment-tracking')
     ], StatusPaymentTracking);
     exports.StatusPaymentTracking = StatusPaymentTracking;
 });
@@ -3052,13 +3169,13 @@ define("@scom/scom-payment-widget/components/index.ts", ["require", "exports", "
     Object.defineProperty(exports, "StripePayment", { enumerable: true, get: function () { return stripePayment_2.StripePayment; } });
     Object.defineProperty(exports, "StatusPaymentTracking", { enumerable: true, get: function () { return stripePaymentTracking_1.StatusPaymentTracking; } });
 });
-define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.ts", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/defaultData.ts", "@scom/scom-payment-widget/translations.json.ts", "@scom/scom-payment-widget/model.ts"], function (require, exports, components_20, components_21, interface_6, defaultData_2, translations_json_13, model_1) {
+define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/components/index.ts", "@scom/scom-payment-widget/interface.ts", "@scom/scom-payment-widget/defaultData.ts", "@scom/scom-payment-widget/translations.json.ts", "@scom/scom-payment-widget/model.ts"], function (require, exports, components_21, components_22, interface_6, defaultData_2, translations_json_14, model_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ScomPaymentWidget = exports.ProductType = void 0;
     Object.defineProperty(exports, "ProductType", { enumerable: true, get: function () { return interface_6.ProductType; } });
-    const Theme = components_20.Styles.Theme.ThemeVars;
-    let ScomPaymentWidget = class ScomPaymentWidget extends components_20.Module {
+    const Theme = components_21.Styles.Theme.ThemeVars;
+    let ScomPaymentWidget = class ScomPaymentWidget extends components_21.Module {
         constructor(parent, options) {
             super(parent, options);
             this.initModel();
@@ -3140,7 +3257,7 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
         }
         async openPaymentModal() {
             if (!this.paymentModule) {
-                this.paymentModule = new components_21.PaymentModule();
+                this.paymentModule = new components_22.PaymentModule();
                 this.paymentModule.model = this.model;
                 if (this.isUrl) {
                     this.paymentModule.width = '100%';
@@ -3212,7 +3329,7 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
             }
         }
         async init() {
-            this.i18n.init({ ...translations_json_13.default });
+            this.i18n.init({ ...translations_json_14.default });
             super.init();
             this.openPaymentModal = this.openPaymentModal.bind(this);
             this.placeMarketplaceOrder = this.getAttribute('placeMarketplaceOrder', true) || this.placeMarketplaceOrder;
@@ -3251,7 +3368,7 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
         }
     };
     ScomPaymentWidget = __decorate([
-        (0, components_20.customElements)('i-scom-payment-widget')
+        (0, components_21.customElements)('i-scom-payment-widget')
     ], ScomPaymentWidget);
     exports.ScomPaymentWidget = ScomPaymentWidget;
 });
