@@ -45,10 +45,23 @@ interface IStallShipping {
 
 export interface ICryptoPayoutOption {
   chainId?: string;
-	cryptoCode: string; 
-	networkCode: string; 
-	tokenAddress?: string;
-	walletAddress: string; 
+  cryptoCode: string;
+  networkCode: string;
+  tokenAddress?: string;
+  walletAddress: string;
+}
+
+export interface IRewardsPoints {
+  creatorId: string;
+  communityId: string;
+  points: number;
+}
+
+export interface IRewardsPointsOption {
+  creatorId: string;
+  communityId: string;
+  exchangeRate: number;
+  upperBoundary?: number;
 }
 
 export interface IPaymentInfo {
@@ -60,6 +73,7 @@ export interface IPaymentInfo {
   payload?: string;
   address?: string; //wallet
   cryptoPayoutOptions?: ICryptoPayoutOption[];
+  rewardsPointsOptions?: IRewardsPointsOption[];
   stripeAccountId?: string;
 }
 
@@ -89,6 +103,7 @@ export interface IOrder extends IShippingInfo {
   currency?: string;
   totalAmount?: number;
   items: IOrderItem[];
+  rewardsPoints?: IRewardsPoints;
 }
 
 export interface IPlaceOrder {
@@ -99,8 +114,9 @@ export interface IPlaceOrder {
 
 export enum PaymentMethod {
   EVM = "EVM",
-	TON = "TON",
-  Stripe = "Stripe"
+  TON = "TON",
+  Stripe = "Stripe",
+  RewardsPoints = "RewardsPoints"
 }
 
 export interface IPaymentActivity {
@@ -120,7 +136,8 @@ export interface IPaymentActivity {
 
 export enum PaymentType {
   Fiat = 'Fiat',
-  Crypto = 'Crypto'
+  Crypto = 'Crypto',
+  RewardsPoints = 'RewardsPoints'
 }
 
 export enum PaymentProvider {
@@ -132,9 +149,9 @@ export enum PaymentProvider {
 
 export interface IPaymentStatus {
   status: 'pending' | 'completed' | 'failed';
-  receipt: string;
-  provider: PaymentProvider;
-  ownerAddress: string;
+  receipt?: string;
+  provider?: PaymentProvider;
+  ownerAddress?: string;
 }
 
 export interface INetworkConfig {

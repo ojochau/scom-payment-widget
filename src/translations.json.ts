@@ -55,6 +55,11 @@ export default {
     "service": "Service",
     "provider": "Provider",
     "insufficient_balance": "Insufficient balance",
+    "rewards_points": "Rewards Points",
+    "select_rewards_point": "Select Rewards Point",
+    "pay_with_rewards_points": "Pay with Rewards Points",
+    "points": "Point(s)",
+    "you_can_use": "You can use up to {{value}} points.",
   },
   "zh-hant": {
     "pay": "付款",
@@ -112,6 +117,11 @@ export default {
     "service": "服務",
     "provider": "提供者",
     "insufficient_balance": "餘額不足",
+    "rewards_points": "社群積分",
+    "select_rewards_point": "選擇社群積分",
+    "pay_with_rewards_points": "使用積分付款",
+    "points": "積分",
+    "you_can_use": "您最多可以使用 {{value}} 點積分。",
   },
   "vi": {
     "pay": "Thanh toán",
@@ -169,5 +179,10 @@ export default {
     "service": "Dịch vụ",
     "provider": "Nhà cung cấp",
     "insufficient_balance": "Số dư không đủ",
+    "rewards_points": "Điểm cộng đồng",
+    "select_rewards_point": "Chọn điểm cộng đồng",
+    "pay_with_rewards_points": "Thanh toán bằng điểm thưởng",
+    "points": "Điểm",
+    "you_can_use": "Bạn có thể sử dụng tối đa {{value}} điểm.",
   }
 }

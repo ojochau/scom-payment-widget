@@ -8,6 +8,7 @@ import { StripePayment } from './stripePayment';
 import { WalletPayment } from './walletPayment';
 import { elementStyle } from './index.css';
 import { Model } from '../model';
+import { RewardsPointsPayment } from './rewardsPointsPayment';
 
 interface ScomPaymentWidgetPaymentElement extends ControlElement {
     model?: Model;
@@ -29,6 +30,7 @@ export class PaymentModule extends Module {
     private paymentMethod: PaymentMethodModule;
     private walletPayment: WalletPayment;
     private stripePayment: StripePayment;
+    private rewardsPointsPayment: RewardsPointsPayment;
     private statusPayment: StatusPayment;
     private _model: Model;
     private isModal: boolean;
@@ -52,6 +54,7 @@ export class PaymentModule extends Module {
         this.statusPayment.visible = false;
         if (this.walletPayment) this.walletPayment.visible = false;
         if (this.stripePayment) this.stripePayment.visible = false;
+        if (this.rewardsPointsPayment) this.rewardsPointsPayment.visible = false;
         this.isModal = isModal;
         this.model.isCompleted = false;
     }
@@ -84,7 +87,7 @@ export class PaymentModule extends Module {
             this.invoiceCreation.visible = true;
             this.shippingInfo.visible = false;
         };
-        this.paymentMethod.onSelectedPaymentProvider = async (paymentProvider: PaymentProvider) => {
+        this.paymentMethod.onSelectedPaymentProvider = async (paymentProvider?: PaymentProvider) => {
             if (paymentProvider === PaymentProvider.Metamask || paymentProvider === PaymentProvider.TonWallet) {
                 if (!this.walletPayment) {
                     this.walletPayment = new WalletPayment(undefined, { visible: false, class: elementStyle });
@@ -106,7 +109,7 @@ export class PaymentModule extends Module {
                 this.walletPayment.visible = true;
                 
             } 
-            else {
+            else if (paymentProvider === PaymentProvider.Stripe) {
                 if (!this.stripePayment) {
                     this.stripePayment = new StripePayment(undefined, { visible: false, class: elementStyle });
                     this.stripePayment.model = this.model;
@@ -120,6 +123,25 @@ export class PaymentModule extends Module {
                 this.stripePayment.onStartPayment();
                 this.paymentMethod.visible = false;
                 this.stripePayment.visible = true;
+            } else {
+                if (!this.rewardsPointsPayment) {
+                    this.rewardsPointsPayment = new RewardsPointsPayment(undefined, { visible: false, class: elementStyle });
+                    this.rewardsPointsPayment.model = this.model;
+                    this.rewardsPointsPayment.onPaid = (paymentStatus: IPaymentStatus) => {
+                        this.rewardsPointsPayment.visible = false;
+                        this.statusPayment.visible = true;
+                        this.statusPayment.updateStatus(paymentStatus);
+                    }
+                    this.rewardsPointsPayment.onBack = () => {
+                        this.paymentMethod.visible = true;
+                        this.rewardsPointsPayment.visible = false;
+                    }
+                    this.statusPayment.onClose = this.processCompletedHandler.bind(this);
+                    this.pnlPaymentModule.append(this.rewardsPointsPayment);
+                }
+                this.rewardsPointsPayment.onStartPayment();
+                this.paymentMethod.visible = false;
+                this.rewardsPointsPayment.visible = true;
             }
         };
         this.paymentMethod.onBack = () => {

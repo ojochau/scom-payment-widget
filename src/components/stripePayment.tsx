@@ -113,6 +113,7 @@ export class StripePayment extends Module {
                 this.showAlert('error', this.i18n.get('$payment_failed'), this.i18n.get('$cannot_get_payment_info'));
                 return;
             };
+            this.model.rewardsPoint = undefined;
             await this.model.handlePlaceMarketplaceOrder();
             this.model.referenceId = clientSecret;
             this.model.networkCode = '';

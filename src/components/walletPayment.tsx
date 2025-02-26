@@ -10,6 +10,7 @@ import { PaymentHeader } from './common/index';
 import translations from '../translations.json';
 import { Model } from '../model';
 import { EVMWallet, TonWallet } from '../wallets';
+import { RewardsPointsModule } from './rewardsPointsModule';
 
 const path = application.currentModuleDir;
 const Theme = Styles.Theme.ThemeVars;
@@ -67,6 +68,7 @@ export class WalletPayment extends Module {
     private pnlEVMWallet: Panel;
     private selectedToken: ITokenObject;
     private lbError: Label;
+    private rewardsPointsModule: RewardsPointsModule;
 
     public onBack: () => void;
     public onPaid: (paymentStatus: IPaymentStatus) => void;
@@ -105,6 +107,7 @@ export class WalletPayment extends Module {
         this.lbError.caption = '';
         this.model.handleWalletConnected = this.handleWalletConnected.bind(this);
         this.model.handleWalletChainChanged = this.handleWalletChainChanged.bind(this);
+        this.rewardsPointsModule.clear();
         this.goToStep(Step.ConnectWallet);
         this.updateAmount();
     }
@@ -280,6 +283,7 @@ export class WalletPayment extends Module {
         // this.lbUSD.caption = `${formattedAmount} ${currency || 'USD'}`;
         // this.lbUSD.visible = !isTon;
         // this.imgPayToken.url = tokenImg;
+        this.rewardsPointsModule.visible = this.model.rewardsPointsOptions.length > 0;
         this.selectedToken = token;
         const tokenBalance = await this.model.walletModel.getTokenBalance(token); 
         if (new BigNumber(totalAmount).shiftedBy(token.decimals).gt(tokenBalance)) {
@@ -333,6 +337,15 @@ export class WalletPayment extends Module {
     }
 
     private async handlePay() {
+        const rewardsPointData = this.rewardsPointsModule.getData();
+        const payWithPoints = rewardsPointData.payWithPoints && rewardsPointData.points > 0;
+        if (payWithPoints) {
+            const balance = await this.model.fetchRewardsPointBalance(rewardsPointData.creatorId, rewardsPointData.communityId);
+            if (rewardsPointData.points > balance || rewardsPointData.upperBoundary > balance) {
+                this.lbError.caption = rewardsPointData.points > balance ? '$insufficient_balance' :this.i18n.get('$you_can_use', { value: rewardsPointData.upperBoundary.toString() });
+                return;
+            }
+        }
         if (this.onPaid) {
             this.updateBtnPay(true);
             try {
@@ -345,10 +358,22 @@ export class WalletPayment extends Module {
                     this.model.networkCode = networkInfo.networkCode;
                 }
         
+                let totalAmount;
+                if (payWithPoints) {
+                    this.model.rewardsPoint = {
+                        creatorId: rewardsPointData.creatorId,
+                        communityId: rewardsPointData.communityId,
+                        points: rewardsPointData.points
+                    };
+                    totalAmount = Math.max(this.model.totalAmount - rewardsPointData.points / rewardsPointData.exchangeRate,0);
+                } else {
+                    this.model.rewardsPoint = undefined;
+                    totalAmount = this.model.totalAmount
+                }
                 await this.model.walletModel.transferToken(
                     this.model.payment.address,
                     this.selectedToken,
-                    this.model.totalAmount,
+                    totalAmount,
                     async (error: Error, receipt?: string) => {
                         this.updateBtnPay(false);
                         if (error) {
@@ -548,6 +573,7 @@ export class WalletPayment extends Module {
                             </i-stack>
                         </i-stack>
                         <i-label id="lbError" font={{ color: Theme.colors.error.main }} />
+                        <scom-payment-widget--rewards-points-module id="rewardsPointsModule" margin={{ top: '1rem' }} model={this.model} visible={false}></scom-payment-widget--rewards-points-module>
                     </i-stack>
                     <i-stack direction="horizontal" width="100%" alignItems="center" justifyContent="center" gap="1rem" wrap="wrap-reverse" padding={{ left: '1rem', right: '1rem' }}>
                         <i-button
