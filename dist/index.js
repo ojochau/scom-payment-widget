@@ -205,7 +205,8 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "you_can_use": "You can use up to {{value}} points.",
             "available_points": "Available points",
             "token_balance": "Token balance",
-            "point_balance": "Point balance"
+            "point_balance": "Point balance",
+            "redeem_points": "Redeem points",
         },
         "zh-hant": {
             "pay": "付款",
@@ -270,7 +271,8 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "you_can_use": "您最多可以使用 {{value}} 點積分。",
             "available_points": "可用積分",
             "token_balance": "代幣餘額",
-            "point_balance": "積分餘額"
+            "point_balance": "積分餘額",
+            "redeem_points": "兌換積分",
         },
         "vi": {
             "pay": "Thanh toán",
@@ -335,7 +337,8 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "you_can_use": "Bạn có thể sử dụng tối đa {{value}} điểm.",
             "available_points": "Điểm sẵn có",
             "token_balance": "Số dư mã thông báo",
-            "point_balance": "Số dư điểm"
+            "point_balance": "Số dư điểm",
+            "redeem_points": "Đổi điểm",
         }
     };
 });
@@ -2330,11 +2333,15 @@ define("@scom/scom-payment-widget/components/rewardsPointsModule.tsx", ["require
             this.lblCommunity.caption = rewardsPoint.communityId;
             this.lblCommunityCreator.caption = rewardsPoint.creatorId;
             this.pnlDetail.visible = true;
-            this.edtPoints.value = "";
+            this.edtPoints.value = 0;
+            this.rngPoints.value = 0;
             this.lblExchangeRate.caption = `${rewardsPoint.exchangeRate} point(s) = 1 ${this.model.currency}${rewardsPoint.upperBoundary ? ', upper boundary: ' + rewardsPoint.upperBoundary : ''}`;
             this.balance = await this.model.fetchRewardsPointBalance(rewardsPoint.creatorId, rewardsPoint.communityId);
             this.lblPointBalance.caption = this.balance.toFixed();
-            this.edtPoints.enabled = this.balance > 0;
+            this.edtPoints.enabled = this.rngPoints.enabled = this.balance > 0;
+            const maxValue = Math.trunc(rewardsPoint.upperBoundary ? Math.min(rewardsPoint.upperBoundary, this.balance) : this.balance);
+            this.rngPoints.max = maxValue;
+            this.rngPoints.step = Math.ceil(maxValue / 10) || 1;
         }
         getData() {
             return {
@@ -2352,7 +2359,9 @@ define("@scom/scom-payment-widget/components/rewardsPointsModule.tsx", ["require
             this.pnlDetail.visible = false;
             this.lblPointBalance.caption = "";
             this.edtPoints.enabled = false;
-            this.edtPoints.value = "";
+            this.edtPoints.value = 0;
+            this.rngPoints.enabled = false;
+            this.rngPoints.value = 0;
             this.lblExchangeRate.caption = "";
             this.lblError.visible = false;
             this.selectedRewardsPoint = undefined;
@@ -2398,6 +2407,13 @@ define("@scom/scom-payment-widget/components/rewardsPointsModule.tsx", ["require
             if (!Number.isInteger(points)) {
                 this.edtPoints.value = Math.trunc(points);
             }
+            this.rngPoints.value = Math.trunc(points);
+            if (this.onPointsChanged)
+                this.onPointsChanged(this.onValidate());
+        }
+        handlePointRangeChanged() {
+            const points = this.rngPoints.value;
+            this.edtPoints.value = points;
             if (this.onPointsChanged)
                 this.onPointsChanged(this.onValidate());
         }
@@ -2424,8 +2440,10 @@ define("@scom/scom-payment-widget/components/rewardsPointsModule.tsx", ["require
                         this.$render("i-stack", { direction: "horizontal", alignItems: "stretch", width: "100%", minHeight: 36, padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }, border: { radius: 8 }, background: { color: Theme.input.background }, overflow: "hidden" },
                             this.$render("i-label", { id: "lblPointBalance" })),
                         this.$render("i-label", { id: "lblExchangeRate", margin: { bottom: '1rem' }, font: { size: '0.875rem', color: Theme.text.secondary } }),
-                        this.$render("i-label", { caption: "$points" }),
-                        this.$render("i-input", { id: "edtPoints", width: "100%", height: 36, padding: { left: '0.5rem', right: '0.5rem' }, border: { radius: 5, width: 1, style: 'solid', color: 'transparent' }, inputType: "number", onChanged: this.handlePointInputChanged, enabled: false }),
+                        this.$render("i-stack", { direction: "horizontal", alignItems: "center", gap: "0.25rem" },
+                            this.$render("i-label", { caption: "$redeem_points", stack: { grow: '1', shrink: '1', basis: '0%' } }),
+                            this.$render("i-input", { id: "edtPoints", width: "100%", height: 36, padding: { left: '0.5rem', right: '0.5rem' }, border: { radius: 5, width: 1, style: 'solid', color: 'transparent' }, stack: { grow: '1', shrink: '1', basis: '0%' }, inputType: "number", value: 0, onChanged: this.handlePointInputChanged, enabled: false })),
+                        this.$render("i-range", { id: "rngPoints", width: '100%', min: 0, tooltipVisible: true, margin: { top: '0.5rem', bottom: '0.5rem' }, onChanged: this.handlePointRangeChanged, enabled: false }),
                         this.$render("i-label", { id: "lblError", font: { color: Theme.colors.error.main }, visible: false }))));
         }
     };

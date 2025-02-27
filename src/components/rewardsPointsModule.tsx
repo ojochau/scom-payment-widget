@@ -7,6 +7,7 @@ import {
     Label,
     Checkbox,
     Input,
+    Range,
 } from '@ijstech/components';
 import { Model } from '../model';
 import { IRewardsPointsOption } from '../interface';
@@ -42,6 +43,7 @@ export class RewardsPointsModule extends Module {
     private pnlDetail: StackLayout;
     private lblPointBalance: Label;
     private edtPoints: Input;
+    private rngPoints: Range;
     private lblExchangeRate: Label;
     private lblError: Label;
     private _model: Model;
@@ -64,11 +66,15 @@ export class RewardsPointsModule extends Module {
         this.lblCommunity.caption = rewardsPoint.communityId;
         this.lblCommunityCreator.caption = rewardsPoint.creatorId;
         this.pnlDetail.visible = true;
-        this.edtPoints.value = "";
+        this.edtPoints.value = 0;
+        this.rngPoints.value = 0;
         this.lblExchangeRate.caption = `${rewardsPoint.exchangeRate} point(s) = 1 ${this.model.currency}${rewardsPoint.upperBoundary ? ', upper boundary: ' + rewardsPoint.upperBoundary : ''}`;
         this.balance = await this.model.fetchRewardsPointBalance(rewardsPoint.creatorId, rewardsPoint.communityId);
         this.lblPointBalance.caption = this.balance.toFixed();
-        this.edtPoints.enabled = this.balance > 0;
+        this.edtPoints.enabled = this.rngPoints.enabled = this.balance > 0;
+        const maxValue = Math.trunc(rewardsPoint.upperBoundary ? Math.min(rewardsPoint.upperBoundary, this.balance) : this.balance);
+        this.rngPoints.max = maxValue;
+        this.rngPoints.step = Math.ceil(maxValue / 10) || 1;
     }
 
     getData() {
@@ -88,7 +94,9 @@ export class RewardsPointsModule extends Module {
         this.pnlDetail.visible = false;
         this.lblPointBalance.caption = "";
         this.edtPoints.enabled = false;
-        this.edtPoints.value = "";
+        this.edtPoints.value = 0;
+        this.rngPoints.enabled = false;
+        this.rngPoints.value = 0;
         this.lblExchangeRate.caption = "";
         this.lblError.visible = false;
         this.selectedRewardsPoint = undefined;
@@ -137,6 +145,13 @@ export class RewardsPointsModule extends Module {
         if (!Number.isInteger(points)) {
             this.edtPoints.value = Math.trunc(points);
         }
+        this.rngPoints.value = Math.trunc(points);
+        if (this.onPointsChanged) this.onPointsChanged(this.onValidate());
+    }
+
+    private handlePointRangeChanged() {
+        const points = this.rngPoints.value;
+        this.edtPoints.value = points;
         if (this.onPointsChanged) this.onPointsChanged(this.onValidate());
     }
 
@@ -183,17 +198,30 @@ export class RewardsPointsModule extends Module {
                         <i-label id="lblPointBalance"></i-label>
                     </i-stack>
                     <i-label id="lblExchangeRate" margin={{ bottom: '1rem' }} font={{ size: '0.875rem', color: Theme.text.secondary }}></i-label>
-                    <i-label caption="$points"></i-label>
-                    <i-input
-                        id="edtPoints"
-                        width="100%"
-                        height={36}
-                        padding={{ left: '0.5rem', right: '0.5rem' }}
-                        border={{ radius: 5, width: 1, style: 'solid', color: 'transparent' }}
-                        inputType="number"
-                        onChanged={this.handlePointInputChanged}
+                    <i-stack direction="horizontal" alignItems="center" gap="0.25rem">
+                        <i-label caption="$redeem_points" stack={{ grow: '1', shrink: '1', basis: '0%' }}></i-label>
+                        <i-input
+                            id="edtPoints"
+                            width="100%"
+                            height={36}
+                            padding={{ left: '0.5rem', right: '0.5rem' }}
+                            border={{ radius: 5, width: 1, style: 'solid', color: 'transparent' }}
+                            stack={{ grow: '1', shrink: '1', basis: '0%' }}
+                            inputType="number"
+                            value={0}
+                            onChanged={this.handlePointInputChanged}
+                            enabled={false}
+                        ></i-input>
+                    </i-stack>
+                    <i-range
+                        id="rngPoints"
+                        width='100%'
+                        min={0}
+                        tooltipVisible={true}
+                        margin={{ top: '0.5rem', bottom: '0.5rem' }}
+                        onChanged={this.handlePointRangeChanged}
                         enabled={false}
-                    ></i-input>
+                    ></i-range>
                     <i-label id="lblError" font={{ color: Theme.colors.error.main }} visible={false} />
                 </i-stack>
             </i-stack>

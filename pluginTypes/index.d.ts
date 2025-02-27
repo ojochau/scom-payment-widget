@@ -229,6 +229,7 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             available_points: string;
             token_balance: string;
             point_balance: string;
+            redeem_points: string;
         };
         "zh-hant": {
             pay: string;
@@ -294,6 +295,7 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             available_points: string;
             token_balance: string;
             point_balance: string;
+            redeem_points: string;
         };
         vi: {
             pay: string;
@@ -359,6 +361,7 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             available_points: string;
             token_balance: string;
             point_balance: string;
+            redeem_points: string;
         };
     };
     export default _default;
@@ -996,6 +999,7 @@ declare module "@scom/scom-payment-widget/components/rewardsPointsModule.tsx" {
         private pnlDetail;
         private lblPointBalance;
         private edtPoints;
+        private rngPoints;
         private lblExchangeRate;
         private lblError;
         private _model;
@@ -1022,6 +1026,7 @@ declare module "@scom/scom-payment-widget/components/rewardsPointsModule.tsx" {
         private onValidate;
         private handleCheckboxChanged;
         private handlePointInputChanged;
+        private handlePointRangeChanged;
         init(): void;
         render(): void;
     }
