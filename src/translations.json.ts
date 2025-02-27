@@ -60,6 +60,10 @@ export default {
     "pay_with_rewards_points": "Pay with Rewards Points",
     "points": "Point(s)",
     "you_can_use": "You can use up to {{value}} points.",
+    "available_points": "Available points",
+    "token_balance": "Token balance",
+    "point_balance": "Point balance",
+    "redeem_points": "Redeem points",
   },
   "zh-hant": {
     "pay": "付款",
@@ -122,6 +126,10 @@ export default {
     "pay_with_rewards_points": "使用積分付款",
     "points": "積分",
     "you_can_use": "您最多可以使用 {{value}} 點積分。",
+    "available_points": "可用積分",
+    "token_balance": "代幣餘額",
+    "point_balance": "積分餘額",
+    "redeem_points": "兌換積分",
   },
   "vi": {
     "pay": "Thanh toán",
@@ -184,5 +192,9 @@ export default {
     "pay_with_rewards_points": "Thanh toán bằng điểm thưởng",
     "points": "Điểm",
     "you_can_use": "Bạn có thể sử dụng tối đa {{value}} điểm.",
+    "available_points": "Điểm sẵn có",
+    "token_balance": "Số dư mã thông báo",
+    "point_balance": "Số dư điểm",
+    "redeem_points": "Đổi điểm",
   }
 }

@@ -7,6 +7,7 @@ import {
     Label,
     Checkbox,
     Input,
+    Range,
 } from '@ijstech/components';
 import { Model } from '../model';
 import { IRewardsPointsOption } from '../interface';
@@ -17,6 +18,9 @@ const Theme = Styles.Theme.ThemeVars;
 
 interface ScomPaymentWidgetRewardsPointsElement extends ControlElement {
     model?: Model;
+    onBeforeSelect?: () => void;
+    onSelected?: () => void;
+    onPointsChanged?: (isValid: boolean) => void;
 }
 
 
@@ -36,12 +40,18 @@ export class RewardsPointsModule extends Module {
     private pnlRewardsPoints: StackLayout;
     private lblCommunity: Label;
     private lblCommunityCreator: Label;
-    private pnlInput: StackLayout;
+    private pnlDetail: StackLayout;
+    private lblPointBalance: Label;
     private edtPoints: Input;
+    private rngPoints: Range;
     private lblExchangeRate: Label;
+    private lblError: Label;
     private _model: Model;
     private selectedRewardsPoint: IRewardsPointsOption;
-    private balance: number;
+    private balance: number = 0;
+    public onBeforeSelect: () => void;
+    public onSelected: () => void;
+    public onPointsChanged: (isValid: boolean) => void;
 
     get model() {
         return this._model;
@@ -55,11 +65,16 @@ export class RewardsPointsModule extends Module {
         this.selectedRewardsPoint = rewardsPoint;
         this.lblCommunity.caption = rewardsPoint.communityId;
         this.lblCommunityCreator.caption = rewardsPoint.creatorId;
-        this.pnlInput.visible = true;
-        this.edtPoints.value = "";
+        this.pnlDetail.visible = true;
+        this.edtPoints.value = 0;
+        this.rngPoints.value = 0;
         this.lblExchangeRate.caption = `${rewardsPoint.exchangeRate} point(s) = 1 ${this.model.currency}${rewardsPoint.upperBoundary ? ', upper boundary: ' + rewardsPoint.upperBoundary : ''}`;
         this.balance = await this.model.fetchRewardsPointBalance(rewardsPoint.creatorId, rewardsPoint.communityId);
-        this.edtPoints.enabled = this.balance > 0;
+        this.lblPointBalance.caption = this.balance.toFixed();
+        this.edtPoints.enabled = this.rngPoints.enabled = this.balance > 0;
+        const maxValue = Math.trunc(rewardsPoint.upperBoundary ? Math.min(rewardsPoint.upperBoundary, this.balance) : this.balance);
+        this.rngPoints.max = maxValue;
+        this.rngPoints.step = Math.ceil(maxValue / 10) || 1;
     }
 
     getData() {
@@ -76,11 +91,22 @@ export class RewardsPointsModule extends Module {
         this.pnlRewardsPoints.visible = false;
         this.lblCommunity.caption = this.i18n.get("$select_rewards_point");
         this.lblCommunityCreator.caption = "";
-        this.pnlInput.visible = false;
+        this.pnlDetail.visible = false;
+        this.lblPointBalance.caption = "";
         this.edtPoints.enabled = false;
-        this.edtPoints.value = "";
+        this.edtPoints.value = 0;
+        this.rngPoints.enabled = false;
+        this.rngPoints.value = 0;
         this.lblExchangeRate.caption = "";
+        this.lblError.visible = false;
         this.selectedRewardsPoint = undefined;
+        this.balance = 0;
+    }
+
+    cancelSelectRewardsPoint() {
+        this.chkPayWithPoints.visible = true;
+        this.pnlRewardsPoints.visible = this.chkPayWithPoints.checked;
+        this.pnlRewardsPointsList.visible = false;
     }
 
     private handleSelectRewardsPoint(rewardsPoint: IRewardsPointsOption) {
@@ -88,16 +114,45 @@ export class RewardsPointsModule extends Module {
         this.pnlRewardsPoints.visible = true;
         this.pnlRewardsPointsList.visible = false;
         this.setData(rewardsPoint);
+        if (this.onSelected) this.onSelected();
     }
 
     private handleRewardsPointClick() {
+        if (this.onBeforeSelect) this.onBeforeSelect();
         this.chkPayWithPoints.visible = false;
         this.pnlRewardsPoints.visible = false;
         this.pnlRewardsPointsList.visible = true;
     }
 
+    private onValidate() {
+        const points = Number(this.edtPoints.value) || 0;
+        const upperBoundary = this.selectedRewardsPoint.upperBoundary;
+        const isValid = this.balance >= points && (!upperBoundary || upperBoundary >= points);
+        this.lblError.visible = !isValid;
+        if (!isValid) {
+            this.lblError.caption = points > this.balance ? '$insufficient_balance' : this.i18n.get('$you_can_use', { value: upperBoundary.toString() });
+        }
+        return isValid;
+    }
+
     private handleCheckboxChanged() {
         this.pnlRewardsPoints.visible = this.chkPayWithPoints.checked;
+        if (this.selectedRewardsPoint && this.onPointsChanged) this.onPointsChanged(this.onValidate());
+    }
+
+    private handlePointInputChanged() {
+        const points = Number(this.edtPoints.value) || 0;
+        if (!Number.isInteger(points)) {
+            this.edtPoints.value = Math.trunc(points);
+        }
+        this.rngPoints.value = Math.trunc(points);
+        if (this.onPointsChanged) this.onPointsChanged(this.onValidate());
+    }
+
+    private handlePointRangeChanged() {
+        const points = this.rngPoints.value;
+        this.edtPoints.value = points;
+        if (this.onPointsChanged) this.onPointsChanged(this.onValidate());
     }
 
     init() {
@@ -128,18 +183,46 @@ export class RewardsPointsModule extends Module {
                     <i-label id="lblCommunity" caption="$select_rewards_point" font={{ bold: true, color: Theme.text.primary }} />
                     <i-label id="lblCommunityCreator" font={{ size: '0.75rem', color: Theme.text.primary }} textOverflow="ellipsis" />
                 </i-stack>
-                <i-stack id="pnlInput" direction="vertical" width="100%" margin={{ top: '0.25rem' }} gap="0.25rem">
-                    <i-label caption="$points"></i-label>
-                    <i-input
-                        id="edtPoints"
+                <i-stack id="pnlDetail" direction="vertical" width="100%" margin={{ top: '1rem' }} gap="0.25rem">
+                    <i-label caption="$point_balance" />
+                    <i-stack
+                        direction="horizontal"
+                        alignItems="stretch"
                         width="100%"
-                        height={36}
-                        padding={{ left: '0.5rem', right: '0.5rem' }}
-                        border={{ radius: 5, width: 1, style: 'solid', color: 'transparent' }}
-                        inputType="number"
+                        minHeight={36}
+                        padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }}
+                        border={{ radius: 8 }}
+                        background={{ color: Theme.input.background }}
+                        overflow="hidden"
+                    >
+                        <i-label id="lblPointBalance"></i-label>
+                    </i-stack>
+                    <i-label id="lblExchangeRate" margin={{ bottom: '1rem' }} font={{ size: '0.875rem', color: Theme.text.secondary }}></i-label>
+                    <i-stack direction="horizontal" alignItems="center" gap="0.25rem">
+                        <i-label caption="$redeem_points" stack={{ grow: '1', shrink: '1', basis: '0%' }}></i-label>
+                        <i-input
+                            id="edtPoints"
+                            width="100%"
+                            height={36}
+                            padding={{ left: '0.5rem', right: '0.5rem' }}
+                            border={{ radius: 5, width: 1, style: 'solid', color: 'transparent' }}
+                            stack={{ grow: '1', shrink: '1', basis: '0%' }}
+                            inputType="number"
+                            value={0}
+                            onChanged={this.handlePointInputChanged}
+                            enabled={false}
+                        ></i-input>
+                    </i-stack>
+                    <i-range
+                        id="rngPoints"
+                        width='100%'
+                        min={0}
+                        tooltipVisible={true}
+                        margin={{ top: '0.5rem', bottom: '0.5rem' }}
+                        onChanged={this.handlePointRangeChanged}
                         enabled={false}
-                    ></i-input>
-                    <i-label id="lblExchangeRate" font={{ size: '0.875rem', color: Theme.text.secondary }}></i-label>
+                    ></i-range>
+                    <i-label id="lblError" font={{ color: Theme.colors.error.main }} visible={false} />
                 </i-stack>
             </i-stack>
         </i-stack>

@@ -169,7 +169,19 @@ export class ScomPaymentWidget extends Module {
 			width: 480,
 			maxWidth: '100%',
 			padding: { left: '1rem', right: '1rem', top: '0.75rem', bottom: '0.75rem' },
-			border: { radius: '1rem' }
+			border: { radius: '1rem' },
+            mediaQueries: [
+                {
+                    maxWidth: '767px',
+                    properties: {
+                        width: '50rem',
+                        height: '100vh',
+                        maxHeight: '100vh',
+                        overflow: { y: 'auto' },
+						popupPlacement: 'top'
+                    }
+                }
+            ]
 		});
 		await this.paymentModule.ready();
 		this.paymentModule.show();
