@@ -286,7 +286,8 @@ export class Model {
 			stallId: stallId,
 			orderId: this.orderId,
 			referenceId: this.referenceId,
-			paymentMethod: this.paymentMethod
+			paymentMethod: this.paymentMethod,
+			rewardsPoints: this.rewardsPoint
 		}
 	}
 

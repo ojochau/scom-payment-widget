@@ -1392,7 +1392,8 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
                 stallId: stallId,
                 orderId: this.orderId,
                 referenceId: this.referenceId,
-                paymentMethod: this.paymentMethod
+                paymentMethod: this.paymentMethod,
+                rewardsPoints: this.rewardsPoint
             };
         }
         async handleWalletConnected() {

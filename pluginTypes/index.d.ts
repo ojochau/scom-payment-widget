@@ -122,6 +122,7 @@ declare module "@scom/scom-payment-widget/interface.ts" {
         referenceId?: string;
         paymentMethod?: PaymentMethod;
         createdAt?: number;
+        rewardsPoints?: IRewardsPoints;
     }
     export enum PaymentType {
         Fiat = "Fiat",

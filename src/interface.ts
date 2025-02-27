@@ -132,6 +132,7 @@ export interface IPaymentActivity {
   referenceId?: string;
   paymentMethod?: PaymentMethod;
   createdAt?: number;
+  rewardsPoints?: IRewardsPoints;
 }
 
 export enum PaymentType {
