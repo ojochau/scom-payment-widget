@@ -18,7 +18,8 @@ const Theme = Styles.Theme.ThemeVars;
 enum Step {
     ConnectWallet,
     SelectToken,
-    Pay
+    SelectRewardsPoint,
+    Pay,
 }
 
 interface ScomPaymentWidgetWalletPaymentElement extends ControlElement {
@@ -49,7 +50,9 @@ export class WalletPayment extends Module {
     private pnlCryptos: StackLayout;
     private pnlTokenItems: StackLayout;
     private pnlPayDetail: StackLayout;
+    private pnlCryptoPayment: StackLayout;
     private lbToAddress: Label;
+    private lblTokenBalance: Label;
     private lbAmountToPay: Label;
     // private lbUSD: Label;
     private btnBack: Button;
@@ -69,6 +72,7 @@ export class WalletPayment extends Module {
     private selectedToken: ITokenObject;
     private lbError: Label;
     private rewardsPointsModule: RewardsPointsModule;
+    private tokenBalance: BigNumber;
 
     public onBack: () => void;
     public onPaid: (paymentStatus: IPaymentStatus) => void;
@@ -99,6 +103,12 @@ export class WalletPayment extends Module {
 
     get provider() {
         return this.model.walletModel instanceof TonWallet ? PaymentProvider.TonWallet : PaymentProvider.Metamask;
+    }
+
+    get amountToPay() {
+        const rewardsPointData = this.rewardsPointsModule.getData();
+        if (!rewardsPointData?.payWithPoints) return this.model.totalAmount;
+        return Math.max(this.model.totalAmount - rewardsPointData.points / rewardsPointData.exchangeRate, 0);
     }
 
     async onStartPayment() {
@@ -143,11 +153,19 @@ export class WalletPayment extends Module {
             this.btnBack.width = '100%';
             this.currentStep = Step.SelectToken;
         }
+        else if (step === Step.SelectRewardsPoint) {
+            this.btnPay.visible = false;
+            this.btnSwitchNetwork.visible = false;
+            this.pnlCryptoPayment.visible = false;
+            this.currentStep = Step.SelectRewardsPoint;
+        }
         else if (step === Step.Pay) {
             // this.header.visible = false;
             // this.pnlPayAmount.visible = true;
+            this.rewardsPointsModule.cancelSelectRewardsPoint();
             this.pnlCryptos.visible = false;
             this.pnlPayDetail.visible = true;
+            this.pnlCryptoPayment.visible = true;
             this.pnlWallet.visible = false;
             this.pnlPay.visible = true;
             this.btnPay.visible = true;
@@ -181,7 +199,7 @@ export class WalletPayment extends Module {
             }
             const address = this.model.walletModel.getWalletAddress();
             if (provider) {
-                this.lbCurrentAddress.caption = address.substr(0, 6) + '...' + address.substr(-4);
+                this.lbCurrentAddress.caption = FormatUtils.truncateWalletAddress(address);
                 const network = this.model.walletModel.getNetworkInfo();
                 if (network) {
                     this.imgCurrentNetwork.url = network.image;
@@ -193,7 +211,7 @@ export class WalletPayment extends Module {
                 }
             }
             await this.renderTokens(paymentProvider);
-        } 
+        }
         else {
             this.goToStep(Step.ConnectWallet);
         }
@@ -254,10 +272,10 @@ export class WalletPayment extends Module {
         if (this.model.walletModel.isNetworkConnected() || !this.model.walletModel.switchNetwork) {
             this.btnPay.visible = true;
             this.btnSwitchNetwork.visible = false;
-        } 
+        }
         else {
             this.btnSwitchNetwork.visible = true;
-            this.btnPay.visible = false;    
+            this.btnPay.visible = false;
         }
     }
 
@@ -276,17 +294,21 @@ export class WalletPayment extends Module {
             }
             return option.chainId === token.chainId.toString() && option.tokenAddress == tokenAddress;
         })?.walletAddress || "";
-        const { totalAmount, currency, toAddress } = this.model;
-        this.lbToAddress.caption = toAddress;
-        const formattedAmount = FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false });
+        const { toAddress } = this.model;
+        this.lblTokenBalance.caption = "";
+        this.lbToAddress.caption = FormatUtils.truncateWalletAddress(toAddress);
+        const formattedAmount = FormatUtils.formatNumber(this.amountToPay, { decimalFigures: 6, hasTrailingZero: false });
         this.lbAmountToPay.caption = `${formattedAmount} ${token.symbol}`;
         // this.lbUSD.caption = `${formattedAmount} ${currency || 'USD'}`;
         // this.lbUSD.visible = !isTon;
         // this.imgPayToken.url = tokenImg;
         this.rewardsPointsModule.visible = this.model.rewardsPointsOptions.length > 0;
         this.selectedToken = token;
-        const tokenBalance = await this.model.walletModel.getTokenBalance(token); 
-        if (new BigNumber(totalAmount).shiftedBy(token.decimals).gt(tokenBalance)) {
+        const tokenBalance = await this.model.walletModel.getTokenBalance(token);
+        this.tokenBalance = Utils.fromDecimals(tokenBalance, token.decimals);
+        const formattedTokenBalance = FormatUtils.formatNumber(this.tokenBalance.toFixed(), { decimalFigures: 6, hasTrailingZero: false });
+        this.lblTokenBalance.caption = `${formattedTokenBalance} ${token.symbol}`;
+        if (new BigNumber(this.amountToPay).shiftedBy(token.decimals).gt(tokenBalance)) {
             this.btnPay.enabled = false;
             this.lbError.caption = '$insufficient_balance';
         }
@@ -326,6 +348,20 @@ export class WalletPayment extends Module {
         } catch { }
     }
 
+    private handleBeforeSelectRewardsPoint() {
+        this.goToStep(Step.SelectRewardsPoint);
+    }
+
+    private handleSelectedRewardsPoint() {
+        this.goToStep(Step.Pay);
+    }
+
+    private handleRewardsPointsChanged(isValid: boolean) {
+        this.btnPay.enabled = isValid;
+        const formattedAmount = FormatUtils.formatNumber(this.amountToPay, { decimalFigures: 6, hasTrailingZero: false });
+        this.lbAmountToPay.caption = `${formattedAmount} ${this.model.currency}`;
+    }
+
     private updateBtnPay(value: boolean) {
         this.btnPay.rightIcon.spin = value;
         this.btnPay.rightIcon.visible = value;
@@ -341,8 +377,7 @@ export class WalletPayment extends Module {
         const payWithPoints = rewardsPointData.payWithPoints && rewardsPointData.points > 0;
         if (payWithPoints) {
             const balance = await this.model.fetchRewardsPointBalance(rewardsPointData.creatorId, rewardsPointData.communityId);
-            if (rewardsPointData.points > balance || rewardsPointData.upperBoundary > balance) {
-                this.lbError.caption = rewardsPointData.points > balance ? '$insufficient_balance' :this.i18n.get('$you_can_use', { value: rewardsPointData.upperBoundary.toString() });
+            if (rewardsPointData.points > balance || rewardsPointData.points > rewardsPointData.upperBoundary) {
                 return;
             }
         }
@@ -357,23 +392,20 @@ export class WalletPayment extends Module {
                     const networkInfo = this.model.walletModel.getNetworkInfo();
                     this.model.networkCode = networkInfo.networkCode;
                 }
-        
-                let totalAmount;
+
                 if (payWithPoints) {
                     this.model.rewardsPoint = {
                         creatorId: rewardsPointData.creatorId,
                         communityId: rewardsPointData.communityId,
                         points: rewardsPointData.points
                     };
-                    totalAmount = Math.max(this.model.totalAmount - rewardsPointData.points / rewardsPointData.exchangeRate,0);
                 } else {
                     this.model.rewardsPoint = undefined;
-                    totalAmount = this.model.totalAmount
                 }
                 await this.model.walletModel.transferToken(
                     this.model.payment.address,
                     this.selectedToken,
-                    totalAmount,
+                    this.amountToPay,
                     async (error: Error, receipt?: string) => {
                         this.updateBtnPay(false);
                         if (error) {
@@ -396,6 +428,11 @@ export class WalletPayment extends Module {
     private handleBack() {
         if (this.currentStep === Step.SelectToken) {
             this.goToStep(Step.ConnectWallet);
+            return;
+        }
+        else if (this.currentStep === Step.SelectRewardsPoint) {
+            this.rewardsPointsModule.cancelSelectRewardsPoint();
+            this.goToStep(Step.Pay);
             return;
         }
         else if (this.currentStep === Step.Pay) {
@@ -505,75 +542,98 @@ export class WalletPayment extends Module {
                         <i-label font={{ size: '1rem', color: Theme.text.primary, bold: true }} caption='$select_crypto' />
                         <i-stack id="pnlTokenItems" direction="vertical" gap="1rem" width="100%" height="100%" minHeight={100} maxHeight={240} overflow="auto" />
                     </i-stack>
-                    <i-stack id="pnlPayDetail" visible={false} direction="vertical" gap="0.25rem" width="100%" height="100%" padding={{ left: '1rem', right: '1rem' }}>
-                        <i-label caption="$paid_to_address" />
-                        <i-stack
-                            direction="horizontal"
-                            alignItems="stretch"
-                            width="100%"
-                            margin={{ bottom: '1rem' }}
-                            border={{ radius: 8 }}
-                            background={{ color: Theme.input.background }}
-                            overflow="hidden"
-                        >
+                    <i-stack id="pnlPayDetail" visible={false} direction="vertical" gap="1rem" width="100%" height="100%" padding={{ left: '1rem', right: '1rem' }}>
+                        <i-stack id="pnlCryptoPayment" direction="vertical" gap="0.25rem" width="100%">
+                            <i-label caption="$paid_to_address" />
                             <i-stack
                                 direction="horizontal"
-                                gap="0.5rem"
-                                alignItems="center"
+                                alignItems="stretch"
                                 width="100%"
-                                padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }}
+                                margin={{ bottom: '1rem' }}
+                                border={{ radius: 8 }}
+                                background={{ color: Theme.input.background }}
+                                overflow="hidden"
                             >
-                                <i-label id="lbToAddress" wordBreak="break-all" font={{ color: Theme.input.fontColor }} />
+                                <i-stack
+                                    direction="horizontal"
+                                    gap="0.5rem"
+                                    alignItems="center"
+                                    width="100%"
+                                    padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }}
+                                >
+                                    <i-label id="lbToAddress" wordBreak="break-all" font={{ color: Theme.input.fontColor }} />
+                                </i-stack>
+                                <i-stack
+                                    direction="horizontal"
+                                    width={32}
+                                    minWidth={32}
+                                    alignItems="center"
+                                    justifyContent="center"
+                                    cursor="pointer"
+                                    margin={{ left: 'auto' }}
+                                    background={{ color: Theme.colors.primary.main }}
+                                    onClick={this.handleCopyAddress}
+                                >
+                                    <i-icon id="iconCopyAddress" name="copy" width={16} height={16} cursor="pointer" fill={Theme.text.primary} />
+                                </i-stack>
                             </i-stack>
+                            <i-label caption="$token_balance" />
                             <i-stack
                                 direction="horizontal"
-                                width={32}
-                                minWidth={32}
-                                alignItems="center"
-                                justifyContent="center"
-                                cursor="pointer"
-                                margin={{ left: 'auto' }}
-                                background={{ color: Theme.colors.primary.main }}
-                                onClick={this.handleCopyAddress}
-                            >
-                                <i-icon id="iconCopyAddress" name="copy" width={16} height={16} cursor="pointer" fill={Theme.text.primary} />
-                            </i-stack>
-                        </i-stack>
-                        <i-label caption="$amount_to_pay" />
-                        <i-stack
-                            direction="horizontal"
-                            alignItems="stretch"
-                            width="100%"
-                            border={{ radius: 8 }}
-                            background={{ color: Theme.input.background }}
-                            overflow="hidden"
-                        >
-                            <i-stack
-                                direction="horizontal"
-                                gap="0.5rem"
-                                alignItems="center"
+                                alignItems="stretch"
                                 width="100%"
+                                minHeight={36}
+                                margin={{ bottom: '1rem' }}
                                 padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }}
+                                border={{ radius: 8 }}
+                                background={{ color: Theme.input.background }}
+                                overflow="hidden"
                             >
-                                <i-label id="lbAmountToPay" wordBreak="break-all" font={{ color: Theme.input.fontColor }} />
-                                {/* <i-label id="lbUSD" wordBreak="break-all" font={{ size: '0.75rem', color: Theme.colors.primary.main }} /> */}
+                                <i-label id="lblTokenBalance"></i-label>
                             </i-stack>
+                            <i-label caption="$amount_to_pay" />
                             <i-stack
                                 direction="horizontal"
-                                width={32}
-                                minWidth={32}
-                                alignItems="center"
-                                justifyContent="center"
-                                cursor="pointer"
-                                margin={{ left: 'auto' }}
-                                background={{ color: Theme.colors.primary.main }}
-                                onClick={this.handleCopyAmount}
+                                alignItems="stretch"
+                                width="100%"
+                                border={{ radius: 8 }}
+                                background={{ color: Theme.input.background }}
+                                overflow="hidden"
                             >
-                                <i-icon id="iconCopyAmount" name="copy" width={16} height={16} fill={Theme.text.primary} />
+                                <i-stack
+                                    direction="horizontal"
+                                    gap="0.5rem"
+                                    alignItems="center"
+                                    width="100%"
+                                    padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }}
+                                >
+                                    <i-label id="lbAmountToPay" wordBreak="break-all" font={{ color: Theme.input.fontColor }} />
+                                    {/* <i-label id="lbUSD" wordBreak="break-all" font={{ size: '0.75rem', color: Theme.colors.primary.main }} /> */}
+                                </i-stack>
+                                <i-stack
+                                    direction="horizontal"
+                                    width={32}
+                                    minWidth={32}
+                                    alignItems="center"
+                                    justifyContent="center"
+                                    cursor="pointer"
+                                    margin={{ left: 'auto' }}
+                                    background={{ color: Theme.colors.primary.main }}
+                                    onClick={this.handleCopyAmount}
+                                >
+                                    <i-icon id="iconCopyAmount" name="copy" width={16} height={16} fill={Theme.text.primary} />
+                                </i-stack>
                             </i-stack>
+                            <i-label id="lbError" font={{ color: Theme.colors.error.main }} />
                         </i-stack>
-                        <i-label id="lbError" font={{ color: Theme.colors.error.main }} />
-                        <scom-payment-widget--rewards-points-module id="rewardsPointsModule" margin={{ top: '1rem' }} model={this.model} visible={false}></scom-payment-widget--rewards-points-module>
+                        <scom-payment-widget--rewards-points-module
+                            id="rewardsPointsModule"
+                            model={this.model}
+                            onBeforeSelect={this.handleBeforeSelectRewardsPoint}
+                            onSelected={this.handleSelectedRewardsPoint}
+                            onPointsChanged={this.handleRewardsPointsChanged}
+                            visible={false}
+                        ></scom-payment-widget--rewards-points-module>
                     </i-stack>
                     <i-stack direction="horizontal" width="100%" alignItems="center" justifyContent="center" gap="1rem" wrap="wrap-reverse" padding={{ left: '1rem', right: '1rem' }}>
                         <i-button

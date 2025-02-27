@@ -20,7 +20,7 @@ import { RewardsPointsList } from './rewardsPointsList';
 const Theme = Styles.Theme.ThemeVars;
 
 enum Step {
-    SelectRewardsPoints,
+    SelectRewardsPoint,
     Pay
 }
 
@@ -44,14 +44,16 @@ export class RewardsPointsPayment extends Module {
     private pnlRewardsPoints: StackLayout;
     private rewardsPointsList: RewardsPointsList;
     private pnlPayDetail: StackLayout;
+    private lblCommunity: Label;
+    private lblCommunityCreator: Label;
+    private lblPointBalance: Label;
     private lbAmountToPay: Label;
-    private iconCopyAmount: Icon;
+    private lblExchangeRate: Label;
     private lbError: Label;
     private btnBack: Button;
     private btnPay: Button;
     private _model: Model;
-    private currentStep: Step = Step.SelectRewardsPoints;
-    private copyAmountTimer: any;
+    private currentStep: Step = Step.SelectRewardsPoint;
     private selectedRewardsPoint: IRewardsPointsOption;
     public onBack: () => void;
     public onPaid: (paymentStatus: IPaymentStatus) => void;
@@ -66,7 +68,7 @@ export class RewardsPointsPayment extends Module {
 
     onStartPayment() {
         this.lbError.caption = '';
-        this.goToStep(Step.SelectRewardsPoints);
+        this.goToStep(Step.SelectRewardsPoint);
         this.updateAmount();
     }
 
@@ -78,12 +80,12 @@ export class RewardsPointsPayment extends Module {
     }
 
     private goToStep(step: Step) {
-        if (step === Step.SelectRewardsPoints) {
+        if (step === Step.SelectRewardsPoint) {
             this.pnlRewardsPoints.visible = true;
             this.pnlPayDetail.visible = false;
             this.btnPay.visible = false;
             this.btnBack.width = '100%';
-            this.currentStep = Step.SelectRewardsPoints;
+            this.currentStep = Step.SelectRewardsPoint;
         } else if (step === Step.Pay) {
             this.pnlRewardsPoints.visible = false;
             this.pnlPayDetail.visible = true;
@@ -97,10 +99,15 @@ export class RewardsPointsPayment extends Module {
         this.selectedRewardsPoint = rewardsPoint;
         const totalAmount = Math.ceil(this.model.totalAmount * rewardsPoint.exchangeRate);
         const formattedAmount = FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false });
+        this.lblCommunity.caption = rewardsPoint.communityId;
+        this.lblCommunityCreator.caption = rewardsPoint.creatorId;
+        this.lblPointBalance.caption = '';
         this.lbAmountToPay.caption = `${formattedAmount} POINTS`;
+        this.lblExchangeRate.caption = `${rewardsPoint.exchangeRate} point(s) = 1 ${this.model.currency}${rewardsPoint.upperBoundary ? ', upper boundary: ' + rewardsPoint.upperBoundary : ''}`;
         this.goToStep(Step.Pay);
         this.btnPay.enabled = false;
         const balance = await this.model.fetchRewardsPointBalance(rewardsPoint.creatorId, rewardsPoint.communityId);
+        this.lblPointBalance.caption = balance.toFixed();
         if (totalAmount > balance) {
             this.btnPay.enabled = false;
             this.lbError.caption = '$insufficient_balance';
@@ -110,22 +117,9 @@ export class RewardsPointsPayment extends Module {
         }
     }
 
-    private async handleCopyAmount() {
-        try {
-            await application.copyToClipboard(this.model.totalAmount.toString());
-            this.iconCopyAmount.name = 'check';
-            this.iconCopyAmount.fill = Theme.colors.success.main;
-            if (this.copyAmountTimer) clearTimeout(this.copyAmountTimer);
-            this.copyAmountTimer = setTimeout(() => {
-                this.iconCopyAmount.name = 'copy';
-                this.iconCopyAmount.fill = Theme.text.primary;
-            }, 500)
-        } catch { }
-    }
-
     private handleBack() {
         if (this.currentStep === Step.Pay) {
-            this.goToStep(Step.SelectRewardsPoints);
+            this.goToStep(Step.SelectRewardsPoint);
             return;
         }
         if (this.onBack) this.onBack();
@@ -174,37 +168,43 @@ export class RewardsPointsPayment extends Module {
                         <scom-payment-widget--rewards-points-list id="rewardsPointsList" width="100%" data={this.model.oneOffRewardsPointsOptions} onSelectedRewardsPoint={this.handleSelectRewardsPoint} />
                     </i-stack>
                     <i-stack id="pnlPayDetail" direction="vertical" gap="0.25rem" width="100%" height="100%" padding={{ left: '1rem', right: '1rem' }} visible={false}>
+                        <i-stack
+                            direction="vertical"
+                            width="100%"
+                            border={{ width: 1, style: 'solid', color: Theme.divider, radius: 8 }}
+                            padding={{ top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }}
+                            margin={{ bottom: '1rem' }}
+                            gap="0.25rem"
+                        >
+                            <i-label id="lblCommunity" font={{ bold: true, color: Theme.text.primary }} />
+                            <i-label id="lblCommunityCreator" font={{ size: '0.75rem', color: Theme.text.primary }} textOverflow="ellipsis" />
+                        </i-stack>
+                        <i-label caption="$available_points"></i-label>
+                        <i-stack
+                            direction="horizontal"
+                            alignItems="stretch"
+                            width="100%"
+                            minHeight={36}
+                            padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }}
+                            border={{ radius: 8 }}
+                            background={{ color: Theme.input.background }}
+                            overflow="hidden"
+                        >
+                            <i-label id="lblPointBalance"></i-label>
+                        </i-stack>
+                        <i-label id="lblExchangeRate" margin={{ bottom: '1rem' }} font={{ size: '0.875rem', color: Theme.text.secondary }}></i-label>
                         <i-label caption="$amount_to_pay" />
                         <i-stack
                             direction="horizontal"
                             alignItems="stretch"
                             width="100%"
+                            minHeight={36}
+                            padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }}
                             border={{ radius: 8 }}
                             background={{ color: Theme.input.background }}
                             overflow="hidden"
                         >
-                            <i-stack
-                                direction="horizontal"
-                                gap="0.5rem"
-                                alignItems="center"
-                                width="100%"
-                                padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }}
-                            >
-                                <i-label id="lbAmountToPay" wordBreak="break-all" font={{ color: Theme.input.fontColor }} />
-                            </i-stack>
-                            <i-stack
-                                direction="horizontal"
-                                width={32}
-                                minWidth={32}
-                                alignItems="center"
-                                justifyContent="center"
-                                cursor="pointer"
-                                margin={{ left: 'auto' }}
-                                background={{ color: Theme.colors.primary.main }}
-                                onClick={this.handleCopyAmount}
-                            >
-                                <i-icon id="iconCopyAmount" name="copy" width={16} height={16} fill={Theme.text.primary} />
-                            </i-stack>
+                            <i-label id="lbAmountToPay" wordBreak="break-all" font={{ color: Theme.input.fontColor }} />
                         </i-stack>
                         <i-label id="lbError" font={{ color: Theme.colors.error.main }} />
                     </i-stack>

@@ -226,6 +226,9 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             pay_with_rewards_points: string;
             points: string;
             you_can_use: string;
+            available_points: string;
+            token_balance: string;
+            point_balance: string;
         };
         "zh-hant": {
             pay: string;
@@ -288,6 +291,9 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             pay_with_rewards_points: string;
             points: string;
             you_can_use: string;
+            available_points: string;
+            token_balance: string;
+            point_balance: string;
         };
         vi: {
             pay: string;
@@ -350,6 +356,9 @@ declare module "@scom/scom-payment-widget/translations.json.ts" {
             pay_with_rewards_points: string;
             points: string;
             you_can_use: string;
+            available_points: string;
+            token_balance: string;
+            point_balance: string;
         };
     };
     export default _default;
@@ -966,6 +975,9 @@ declare module "@scom/scom-payment-widget/components/rewardsPointsModule.tsx" {
     import { IRewardsPointsOption } from "@scom/scom-payment-widget/interface.ts";
     interface ScomPaymentWidgetRewardsPointsElement extends ControlElement {
         model?: Model;
+        onBeforeSelect?: () => void;
+        onSelected?: () => void;
+        onPointsChanged?: (isValid: boolean) => void;
     }
     global {
         namespace JSX {
@@ -981,12 +993,17 @@ declare module "@scom/scom-payment-widget/components/rewardsPointsModule.tsx" {
         private pnlRewardsPoints;
         private lblCommunity;
         private lblCommunityCreator;
-        private pnlInput;
+        private pnlDetail;
+        private lblPointBalance;
         private edtPoints;
         private lblExchangeRate;
+        private lblError;
         private _model;
         private selectedRewardsPoint;
         private balance;
+        onBeforeSelect: () => void;
+        onSelected: () => void;
+        onPointsChanged: (isValid: boolean) => void;
         get model(): Model;
         set model(value: Model);
         setData(rewardsPoint: IRewardsPointsOption): Promise<void>;
@@ -999,9 +1016,12 @@ declare module "@scom/scom-payment-widget/components/rewardsPointsModule.tsx" {
             payWithPoints: boolean;
         };
         clear(): void;
+        cancelSelectRewardsPoint(): void;
         private handleSelectRewardsPoint;
         private handleRewardsPointClick;
+        private onValidate;
         private handleCheckboxChanged;
+        private handlePointInputChanged;
         init(): void;
         render(): void;
     }
@@ -1033,7 +1053,9 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private pnlCryptos;
         private pnlTokenItems;
         private pnlPayDetail;
+        private pnlCryptoPayment;
         private lbToAddress;
+        private lblTokenBalance;
         private lbAmountToPay;
         private btnBack;
         private btnSwitchNetwork;
@@ -1052,6 +1074,7 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private selectedToken;
         private lbError;
         private rewardsPointsModule;
+        private tokenBalance;
         onBack: () => void;
         onPaid: (paymentStatus: IPaymentStatus) => void;
         constructor(parent?: Container, options?: ScomPaymentWidgetWalletPaymentElement);
@@ -1061,6 +1084,7 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         get wallets(): any[];
         get networks(): import("@scom/scom-payment-widget/interface.ts").INetworkConfig[];
         get provider(): PaymentProvider.TonWallet | PaymentProvider.Metamask;
+        get amountToPay(): number;
         onStartPayment(): Promise<void>;
         private handleWalletConnected;
         private handleWalletChainChanged;
@@ -1075,6 +1099,9 @@ declare module "@scom/scom-payment-widget/components/walletPayment.tsx" {
         private handleCopyAddress;
         private handleDisconnectWallet;
         private handleCopyAmount;
+        private handleBeforeSelectRewardsPoint;
+        private handleSelectedRewardsPoint;
+        private handleRewardsPointsChanged;
         private updateBtnPay;
         private handleSwitchNetwork;
         private handlePay;
@@ -1105,14 +1132,16 @@ declare module "@scom/scom-payment-widget/components/rewardsPointsPayment.tsx" {
         private pnlRewardsPoints;
         private rewardsPointsList;
         private pnlPayDetail;
+        private lblCommunity;
+        private lblCommunityCreator;
+        private lblPointBalance;
         private lbAmountToPay;
-        private iconCopyAmount;
+        private lblExchangeRate;
         private lbError;
         private btnBack;
         private btnPay;
         private _model;
         private currentStep;
-        private copyAmountTimer;
         private selectedRewardsPoint;
         onBack: () => void;
         onPaid: (paymentStatus: IPaymentStatus) => void;
@@ -1122,7 +1151,6 @@ declare module "@scom/scom-payment-widget/components/rewardsPointsPayment.tsx" {
         private updateAmount;
         private goToStep;
         private handleSelectRewardsPoint;
-        private handleCopyAmount;
         private handleBack;
         private updateBtnPay;
         private handlePay;

@@ -203,6 +203,9 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "pay_with_rewards_points": "Pay with Rewards Points",
             "points": "Point(s)",
             "you_can_use": "You can use up to {{value}} points.",
+            "available_points": "Available points",
+            "token_balance": "Token balance",
+            "point_balance": "Point balance"
         },
         "zh-hant": {
             "pay": "付款",
@@ -265,6 +268,9 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "pay_with_rewards_points": "使用積分付款",
             "points": "積分",
             "you_can_use": "您最多可以使用 {{value}} 點積分。",
+            "available_points": "可用積分",
+            "token_balance": "代幣餘額",
+            "point_balance": "積分餘額"
         },
         "vi": {
             "pay": "Thanh toán",
@@ -327,6 +333,9 @@ define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"],
             "pay_with_rewards_points": "Thanh toán bằng điểm thưởng",
             "points": "Điểm",
             "you_can_use": "Bạn có thể sử dụng tối đa {{value}} điểm.",
+            "available_points": "Điểm sẵn có",
+            "token_balance": "Số dư mã thông báo",
+            "point_balance": "Số dư điểm"
         }
     };
 });
@@ -2306,6 +2315,10 @@ define("@scom/scom-payment-widget/components/rewardsPointsModule.tsx", ["require
     exports.RewardsPointsModule = void 0;
     const Theme = components_16.Styles.Theme.ThemeVars;
     let RewardsPointsModule = class RewardsPointsModule extends components_16.Module {
+        constructor() {
+            super(...arguments);
+            this.balance = 0;
+        }
         get model() {
             return this._model;
         }
@@ -2316,10 +2329,11 @@ define("@scom/scom-payment-widget/components/rewardsPointsModule.tsx", ["require
             this.selectedRewardsPoint = rewardsPoint;
             this.lblCommunity.caption = rewardsPoint.communityId;
             this.lblCommunityCreator.caption = rewardsPoint.creatorId;
-            this.pnlInput.visible = true;
+            this.pnlDetail.visible = true;
             this.edtPoints.value = "";
             this.lblExchangeRate.caption = `${rewardsPoint.exchangeRate} point(s) = 1 ${this.model.currency}${rewardsPoint.upperBoundary ? ', upper boundary: ' + rewardsPoint.upperBoundary : ''}`;
             this.balance = await this.model.fetchRewardsPointBalance(rewardsPoint.creatorId, rewardsPoint.communityId);
+            this.lblPointBalance.caption = this.balance.toFixed();
             this.edtPoints.enabled = this.balance > 0;
         }
         getData() {
@@ -2335,25 +2349,57 @@ define("@scom/scom-payment-widget/components/rewardsPointsModule.tsx", ["require
             this.pnlRewardsPoints.visible = false;
             this.lblCommunity.caption = this.i18n.get("$select_rewards_point");
             this.lblCommunityCreator.caption = "";
-            this.pnlInput.visible = false;
+            this.pnlDetail.visible = false;
+            this.lblPointBalance.caption = "";
             this.edtPoints.enabled = false;
             this.edtPoints.value = "";
             this.lblExchangeRate.caption = "";
+            this.lblError.visible = false;
             this.selectedRewardsPoint = undefined;
+            this.balance = 0;
+        }
+        cancelSelectRewardsPoint() {
+            this.chkPayWithPoints.visible = true;
+            this.pnlRewardsPoints.visible = this.chkPayWithPoints.checked;
+            this.pnlRewardsPointsList.visible = false;
         }
         handleSelectRewardsPoint(rewardsPoint) {
             this.chkPayWithPoints.visible = true;
             this.pnlRewardsPoints.visible = true;
             this.pnlRewardsPointsList.visible = false;
             this.setData(rewardsPoint);
+            if (this.onSelected)
+                this.onSelected();
         }
         handleRewardsPointClick() {
+            if (this.onBeforeSelect)
+                this.onBeforeSelect();
             this.chkPayWithPoints.visible = false;
             this.pnlRewardsPoints.visible = false;
             this.pnlRewardsPointsList.visible = true;
         }
+        onValidate() {
+            const points = Number(this.edtPoints.value) || 0;
+            const upperBoundary = this.selectedRewardsPoint.upperBoundary;
+            const isValid = this.balance >= points && (!upperBoundary || upperBoundary >= points);
+            this.lblError.visible = !isValid;
+            if (!isValid) {
+                this.lblError.caption = points > this.balance ? '$insufficient_balance' : this.i18n.get('$you_can_use', { value: upperBoundary.toString() });
+            }
+            return isValid;
+        }
         handleCheckboxChanged() {
             this.pnlRewardsPoints.visible = this.chkPayWithPoints.checked;
+            if (this.selectedRewardsPoint && this.onPointsChanged)
+                this.onPointsChanged(this.onValidate());
+        }
+        handlePointInputChanged() {
+            const points = Number(this.edtPoints.value) || 0;
+            if (!Number.isInteger(points)) {
+                this.edtPoints.value = Math.trunc(points);
+            }
+            if (this.onPointsChanged)
+                this.onPointsChanged(this.onValidate());
         }
         init() {
             this.i18n.init({ ...translations_json_10.default });
@@ -2373,10 +2419,14 @@ define("@scom/scom-payment-widget/components/rewardsPointsModule.tsx", ["require
                     this.$render("i-stack", { direction: "vertical", width: "100%", border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, gap: "0.25rem", cursor: "pointer", onClick: this.handleRewardsPointClick },
                         this.$render("i-label", { id: "lblCommunity", caption: "$select_rewards_point", font: { bold: true, color: Theme.text.primary } }),
                         this.$render("i-label", { id: "lblCommunityCreator", font: { size: '0.75rem', color: Theme.text.primary }, textOverflow: "ellipsis" })),
-                    this.$render("i-stack", { id: "pnlInput", direction: "vertical", width: "100%", margin: { top: '0.25rem' }, gap: "0.25rem" },
+                    this.$render("i-stack", { id: "pnlDetail", direction: "vertical", width: "100%", margin: { top: '1rem' }, gap: "0.25rem" },
+                        this.$render("i-label", { caption: "$point_balance" }),
+                        this.$render("i-stack", { direction: "horizontal", alignItems: "stretch", width: "100%", minHeight: 36, padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }, border: { radius: 8 }, background: { color: Theme.input.background }, overflow: "hidden" },
+                            this.$render("i-label", { id: "lblPointBalance" })),
+                        this.$render("i-label", { id: "lblExchangeRate", margin: { bottom: '1rem' }, font: { size: '0.875rem', color: Theme.text.secondary } }),
                         this.$render("i-label", { caption: "$points" }),
-                        this.$render("i-input", { id: "edtPoints", width: "100%", height: 36, padding: { left: '0.5rem', right: '0.5rem' }, border: { radius: 5, width: 1, style: 'solid', color: 'transparent' }, inputType: "number", enabled: false }),
-                        this.$render("i-label", { id: "lblExchangeRate", font: { size: '0.875rem', color: Theme.text.secondary } }))));
+                        this.$render("i-input", { id: "edtPoints", width: "100%", height: 36, padding: { left: '0.5rem', right: '0.5rem' }, border: { radius: 5, width: 1, style: 'solid', color: 'transparent' }, inputType: "number", onChanged: this.handlePointInputChanged, enabled: false }),
+                        this.$render("i-label", { id: "lblError", font: { color: Theme.colors.error.main }, visible: false }))));
         }
     };
     RewardsPointsModule = __decorate([
@@ -2394,7 +2444,8 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
     (function (Step) {
         Step[Step["ConnectWallet"] = 0] = "ConnectWallet";
         Step[Step["SelectToken"] = 1] = "SelectToken";
-        Step[Step["Pay"] = 2] = "Pay";
+        Step[Step["SelectRewardsPoint"] = 2] = "SelectRewardsPoint";
+        Step[Step["Pay"] = 3] = "Pay";
     })(Step || (Step = {}));
     let WalletPayment = class WalletPayment extends components_17.Module {
         constructor(parent, options) {
@@ -2418,6 +2469,12 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         }
         get provider() {
             return this.model.walletModel instanceof wallets_2.TonWallet ? interface_4.PaymentProvider.TonWallet : interface_4.PaymentProvider.Metamask;
+        }
+        get amountToPay() {
+            const rewardsPointData = this.rewardsPointsModule.getData();
+            if (!rewardsPointData?.payWithPoints)
+                return this.model.totalAmount;
+            return Math.max(this.model.totalAmount - rewardsPointData.points / rewardsPointData.exchangeRate, 0);
         }
         async onStartPayment() {
             if (!this.header)
@@ -2459,11 +2516,19 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                 this.btnBack.width = '100%';
                 this.currentStep = Step.SelectToken;
             }
+            else if (step === Step.SelectRewardsPoint) {
+                this.btnPay.visible = false;
+                this.btnSwitchNetwork.visible = false;
+                this.pnlCryptoPayment.visible = false;
+                this.currentStep = Step.SelectRewardsPoint;
+            }
             else if (step === Step.Pay) {
                 // this.header.visible = false;
                 // this.pnlPayAmount.visible = true;
+                this.rewardsPointsModule.cancelSelectRewardsPoint();
                 this.pnlCryptos.visible = false;
                 this.pnlPayDetail.visible = true;
+                this.pnlCryptoPayment.visible = true;
                 this.pnlWallet.visible = false;
                 this.pnlPay.visible = true;
                 this.btnPay.visible = true;
@@ -2495,7 +2560,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                 }
                 const address = this.model.walletModel.getWalletAddress();
                 if (provider) {
-                    this.lbCurrentAddress.caption = address.substr(0, 6) + '...' + address.substr(-4);
+                    this.lbCurrentAddress.caption = components_17.FormatUtils.truncateWalletAddress(address);
                     const network = this.model.walletModel.getNetworkInfo();
                     if (network) {
                         this.imgCurrentNetwork.url = network.image;
@@ -2569,9 +2634,10 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                 }
                 return option.chainId === token.chainId.toString() && option.tokenAddress == tokenAddress;
             })?.walletAddress || "";
-            const { totalAmount, currency, toAddress } = this.model;
-            this.lbToAddress.caption = toAddress;
-            const formattedAmount = components_17.FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false });
+            const { toAddress } = this.model;
+            this.lblTokenBalance.caption = "";
+            this.lbToAddress.caption = components_17.FormatUtils.truncateWalletAddress(toAddress);
+            const formattedAmount = components_17.FormatUtils.formatNumber(this.amountToPay, { decimalFigures: 6, hasTrailingZero: false });
             this.lbAmountToPay.caption = `${formattedAmount} ${token.symbol}`;
             // this.lbUSD.caption = `${formattedAmount} ${currency || 'USD'}`;
             // this.lbUSD.visible = !isTon;
@@ -2579,7 +2645,10 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             this.rewardsPointsModule.visible = this.model.rewardsPointsOptions.length > 0;
             this.selectedToken = token;
             const tokenBalance = await this.model.walletModel.getTokenBalance(token);
-            if (new eth_wallet_3.BigNumber(totalAmount).shiftedBy(token.decimals).gt(tokenBalance)) {
+            this.tokenBalance = eth_wallet_3.Utils.fromDecimals(tokenBalance, token.decimals);
+            const formattedTokenBalance = components_17.FormatUtils.formatNumber(this.tokenBalance.toFixed(), { decimalFigures: 6, hasTrailingZero: false });
+            this.lblTokenBalance.caption = `${formattedTokenBalance} ${token.symbol}`;
+            if (new eth_wallet_3.BigNumber(this.amountToPay).shiftedBy(token.decimals).gt(tokenBalance)) {
                 this.btnPay.enabled = false;
                 this.lbError.caption = '$insufficient_balance';
             }
@@ -2619,6 +2688,17 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             }
             catch { }
         }
+        handleBeforeSelectRewardsPoint() {
+            this.goToStep(Step.SelectRewardsPoint);
+        }
+        handleSelectedRewardsPoint() {
+            this.goToStep(Step.Pay);
+        }
+        handleRewardsPointsChanged(isValid) {
+            this.btnPay.enabled = isValid;
+            const formattedAmount = components_17.FormatUtils.formatNumber(this.amountToPay, { decimalFigures: 6, hasTrailingZero: false });
+            this.lbAmountToPay.caption = `${formattedAmount} ${this.model.currency}`;
+        }
         updateBtnPay(value) {
             this.btnPay.rightIcon.spin = value;
             this.btnPay.rightIcon.visible = value;
@@ -2632,8 +2712,7 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
             const payWithPoints = rewardsPointData.payWithPoints && rewardsPointData.points > 0;
             if (payWithPoints) {
                 const balance = await this.model.fetchRewardsPointBalance(rewardsPointData.creatorId, rewardsPointData.communityId);
-                if (rewardsPointData.points > balance || rewardsPointData.upperBoundary > balance) {
-                    this.lbError.caption = rewardsPointData.points > balance ? '$insufficient_balance' : this.i18n.get('$you_can_use', { value: rewardsPointData.upperBoundary.toString() });
+                if (rewardsPointData.points > balance || rewardsPointData.points > rewardsPointData.upperBoundary) {
                     return;
                 }
             }
@@ -2649,20 +2728,17 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                         const networkInfo = this.model.walletModel.getNetworkInfo();
                         this.model.networkCode = networkInfo.networkCode;
                     }
-                    let totalAmount;
                     if (payWithPoints) {
                         this.model.rewardsPoint = {
                             creatorId: rewardsPointData.creatorId,
                             communityId: rewardsPointData.communityId,
                             points: rewardsPointData.points
                         };
-                        totalAmount = Math.max(this.model.totalAmount - rewardsPointData.points / rewardsPointData.exchangeRate, 0);
                     }
                     else {
                         this.model.rewardsPoint = undefined;
-                        totalAmount = this.model.totalAmount;
                     }
-                    await this.model.walletModel.transferToken(this.model.payment.address, this.selectedToken, totalAmount, async (error, receipt) => {
+                    await this.model.walletModel.transferToken(this.model.payment.address, this.selectedToken, this.amountToPay, async (error, receipt) => {
                         this.updateBtnPay(false);
                         if (error) {
                             this.onPaid({ status: 'failed', provider: this.provider, receipt: '', ownerAddress: address });
@@ -2683,6 +2759,11 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
         handleBack() {
             if (this.currentStep === Step.SelectToken) {
                 this.goToStep(Step.ConnectWallet);
+                return;
+            }
+            else if (this.currentStep === Step.SelectRewardsPoint) {
+                this.rewardsPointsModule.cancelSelectRewardsPoint();
+                this.goToStep(Step.Pay);
                 return;
             }
             else if (this.currentStep === Step.Pay) {
@@ -2725,21 +2806,25 @@ define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "ex
                         this.$render("i-stack", { id: "pnlCryptos", direction: "vertical", gap: "1rem", width: "100%", height: "100%", padding: { left: '1rem', right: '1rem' } },
                             this.$render("i-label", { font: { size: '1rem', color: Theme.text.primary, bold: true }, caption: '$select_crypto' }),
                             this.$render("i-stack", { id: "pnlTokenItems", direction: "vertical", gap: "1rem", width: "100%", height: "100%", minHeight: 100, maxHeight: 240, overflow: "auto" })),
-                        this.$render("i-stack", { id: "pnlPayDetail", visible: false, direction: "vertical", gap: "0.25rem", width: "100%", height: "100%", padding: { left: '1rem', right: '1rem' } },
-                            this.$render("i-label", { caption: "$paid_to_address" }),
-                            this.$render("i-stack", { direction: "horizontal", alignItems: "stretch", width: "100%", margin: { bottom: '1rem' }, border: { radius: 8 }, background: { color: Theme.input.background }, overflow: "hidden" },
-                                this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", alignItems: "center", width: "100%", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' } },
-                                    this.$render("i-label", { id: "lbToAddress", wordBreak: "break-all", font: { color: Theme.input.fontColor } })),
-                                this.$render("i-stack", { direction: "horizontal", width: 32, minWidth: 32, alignItems: "center", justifyContent: "center", cursor: "pointer", margin: { left: 'auto' }, background: { color: Theme.colors.primary.main }, onClick: this.handleCopyAddress },
-                                    this.$render("i-icon", { id: "iconCopyAddress", name: "copy", width: 16, height: 16, cursor: "pointer", fill: Theme.text.primary }))),
-                            this.$render("i-label", { caption: "$amount_to_pay" }),
-                            this.$render("i-stack", { direction: "horizontal", alignItems: "stretch", width: "100%", border: { radius: 8 }, background: { color: Theme.input.background }, overflow: "hidden" },
-                                this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", alignItems: "center", width: "100%", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' } },
-                                    this.$render("i-label", { id: "lbAmountToPay", wordBreak: "break-all", font: { color: Theme.input.fontColor } })),
-                                this.$render("i-stack", { direction: "horizontal", width: 32, minWidth: 32, alignItems: "center", justifyContent: "center", cursor: "pointer", margin: { left: 'auto' }, background: { color: Theme.colors.primary.main }, onClick: this.handleCopyAmount },
-                                    this.$render("i-icon", { id: "iconCopyAmount", name: "copy", width: 16, height: 16, fill: Theme.text.primary }))),
-                            this.$render("i-label", { id: "lbError", font: { color: Theme.colors.error.main } }),
-                            this.$render("scom-payment-widget--rewards-points-module", { id: "rewardsPointsModule", margin: { top: '1rem' }, model: this.model, visible: false })),
+                        this.$render("i-stack", { id: "pnlPayDetail", visible: false, direction: "vertical", gap: "1rem", width: "100%", height: "100%", padding: { left: '1rem', right: '1rem' } },
+                            this.$render("i-stack", { id: "pnlCryptoPayment", direction: "vertical", gap: "0.25rem", width: "100%" },
+                                this.$render("i-label", { caption: "$paid_to_address" }),
+                                this.$render("i-stack", { direction: "horizontal", alignItems: "stretch", width: "100%", margin: { bottom: '1rem' }, border: { radius: 8 }, background: { color: Theme.input.background }, overflow: "hidden" },
+                                    this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", alignItems: "center", width: "100%", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' } },
+                                        this.$render("i-label", { id: "lbToAddress", wordBreak: "break-all", font: { color: Theme.input.fontColor } })),
+                                    this.$render("i-stack", { direction: "horizontal", width: 32, minWidth: 32, alignItems: "center", justifyContent: "center", cursor: "pointer", margin: { left: 'auto' }, background: { color: Theme.colors.primary.main }, onClick: this.handleCopyAddress },
+                                        this.$render("i-icon", { id: "iconCopyAddress", name: "copy", width: 16, height: 16, cursor: "pointer", fill: Theme.text.primary }))),
+                                this.$render("i-label", { caption: "$token_balance" }),
+                                this.$render("i-stack", { direction: "horizontal", alignItems: "stretch", width: "100%", minHeight: 36, margin: { bottom: '1rem' }, padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }, border: { radius: 8 }, background: { color: Theme.input.background }, overflow: "hidden" },
+                                    this.$render("i-label", { id: "lblTokenBalance" })),
+                                this.$render("i-label", { caption: "$amount_to_pay" }),
+                                this.$render("i-stack", { direction: "horizontal", alignItems: "stretch", width: "100%", border: { radius: 8 }, background: { color: Theme.input.background }, overflow: "hidden" },
+                                    this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", alignItems: "center", width: "100%", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' } },
+                                        this.$render("i-label", { id: "lbAmountToPay", wordBreak: "break-all", font: { color: Theme.input.fontColor } })),
+                                    this.$render("i-stack", { direction: "horizontal", width: 32, minWidth: 32, alignItems: "center", justifyContent: "center", cursor: "pointer", margin: { left: 'auto' }, background: { color: Theme.colors.primary.main }, onClick: this.handleCopyAmount },
+                                        this.$render("i-icon", { id: "iconCopyAmount", name: "copy", width: 16, height: 16, fill: Theme.text.primary }))),
+                                this.$render("i-label", { id: "lbError", font: { color: Theme.colors.error.main } })),
+                            this.$render("scom-payment-widget--rewards-points-module", { id: "rewardsPointsModule", model: this.model, onBeforeSelect: this.handleBeforeSelectRewardsPoint, onSelected: this.handleSelectedRewardsPoint, onPointsChanged: this.handleRewardsPointsChanged, visible: false })),
                         this.$render("i-stack", { direction: "horizontal", width: "100%", alignItems: "center", justifyContent: "center", gap: "1rem", wrap: "wrap-reverse", padding: { left: '1rem', right: '1rem' } },
                             this.$render("i-button", { id: "btnBack", caption: "$back", minWidth: 90, background: { color: Theme.colors.secondary.main }, class: index_css_7.fullWidthButtonStyle, onClick: this.handleBack }),
                             this.$render("i-button", { id: "btnSwitchNetwork", visible: false, caption: "$switch_network", background: { color: Theme.colors.primary.main }, class: index_css_7.halfWidthButtonStyle, onClick: this.handleSwitchNetwork }),
@@ -2760,13 +2845,13 @@ define("@scom/scom-payment-widget/components/rewardsPointsPayment.tsx", ["requir
     const Theme = components_18.Styles.Theme.ThemeVars;
     var Step;
     (function (Step) {
-        Step[Step["SelectRewardsPoints"] = 0] = "SelectRewardsPoints";
+        Step[Step["SelectRewardsPoint"] = 0] = "SelectRewardsPoint";
         Step[Step["Pay"] = 1] = "Pay";
     })(Step || (Step = {}));
     let RewardsPointsPayment = class RewardsPointsPayment extends components_18.Module {
         constructor() {
             super(...arguments);
-            this.currentStep = Step.SelectRewardsPoints;
+            this.currentStep = Step.SelectRewardsPoint;
         }
         get model() {
             return this._model;
@@ -2776,7 +2861,7 @@ define("@scom/scom-payment-widget/components/rewardsPointsPayment.tsx", ["requir
         }
         onStartPayment() {
             this.lbError.caption = '';
-            this.goToStep(Step.SelectRewardsPoints);
+            this.goToStep(Step.SelectRewardsPoint);
             this.updateAmount();
         }
         updateAmount() {
@@ -2786,12 +2871,12 @@ define("@scom/scom-payment-widget/components/rewardsPointsPayment.tsx", ["requir
             }
         }
         goToStep(step) {
-            if (step === Step.SelectRewardsPoints) {
+            if (step === Step.SelectRewardsPoint) {
                 this.pnlRewardsPoints.visible = true;
                 this.pnlPayDetail.visible = false;
                 this.btnPay.visible = false;
                 this.btnBack.width = '100%';
-                this.currentStep = Step.SelectRewardsPoints;
+                this.currentStep = Step.SelectRewardsPoint;
             }
             else if (step === Step.Pay) {
                 this.pnlRewardsPoints.visible = false;
@@ -2805,10 +2890,15 @@ define("@scom/scom-payment-widget/components/rewardsPointsPayment.tsx", ["requir
             this.selectedRewardsPoint = rewardsPoint;
             const totalAmount = Math.ceil(this.model.totalAmount * rewardsPoint.exchangeRate);
             const formattedAmount = components_18.FormatUtils.formatNumber(totalAmount, { decimalFigures: 6, hasTrailingZero: false });
+            this.lblCommunity.caption = rewardsPoint.communityId;
+            this.lblCommunityCreator.caption = rewardsPoint.creatorId;
+            this.lblPointBalance.caption = '';
             this.lbAmountToPay.caption = `${formattedAmount} POINTS`;
+            this.lblExchangeRate.caption = `${rewardsPoint.exchangeRate} point(s) = 1 ${this.model.currency}${rewardsPoint.upperBoundary ? ', upper boundary: ' + rewardsPoint.upperBoundary : ''}`;
             this.goToStep(Step.Pay);
             this.btnPay.enabled = false;
             const balance = await this.model.fetchRewardsPointBalance(rewardsPoint.creatorId, rewardsPoint.communityId);
+            this.lblPointBalance.caption = balance.toFixed();
             if (totalAmount > balance) {
                 this.btnPay.enabled = false;
                 this.lbError.caption = '$insufficient_balance';
@@ -2818,23 +2908,9 @@ define("@scom/scom-payment-widget/components/rewardsPointsPayment.tsx", ["requir
                 this.lbError.caption = '';
             }
         }
-        async handleCopyAmount() {
-            try {
-                await components_18.application.copyToClipboard(this.model.totalAmount.toString());
-                this.iconCopyAmount.name = 'check';
-                this.iconCopyAmount.fill = Theme.colors.success.main;
-                if (this.copyAmountTimer)
-                    clearTimeout(this.copyAmountTimer);
-                this.copyAmountTimer = setTimeout(() => {
-                    this.iconCopyAmount.name = 'copy';
-                    this.iconCopyAmount.fill = Theme.text.primary;
-                }, 500);
-            }
-            catch { }
-        }
         handleBack() {
             if (this.currentStep === Step.Pay) {
-                this.goToStep(Step.SelectRewardsPoints);
+                this.goToStep(Step.SelectRewardsPoint);
                 return;
             }
             if (this.onBack)
@@ -2880,12 +2956,16 @@ define("@scom/scom-payment-widget/components/rewardsPointsPayment.tsx", ["requir
                         this.$render("i-label", { font: { size: '1rem', color: Theme.text.primary, bold: true }, caption: '$select_rewards_point' }),
                         this.$render("scom-payment-widget--rewards-points-list", { id: "rewardsPointsList", width: "100%", data: this.model.oneOffRewardsPointsOptions, onSelectedRewardsPoint: this.handleSelectRewardsPoint })),
                     this.$render("i-stack", { id: "pnlPayDetail", direction: "vertical", gap: "0.25rem", width: "100%", height: "100%", padding: { left: '1rem', right: '1rem' }, visible: false },
+                        this.$render("i-stack", { direction: "vertical", width: "100%", border: { width: 1, style: 'solid', color: Theme.divider, radius: 8 }, padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, margin: { bottom: '1rem' }, gap: "0.25rem" },
+                            this.$render("i-label", { id: "lblCommunity", font: { bold: true, color: Theme.text.primary } }),
+                            this.$render("i-label", { id: "lblCommunityCreator", font: { size: '0.75rem', color: Theme.text.primary }, textOverflow: "ellipsis" })),
+                        this.$render("i-label", { caption: "$available_points" }),
+                        this.$render("i-stack", { direction: "horizontal", alignItems: "stretch", width: "100%", minHeight: 36, padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }, border: { radius: 8 }, background: { color: Theme.input.background }, overflow: "hidden" },
+                            this.$render("i-label", { id: "lblPointBalance" })),
+                        this.$render("i-label", { id: "lblExchangeRate", margin: { bottom: '1rem' }, font: { size: '0.875rem', color: Theme.text.secondary } }),
                         this.$render("i-label", { caption: "$amount_to_pay" }),
-                        this.$render("i-stack", { direction: "horizontal", alignItems: "stretch", width: "100%", border: { radius: 8 }, background: { color: Theme.input.background }, overflow: "hidden" },
-                            this.$render("i-stack", { direction: "horizontal", gap: "0.5rem", alignItems: "center", width: "100%", padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' } },
-                                this.$render("i-label", { id: "lbAmountToPay", wordBreak: "break-all", font: { color: Theme.input.fontColor } })),
-                            this.$render("i-stack", { direction: "horizontal", width: 32, minWidth: 32, alignItems: "center", justifyContent: "center", cursor: "pointer", margin: { left: 'auto' }, background: { color: Theme.colors.primary.main }, onClick: this.handleCopyAmount },
-                                this.$render("i-icon", { id: "iconCopyAmount", name: "copy", width: 16, height: 16, fill: Theme.text.primary }))),
+                        this.$render("i-stack", { direction: "horizontal", alignItems: "stretch", width: "100%", minHeight: 36, padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }, border: { radius: 8 }, background: { color: Theme.input.background }, overflow: "hidden" },
+                            this.$render("i-label", { id: "lbAmountToPay", wordBreak: "break-all", font: { color: Theme.input.fontColor } })),
                         this.$render("i-label", { id: "lbError", font: { color: Theme.colors.error.main } })),
                     this.$render("i-stack", { direction: "horizontal", width: "100%", alignItems: "center", justifyContent: "center", margin: { top: 'auto' }, gap: "1rem", wrap: "wrap-reverse" },
                         this.$render("i-button", { id: "btnBack", caption: "$back", background: { color: Theme.colors.secondary.main }, class: index_css_8.halfWidthButtonStyle, onClick: this.handleBack }),
@@ -3277,7 +3357,19 @@ define("@scom/scom-payment-widget", ["require", "exports", "@ijstech/components"
                 width: 480,
                 maxWidth: '100%',
                 padding: { left: '1rem', right: '1rem', top: '0.75rem', bottom: '0.75rem' },
-                border: { radius: '1rem' }
+                border: { radius: '1rem' },
+                mediaQueries: [
+                    {
+                        maxWidth: '767px',
+                        properties: {
+                            width: '50rem',
+                            height: '100vh',
+                            maxHeight: '100vh',
+                            overflow: { y: 'auto' },
+                            popupPlacement: 'top'
+                        }
+                    }
+                ]
             });
             await this.paymentModule.ready();
             this.paymentModule.show();
