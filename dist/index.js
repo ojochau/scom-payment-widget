@@ -56,7 +56,7 @@ define("@scom/scom-payment-widget/interface.ts", ["require", "exports"], functio
 define("@scom/scom-payment-widget/components/index.css.ts", ["require", "exports", "@ijstech/components"], function (require, exports, components_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.textEllipsis = exports.halfWidthButtonStyle = exports.fullWidthButtonStyle = exports.carouselSliderStyle = exports.alertStyle = exports.loadingImageStyle = exports.textUpperCaseStyle = exports.textCenterStyle = exports.elementStyle = void 0;
+    exports.accordionStyle = exports.textEllipsis = exports.halfWidthButtonStyle = exports.fullWidthButtonStyle = exports.carouselSliderStyle = exports.alertStyle = exports.loadingImageStyle = exports.textUpperCaseStyle = exports.textCenterStyle = exports.elementStyle = void 0;
     const Theme = components_1.Styles.Theme.ThemeVars;
     const spinnerAnim = components_1.Styles.keyframes({
         "0%": {
@@ -135,6 +135,17 @@ define("@scom/scom-payment-widget/components/index.css.ts", ["require", "exports
         display: '-webkit-box',
         '-webkit-line-clamp': 1,
         WebkitBoxOrient: 'vertical',
+    });
+    exports.accordionStyle = components_1.Styles.style({
+        $nest: {
+            '.accordion-body': {
+                overflow: 'visible'
+            },
+            '.accordion-header .icon-expand': {
+                height: '20px !important',
+                width: '16px !important'
+            }
+        }
     });
 });
 define("@scom/scom-payment-widget/translations.json.ts", ["require", "exports"], function (require, exports) {
@@ -1236,15 +1247,6 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
         get totalAmount() {
             return this.totalPrice + this.totalShippingCost;
         }
-        get stripeAmount() {
-            const currency = this.stripeCurrency.toLowerCase();
-            const amount = this.totalAmount;
-            if (store_1.stripeZeroDecimalCurrencies.includes(currency))
-                return Math.round(amount);
-            if (store_1.stripeSpecialCurrencies.includes(currency))
-                return Math.round(amount) * 100;
-            return Math.round(amount * 100);
-        }
         get totalQuantity() {
             return this.products?.reduce((sum, item) => sum + item.quantity, 0) || 0;
         }
@@ -1485,7 +1487,7 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
         updateShippingInfo(value) {
             this.shippingInfo = value;
         }
-        async createPaymentIntent() {
+        async createPaymentIntent(stripeAmount) {
             try {
                 const response = await fetch(`${this.baseStripeApi}/payment-intent`, {
                     method: 'POST',
@@ -1495,7 +1497,7 @@ define("@scom/scom-payment-widget/model.ts", ["require", "exports", "@scom/scom-
                     },
                     body: JSON.stringify({
                         currency: this.stripeCurrency,
-                        amount: this.stripeAmount,
+                        amount: stripeAmount,
                         accountId: this.stripeAccountId
                     })
                 });
@@ -2100,186 +2102,12 @@ define("@scom/scom-payment-widget/utils.ts", ["require", "exports", "@scom/scom-
     }
     exports.loadStripe = loadStripe;
 });
-define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/utils.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_14, store_4, index_css_6, utils_1, translations_json_8) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.StripePayment = void 0;
-    const Theme = components_14.Styles.Theme.ThemeVars;
-    let StripePayment = class StripePayment extends components_14.Module {
-        constructor(parent, options) {
-            super(parent, options);
-        }
-        set model(data) {
-            this._model = data;
-            this.updateAmount();
-        }
-        get model() {
-            return this._model;
-        }
-        onStartPayment() {
-            this.showButtonIcon(false);
-            this.updateAmount();
-        }
-        updateAmount() {
-            if (this.model && this.header) {
-                const { title, currency, totalAmount } = this.model;
-                this.header.setHeader(title, currency, totalAmount);
-                this.initStripePayment();
-            }
-        }
-        async initStripePayment() {
-            if (!this.stripeElements)
-                this.pnlLoading.visible = true;
-            if (!window.Stripe) {
-                await (0, utils_1.loadStripe)();
-            }
-            if (window.Stripe) {
-                const { stripeAmount, stripeCurrency, baseStripeApi } = this.model;
-                if (this.stripeElements) {
-                    this.stripeElements.update({
-                        currency: stripeCurrency,
-                        amount: stripeAmount
-                    });
-                    return;
-                }
-                if (!this.publishableKey) {
-                    this.publishableKey = await (0, store_4.getStripeKey)(`${baseStripeApi}/key`);
-                    if (!this.publishableKey)
-                        return;
-                }
-                this.stripe = window.Stripe(this.publishableKey);
-                this.stripeElements = this.stripe.elements({
-                    mode: 'payment',
-                    currency: stripeCurrency,
-                    amount: stripeAmount,
-                    appearance: {
-                        theme: 'night'
-                    },
-                });
-                const paymentElement = this.stripeElements.create('payment');
-                paymentElement.mount('#pnlStripePaymentForm');
-            }
-            if (this.pnlLoading.visible) {
-                setTimeout(() => {
-                    this.pnlLoading.visible = false;
-                }, 500);
-            }
-        }
-        async handleStripeCheckoutClick() {
-            if (!this.stripe)
-                return;
-            this.showButtonIcon(true);
-            this.stripeElements.submit().then(async (result) => {
-                if (result.error) {
-                    this.showButtonIcon(false);
-                    return;
-                }
-                const clientSecret = await this.model.createPaymentIntent();
-                if (!clientSecret) {
-                    this.showButtonIcon(false);
-                    this.showAlert('error', this.i18n.get('$payment_failed'), this.i18n.get('$cannot_get_payment_info'));
-                    return;
-                }
-                ;
-                this.model.rewardsPoint = undefined;
-                await this.model.handlePlaceMarketplaceOrder();
-                this.model.referenceId = clientSecret;
-                this.model.networkCode = '';
-                const { returnUrl, paymentActivity } = this.model;
-                const orderId = paymentActivity.orderId;
-                const url = `${returnUrl}/${orderId}`;
-                const jsonString = JSON.stringify(paymentActivity);
-                const encodedData = btoa(jsonString);
-                try {
-                    const { error } = await this.stripe.confirmPayment({
-                        elements: this.stripeElements,
-                        confirmParams: {
-                            return_url: `${url}?data=${encodedData}`
-                        },
-                        clientSecret
-                    });
-                    if (error) {
-                        this.showAlert('error', this.i18n.get('$payment_failed'), error.message);
-                    }
-                    else {
-                        await this.model.handlePaymentSuccess();
-                        this.showAlert('success', this.i18n.get('$payment_completed'), '');
-                    }
-                }
-                catch (error) {
-                    // mini app
-                    const data = await this.stripe.retrievePaymentIntent(clientSecret);
-                    const status = data?.paymentIntent.status;
-                    if (status === 'succeeded' || status === 'processing') {
-                        await this.model.handlePaymentSuccess();
-                        this.showAlert('success', this.i18n.get('$payment_completed'), '');
-                    }
-                    else {
-                        this.showAlert('error', this.i18n.get('$payment_failed'), status || error?.message || '');
-                    }
-                }
-                this.showButtonIcon(false);
-            }).catch((e) => this.showButtonIcon(false));
-        }
-        showButtonIcon(value) {
-            this.btnCheckout.rightIcon.spin = value;
-            this.btnCheckout.rightIcon.visible = value;
-            this.btnBack.enabled = !value;
-        }
-        showAlert(status, title, msg) {
-            if (status === 'success') {
-                this.mdAlert.onClose = () => {
-                    if (this.onClose) {
-                        this.onClose();
-                    }
-                };
-            }
-            else {
-                this.mdAlert.onClose = () => { };
-            }
-            this.mdAlert.status = status;
-            this.mdAlert.title = title;
-            this.mdAlert.content = msg;
-            this.mdAlert.showModal();
-        }
-        handleBack() {
-            if (this.onBack)
-                this.onBack();
-        }
-        async init() {
-            this.i18n.init({ ...translations_json_8.default });
-            super.init();
-            this.onClose = this.getAttribute('onClose', true) || this.onClose;
-            this.onBack = this.getAttribute('onBack', true) || this.onBack;
-            const model = this.getAttribute('model', true);
-            if (model)
-                this.model = model;
-        }
-        render() {
-            return this.$render("i-stack", { direction: "vertical", alignItems: "center", width: "100%" },
-                this.$render("scom-payment-widget--header", { id: "header", margin: { bottom: '1rem' }, display: "flex" }),
-                this.$render("i-stack", { direction: "vertical", width: "100%", height: "100%", alignItems: "center", padding: { top: '1rem', bottom: '1rem', left: '1rem', right: '1rem' }, position: "relative" },
-                    this.$render("i-vstack", { id: "pnlLoading", visible: false, width: "100%", minHeight: 315, position: "absolute", bottom: 0, zIndex: 899, background: { color: Theme.background.main }, class: "i-loading-overlay" },
-                        this.$render("i-vstack", { horizontalAlignment: "center", verticalAlignment: "center", position: "absolute", top: "calc(50% - 0.75rem)", left: "calc(50% - 0.75rem)" },
-                            this.$render("i-icon", { class: "i-loading-spinner_icon", name: "spinner", width: 24, height: 24, fill: Theme.colors.primary.main }))),
-                    this.$render("i-stack", { direction: "vertical", id: "pnlStripePaymentForm", background: { color: '#30313d' }, border: { radius: 12 }, padding: { top: '1rem', left: '1rem', bottom: '2rem', right: '1rem' }, margin: { bottom: '1rem' } }),
-                    this.$render("i-stack", { direction: "horizontal", width: "100%", alignItems: "center", justifyContent: "center", margin: { top: 'auto' }, gap: "1rem", wrap: "wrap-reverse" },
-                        this.$render("i-button", { id: "btnBack", caption: "$back", background: { color: Theme.colors.secondary.main }, class: index_css_6.halfWidthButtonStyle, onClick: this.handleBack }),
-                        this.$render("i-button", { id: "btnCheckout", caption: "$checkout", background: { color: Theme.colors.primary.main }, class: index_css_6.halfWidthButtonStyle, onClick: this.handleStripeCheckoutClick }))),
-                this.$render("i-alert", { id: "mdAlert", class: index_css_6.alertStyle }));
-        }
-    };
-    StripePayment = __decorate([
-        (0, components_14.customElements)('scom-payment-widget--stripe-payment')
-    ], StripePayment);
-    exports.StripePayment = StripePayment;
-});
-define("@scom/scom-payment-widget/components/rewardsPointsList.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_15, translations_json_9) {
+define("@scom/scom-payment-widget/components/rewardsPointsList.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_14, translations_json_8) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.RewardsPointsList = void 0;
-    const Theme = components_15.Styles.Theme.ThemeVars;
-    let RewardsPointsList = class RewardsPointsList extends components_15.Module {
+    const Theme = components_14.Styles.Theme.ThemeVars;
+    let RewardsPointsList = class RewardsPointsList extends components_14.Module {
         setData(rewardsPoints) {
             this.renderRewardsPoints(rewardsPoints);
         }
@@ -2298,7 +2126,7 @@ define("@scom/scom-payment-widget/components/rewardsPointsList.tsx", ["require",
                 this.onSelectedRewardsPoint(rewardsPoint);
         }
         init() {
-            this.i18n.init({ ...translations_json_9.default });
+            this.i18n.init({ ...translations_json_8.default });
             super.init();
             const data = this.getAttribute('data', true);
             if (data)
@@ -2309,16 +2137,16 @@ define("@scom/scom-payment-widget/components/rewardsPointsList.tsx", ["require",
         }
     };
     RewardsPointsList = __decorate([
-        (0, components_15.customElements)('scom-payment-widget--rewards-points-list')
+        (0, components_14.customElements)('scom-payment-widget--rewards-points-list')
     ], RewardsPointsList);
     exports.RewardsPointsList = RewardsPointsList;
 });
-define("@scom/scom-payment-widget/components/rewardsPointsModule.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_16, translations_json_10) {
+define("@scom/scom-payment-widget/components/rewardsPointsModule.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_15, translations_json_9) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.RewardsPointsModule = void 0;
-    const Theme = components_16.Styles.Theme.ThemeVars;
-    let RewardsPointsModule = class RewardsPointsModule extends components_16.Module {
+    const Theme = components_15.Styles.Theme.ThemeVars;
+    let RewardsPointsModule = class RewardsPointsModule extends components_15.Module {
         constructor() {
             super(...arguments);
             this.balance = 0;
@@ -2419,7 +2247,7 @@ define("@scom/scom-payment-widget/components/rewardsPointsModule.tsx", ["require
                 this.onPointsChanged(this.onValidate());
         }
         init() {
-            this.i18n.init({ ...translations_json_10.default });
+            this.i18n.init({ ...translations_json_9.default });
             super.init();
             const model = this.getAttribute('model', true);
             if (model)
@@ -2449,9 +2277,239 @@ define("@scom/scom-payment-widget/components/rewardsPointsModule.tsx", ["require
         }
     };
     RewardsPointsModule = __decorate([
-        (0, components_16.customElements)('scom-payment-widget--rewards-points-module')
+        (0, components_15.customElements)('scom-payment-widget--rewards-points-module')
     ], RewardsPointsModule);
     exports.RewardsPointsModule = RewardsPointsModule;
+});
+define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/store.ts", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/utils.ts", "@scom/scom-payment-widget/translations.json.ts"], function (require, exports, components_16, store_4, index_css_6, utils_1, translations_json_10) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.StripePayment = void 0;
+    const Theme = components_16.Styles.Theme.ThemeVars;
+    let StripePayment = class StripePayment extends components_16.Module {
+        constructor(parent, options) {
+            super(parent, options);
+        }
+        set model(data) {
+            this._model = data;
+            this.updateAmount();
+        }
+        get model() {
+            return this._model;
+        }
+        get amountToPay() {
+            const rewardsPointData = this.rewardsPointsModule.getData();
+            if (!rewardsPointData?.payWithPoints)
+                return this.model.totalAmount;
+            return Math.max(this.model.totalAmount - rewardsPointData.points / rewardsPointData.exchangeRate, 0);
+        }
+        get stripeAmount() {
+            const currency = this.model.stripeCurrency.toLowerCase();
+            const amount = this.amountToPay;
+            if (store_4.stripeZeroDecimalCurrencies.includes(currency))
+                return Math.round(amount);
+            if (store_4.stripeSpecialCurrencies.includes(currency))
+                return Math.round(amount) * 100;
+            return Math.round(amount * 100);
+        }
+        onStartPayment() {
+            this.showButtonIcon(false);
+            this.model.rewardsPoint = undefined;
+            this.rewardsPointsModule.clear();
+            this.accItemPaymentForm.visible = true;
+            this.btnCheckout.enabled = true;
+            this.updateAmount();
+            this.accItemRewardsPoints.visible = this.model.rewardsPointsOptions.length > 0;
+        }
+        updateAmount() {
+            if (this.model && this.header) {
+                const { title, currency, totalAmount } = this.model;
+                this.header.setHeader(title, currency, totalAmount);
+                this.initStripePayment();
+            }
+        }
+        handleBeforeSelectRewardsPoint() {
+            this.accItemPaymentForm.visible = false;
+        }
+        handleSelectedRewardsPoint() {
+            this.accItemPaymentForm.visible = true;
+        }
+        handleRewardsPointsChanged(isValid) {
+            this.btnCheckout.enabled = isValid;
+        }
+        async initStripePayment() {
+            if (!this.stripeElements)
+                this.pnlLoading.visible = true;
+            if (!window.Stripe) {
+                await (0, utils_1.loadStripe)();
+            }
+            if (window.Stripe) {
+                const { stripeCurrency, baseStripeApi } = this.model;
+                if (this.stripeElements) {
+                    this.stripeElements.update({
+                        currency: stripeCurrency,
+                        amount: this.stripeAmount
+                    });
+                    return;
+                }
+                if (!this.publishableKey) {
+                    this.publishableKey = await (0, store_4.getStripeKey)(`${baseStripeApi}/key`);
+                    if (!this.publishableKey)
+                        return;
+                }
+                this.stripe = window.Stripe(this.publishableKey);
+                this.stripeElements = this.stripe.elements({
+                    mode: 'payment',
+                    currency: stripeCurrency,
+                    amount: this.stripeAmount,
+                    appearance: {
+                        theme: 'night'
+                    },
+                });
+                const paymentElement = this.stripeElements.create('payment');
+                paymentElement.mount('#pnlStripePaymentForm');
+            }
+            if (this.pnlLoading.visible) {
+                setTimeout(() => {
+                    this.pnlLoading.visible = false;
+                }, 500);
+            }
+        }
+        async handleStripeCheckoutClick() {
+            if (!this.stripe)
+                return;
+            const rewardsPointData = this.rewardsPointsModule.getData();
+            const payWithPoints = rewardsPointData.payWithPoints && rewardsPointData.points > 0;
+            if (payWithPoints) {
+                const balance = await this.model.fetchRewardsPointBalance(rewardsPointData.creatorId, rewardsPointData.communityId);
+                if (rewardsPointData.points > balance || rewardsPointData.points > rewardsPointData.upperBoundary) {
+                    return;
+                }
+            }
+            this.showButtonIcon(true);
+            this.stripeElements.submit().then(async (result) => {
+                if (result.error) {
+                    this.showButtonIcon(false);
+                    return;
+                }
+                const clientSecret = await this.model.createPaymentIntent(this.stripeAmount);
+                if (!clientSecret) {
+                    this.showButtonIcon(false);
+                    this.showAlert('error', this.i18n.get('$payment_failed'), this.i18n.get('$cannot_get_payment_info'));
+                    return;
+                }
+                ;
+                if (payWithPoints) {
+                    this.model.rewardsPoint = {
+                        creatorId: rewardsPointData.creatorId,
+                        communityId: rewardsPointData.communityId,
+                        points: rewardsPointData.points
+                    };
+                }
+                else {
+                    this.model.rewardsPoint = undefined;
+                }
+                await this.model.handlePlaceMarketplaceOrder();
+                this.model.referenceId = clientSecret;
+                this.model.networkCode = '';
+                const { returnUrl, paymentActivity } = this.model;
+                const orderId = paymentActivity.orderId;
+                const url = `${returnUrl}/${orderId}`;
+                const jsonString = JSON.stringify(paymentActivity);
+                const encodedData = btoa(jsonString);
+                try {
+                    const { error } = await this.stripe.confirmPayment({
+                        elements: this.stripeElements,
+                        confirmParams: {
+                            return_url: `${url}?data=${encodedData}`
+                        },
+                        clientSecret
+                    });
+                    if (error) {
+                        this.showAlert('error', this.i18n.get('$payment_failed'), error.message);
+                    }
+                    else {
+                        await this.model.handlePaymentSuccess();
+                        this.showAlert('success', this.i18n.get('$payment_completed'), '');
+                    }
+                }
+                catch (error) {
+                    // mini app
+                    const data = await this.stripe.retrievePaymentIntent(clientSecret);
+                    const status = data?.paymentIntent.status;
+                    if (status === 'succeeded' || status === 'processing') {
+                        await this.model.handlePaymentSuccess();
+                        this.showAlert('success', this.i18n.get('$payment_completed'), '');
+                    }
+                    else {
+                        this.showAlert('error', this.i18n.get('$payment_failed'), status || error?.message || '');
+                    }
+                }
+                this.showButtonIcon(false);
+            }).catch((e) => this.showButtonIcon(false));
+        }
+        showButtonIcon(value) {
+            this.btnCheckout.rightIcon.spin = value;
+            this.btnCheckout.rightIcon.visible = value;
+            this.btnBack.enabled = !value;
+        }
+        showAlert(status, title, msg) {
+            if (status === 'success') {
+                this.mdAlert.onClose = () => {
+                    if (this.onClose) {
+                        this.onClose();
+                    }
+                };
+            }
+            else {
+                this.mdAlert.onClose = () => { };
+            }
+            this.mdAlert.status = status;
+            this.mdAlert.title = title;
+            this.mdAlert.content = msg;
+            this.mdAlert.showModal();
+        }
+        handleBack() {
+            if (!this.accItemPaymentForm.visible) {
+                this.rewardsPointsModule.cancelSelectRewardsPoint();
+                this.accItemPaymentForm.visible = true;
+                return;
+            }
+            if (this.onBack)
+                this.onBack();
+        }
+        async init() {
+            this.i18n.init({ ...translations_json_10.default });
+            super.init();
+            this.accStripePayment.updateLocale(this.i18n);
+            this.onClose = this.getAttribute('onClose', true) || this.onClose;
+            this.onBack = this.getAttribute('onBack', true) || this.onBack;
+            const model = this.getAttribute('model', true);
+            if (model)
+                this.model = model;
+        }
+        render() {
+            return this.$render("i-stack", { direction: "vertical", alignItems: "center", width: "100%" },
+                this.$render("scom-payment-widget--header", { id: "header", margin: { bottom: '1rem' }, display: "flex" }),
+                this.$render("i-stack", { direction: "vertical", width: "100%", height: "100%", alignItems: "center", padding: { bottom: '1rem', left: '1rem', right: '1rem' }, position: "relative" },
+                    this.$render("i-vstack", { id: "pnlLoading", visible: false, width: "100%", minHeight: 315, position: "absolute", bottom: 0, zIndex: 899, background: { color: Theme.background.main }, class: "i-loading-overlay" },
+                        this.$render("i-vstack", { horizontalAlignment: "center", verticalAlignment: "center", position: "absolute", top: "calc(50% - 0.75rem)", left: "calc(50% - 0.75rem)" },
+                            this.$render("i-icon", { class: "i-loading-spinner_icon", name: "spinner", width: 24, height: 24, fill: Theme.colors.primary.main }))),
+                    this.$render("i-accordion", { id: "accStripePayment", class: index_css_6.accordionStyle, width: "100%", margin: { bottom: '1rem' } },
+                        this.$render("i-accordion-item", { id: "accItemPaymentForm", name: "$payment", defaultExpanded: true, font: { size: '1rem', weight: 600 } },
+                            this.$render("i-stack", { direction: "vertical", id: "pnlStripePaymentForm", background: { color: '#30313d' }, border: { radius: 12 }, padding: { top: '1rem', left: '1rem', bottom: '2rem', right: '1rem' } })),
+                        this.$render("i-accordion-item", { id: "accItemRewardsPoints", name: "$rewards_points", font: { size: '1rem', weight: 600 }, visible: false },
+                            this.$render("scom-payment-widget--rewards-points-module", { id: "rewardsPointsModule", padding: { left: '1rem', right: '1rem' }, model: this.model, onBeforeSelect: this.handleBeforeSelectRewardsPoint, onSelected: this.handleSelectedRewardsPoint, onPointsChanged: this.handleRewardsPointsChanged }))),
+                    this.$render("i-stack", { direction: "horizontal", width: "100%", alignItems: "center", justifyContent: "center", margin: { top: 'auto' }, gap: "1rem", wrap: "wrap-reverse" },
+                        this.$render("i-button", { id: "btnBack", caption: "$back", background: { color: Theme.colors.secondary.main }, class: index_css_6.halfWidthButtonStyle, onClick: this.handleBack }),
+                        this.$render("i-button", { id: "btnCheckout", caption: "$checkout", background: { color: Theme.colors.primary.main }, class: index_css_6.halfWidthButtonStyle, onClick: this.handleStripeCheckoutClick }))),
+                this.$render("i-alert", { id: "mdAlert", class: index_css_6.alertStyle }));
+        }
+    };
+    StripePayment = __decorate([
+        (0, components_16.customElements)('scom-payment-widget--stripe-payment')
+    ], StripePayment);
+    exports.StripePayment = StripePayment;
 });
 define("@scom/scom-payment-widget/components/walletPayment.tsx", ["require", "exports", "@ijstech/components", "@scom/scom-payment-widget/interface.ts", "@scom/scom-token-list", "@scom/scom-payment-widget/store.ts", "@ijstech/eth-wallet", "@scom/scom-payment-widget/components/index.css.ts", "@scom/scom-payment-widget/translations.json.ts", "@scom/scom-payment-widget/wallets/index.ts"], function (require, exports, components_17, interface_4, scom_token_list_1, store_5, eth_wallet_3, index_css_7, translations_json_11, wallets_2) {
     "use strict";

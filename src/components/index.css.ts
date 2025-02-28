@@ -89,3 +89,15 @@ export const textEllipsis = Styles.style({
   '-webkit-line-clamp': 1,
   WebkitBoxOrient: 'vertical',
 })
+
+export const accordionStyle = Styles.style({
+  $nest: {
+    '.accordion-body': {
+      overflow: 'visible'
+    },
+    '.accordion-header .icon-expand': {
+      height: '20px !important',
+      width: '16px !important'
+    }
+  }
+})

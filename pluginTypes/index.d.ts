@@ -162,6 +162,7 @@ declare module "@scom/scom-payment-widget/components/index.css.ts" {
     export const fullWidthButtonStyle: string;
     export const halfWidthButtonStyle: string;
     export const textEllipsis: string;
+    export const accordionStyle: string;
 }
 /// <amd-module name="@scom/scom-payment-widget/translations.json.ts" />
 declare module "@scom/scom-payment-widget/translations.json.ts" {
@@ -601,7 +602,6 @@ declare module "@scom/scom-payment-widget/model.ts" {
         get totalPrice(): number;
         get totalShippingCost(): number;
         get totalAmount(): number;
-        get stripeAmount(): number;
         get totalQuantity(): number;
         get hasPhysicalProduct(): boolean;
         get toAddress(): string;
@@ -642,7 +642,7 @@ declare module "@scom/scom-payment-widget/model.ts" {
         handlePaymentSuccess(): Promise<void>;
         processCompletedHandler(): void;
         updateShippingInfo(value: IShippingInfo): void;
-        createPaymentIntent(): Promise<string>;
+        createPaymentIntent(stripeAmount: number): Promise<string>;
     }
 }
 /// <amd-module name="@scom/scom-payment-widget/components/invoiceCreation.tsx" />
@@ -905,48 +905,6 @@ declare module "@scom/scom-payment-widget/components/statusPayment.tsx" {
 declare module "@scom/scom-payment-widget/utils.ts" {
     export function loadStripe(): Promise<unknown>;
 }
-/// <amd-module name="@scom/scom-payment-widget/components/stripePayment.tsx" />
-declare module "@scom/scom-payment-widget/components/stripePayment.tsx" {
-    import { Module, Container, ControlElement } from '@ijstech/components';
-    import { Model } from "@scom/scom-payment-widget/model.ts";
-    interface ScomPaymentWidgetStripePaymentElement extends ControlElement {
-        model?: Model;
-        onBack?: () => void;
-        onClose?: () => void;
-    }
-    global {
-        namespace JSX {
-            interface IntrinsicElements {
-                ['scom-payment-widget--stripe-payment']: ScomPaymentWidgetStripePaymentElement;
-            }
-        }
-    }
-    export class StripePayment extends Module {
-        private _model;
-        private stripe;
-        private stripeElements;
-        private btnCheckout;
-        private btnBack;
-        private header;
-        private mdAlert;
-        private pnlLoading;
-        private publishableKey;
-        onClose: () => void;
-        onBack: () => void;
-        constructor(parent?: Container, options?: ScomPaymentWidgetStripePaymentElement);
-        set model(data: Model);
-        get model(): Model;
-        onStartPayment(): void;
-        private updateAmount;
-        private initStripePayment;
-        private handleStripeCheckoutClick;
-        private showButtonIcon;
-        private showAlert;
-        private handleBack;
-        init(): Promise<void>;
-        render(): any;
-    }
-}
 /// <amd-module name="@scom/scom-payment-widget/components/rewardsPointsList.tsx" />
 declare module "@scom/scom-payment-widget/components/rewardsPointsList.tsx" {
     import { Module, ControlElement } from '@ijstech/components';
@@ -1030,6 +988,57 @@ declare module "@scom/scom-payment-widget/components/rewardsPointsModule.tsx" {
         private handlePointRangeChanged;
         init(): void;
         render(): void;
+    }
+}
+/// <amd-module name="@scom/scom-payment-widget/components/stripePayment.tsx" />
+declare module "@scom/scom-payment-widget/components/stripePayment.tsx" {
+    import { Module, Container, ControlElement } from '@ijstech/components';
+    import { Model } from "@scom/scom-payment-widget/model.ts";
+    interface ScomPaymentWidgetStripePaymentElement extends ControlElement {
+        model?: Model;
+        onBack?: () => void;
+        onClose?: () => void;
+    }
+    global {
+        namespace JSX {
+            interface IntrinsicElements {
+                ['scom-payment-widget--stripe-payment']: ScomPaymentWidgetStripePaymentElement;
+            }
+        }
+    }
+    export class StripePayment extends Module {
+        private _model;
+        private stripe;
+        private stripeElements;
+        private btnCheckout;
+        private btnBack;
+        private header;
+        private accStripePayment;
+        private accItemPaymentForm;
+        private accItemRewardsPoints;
+        private rewardsPointsModule;
+        private mdAlert;
+        private pnlLoading;
+        private publishableKey;
+        onClose: () => void;
+        onBack: () => void;
+        constructor(parent?: Container, options?: ScomPaymentWidgetStripePaymentElement);
+        set model(data: Model);
+        get model(): Model;
+        private get amountToPay();
+        get stripeAmount(): number;
+        onStartPayment(): void;
+        private updateAmount;
+        private handleBeforeSelectRewardsPoint;
+        private handleSelectedRewardsPoint;
+        private handleRewardsPointsChanged;
+        private initStripePayment;
+        private handleStripeCheckoutClick;
+        private showButtonIcon;
+        private showAlert;
+        private handleBack;
+        init(): Promise<void>;
+        render(): any;
     }
 }
 /// <amd-module name="@scom/scom-payment-widget/components/walletPayment.tsx" />
