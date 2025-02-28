@@ -100,14 +100,6 @@ export class Model {
 		return this.totalPrice + this.totalShippingCost
 	}
 
-	get stripeAmount() {
-		const currency = this.stripeCurrency.toLowerCase();
-		const amount = this.totalAmount;
-		if (stripeZeroDecimalCurrencies.includes(currency)) return Math.round(amount);
-		if (stripeSpecialCurrencies.includes(currency)) return Math.round(amount) * 100;
-		return Math.round(amount * 100);
-	}
-
 	get totalQuantity() {
 		return this.products?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 	}
@@ -391,7 +383,7 @@ export class Model {
 		this.shippingInfo = value;
 	}
 
-	async createPaymentIntent(): Promise<string> {
+	async createPaymentIntent(stripeAmount: number): Promise<string> {
 		try {
 			const response = await fetch(`${this.baseStripeApi}/payment-intent`, {
 				method: 'POST',
@@ -401,7 +393,7 @@ export class Model {
 				},
 				body: JSON.stringify({
 					currency: this.stripeCurrency,
-					amount: this.stripeAmount,
+					amount: stripeAmount,
 					accountId: this.stripeAccountId
 				})
 			});
