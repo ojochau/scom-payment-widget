@@ -2495,7 +2495,7 @@ define("@scom/scom-payment-widget/components/stripePayment.tsx", ["require", "ex
                     this.$render("i-vstack", { id: "pnlLoading", visible: false, width: "100%", minHeight: 315, position: "absolute", bottom: 0, zIndex: 899, background: { color: Theme.background.main }, class: "i-loading-overlay" },
                         this.$render("i-vstack", { horizontalAlignment: "center", verticalAlignment: "center", position: "absolute", top: "calc(50% - 0.75rem)", left: "calc(50% - 0.75rem)" },
                             this.$render("i-icon", { class: "i-loading-spinner_icon", name: "spinner", width: 24, height: 24, fill: Theme.colors.primary.main }))),
-                    this.$render("i-accordion", { id: "accStripePayment", class: index_css_6.accordionStyle, width: "100%", margin: { bottom: '1rem' } },
+                    this.$render("i-accordion", { id: "accStripePayment", class: index_css_6.accordionStyle, width: "100%", margin: { bottom: '1rem' }, isFlush: true },
                         this.$render("i-accordion-item", { id: "accItemPaymentForm", name: "$payment", defaultExpanded: true, font: { size: '1rem', weight: 600 } },
                             this.$render("i-stack", { direction: "vertical", id: "pnlStripePaymentForm", background: { color: '#30313d' }, border: { radius: 12 }, padding: { top: '1rem', left: '1rem', bottom: '2rem', right: '1rem' } })),
                         this.$render("i-accordion-item", { id: "accItemRewardsPoints", name: "$rewards_points", font: { size: '1rem', weight: 600 }, visible: false },

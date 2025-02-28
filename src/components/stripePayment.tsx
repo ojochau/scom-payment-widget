@@ -275,7 +275,7 @@ export class StripePayment extends Module {
                         />
                     </i-vstack>
                 </i-vstack>
-                <i-accordion id="accStripePayment" class={accordionStyle} width="100%" margin={{ bottom: '1rem' }}>
+                <i-accordion id="accStripePayment" class={accordionStyle} width="100%" margin={{ bottom: '1rem' }} isFlush={true}>
                     <i-accordion-item id="accItemPaymentForm" name="$payment" defaultExpanded={true} font={{ size: '1rem', weight: 600 }}>
                         <i-stack direction="vertical" id="pnlStripePaymentForm" background={{ color: '#30313d' }} border={{ radius: 12 }} padding={{ top: '1rem', left: '1rem', bottom: '2rem', right: '1rem' }} />
                     </i-accordion-item>
